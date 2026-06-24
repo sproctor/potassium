@@ -1,77 +1,65 @@
-# nucleus-updater (draft)
+# potassium-updater
 
-A draft of the **new runtime install-type detection** for Nucleus auto-update. It replaces
-the current approach of baking a single `nucleus.executable.type` into the prepackaged app
-*before* electron-builder runs.
+A standalone auto-update library for Compose/JVM desktop applications — the **updating** half
+of a focused fork of [Nucleus](https://github.com/kdroidFilter/Nucleus), under the
+`com.seanproctor` namespace. It is the counterpart to
+[`nucleus-plugin`](https://github.com/sproctor/nucleus-plugin) (the **packaging** half), and is
+independent of the upstream monorepo so it can move on its own.
 
-## Why this exists
+It is a fork/extraction of the monorepo's `updater-runtime` module: the full updater, plus the
+new runtime install-type detection, with the handful of `core-runtime` classes it needs vendored
+in (so there is no dependency on the rest of Nucleus).
 
-Today the Gradle plugin stamps the install format into the jpackage app's `.cfg`
-(`-Dnucleus.executable.type=…`) before calling electron-builder with `--prepackaged`.
-Because `--prepackaged` takes exactly one directory and packages it into **every** target,
-each format needs its own prepackaged dir → **one electron-builder invocation per format**.
-That single-prepackaged-dir constraint is the only reason the plugin can't build
-`--linux AppImage deb rpm` in one invocation.
+## What it does
 
-This module moves detection to **runtime**, mirroring how electron-updater does it
-(`electron-updater/src/index.ts`): platform + the `resources/package-type` file that
-electron-builder writes **per target** into deb/rpm/pacman packages, plus the
-`APPIMAGE`/`SNAP` environment variables. With nothing baked into the shared input, the
-plugin can batch all formats of an OS into one invocation and let electron-builder own the
-`latest-<os>.yml` manifest.
+Self-updates desktop apps from an electron-builder-style release manifest (`latest-<os>.yml`):
 
-## Detection — `InstallTypeDetector`
+- **Linux** — AppImage, deb, rpm
+- **Windows** — NSIS (`.exe`), MSI
+- **macOS** — DMG / ZIP (applies the ZIP, Squirrel-style)
 
-| Platform | Signal (in priority order) | Result |
-|---|---|---|
-| Linux | `APPIMAGE` env set | `APPIMAGE` |
-| Linux | `SNAP` env set | `SNAP` |
-| Linux | `FLATPAK_ID` env / `/.flatpak-info` | `FLATPAK` |
-| Linux | `resources/package-type` = `deb`/`rpm`/`pacman` | `DEB`/`RPM`/`PACMAN` |
-| Linux | none | `UNKNOWN` (selection uses platform fallback) |
-| macOS | always | `ZIP` (updater applies the ZIP regardless of DMG/ZIP install) |
-| Windows | `resources/package-type` (Nucleus-written, optional) | `NSIS`/`MSI`/… |
-| Windows | none | `NSIS` (electron-updater is always NSIS on win32) |
+It checks a provider (GitHub Releases or a generic HTTP server) for a newer version, picks the
+artifact matching how *this* copy was installed, verifies its SHA-512, downloads it, and runs the
+platform-appropriate installer.
 
-electron-builder writes `package-type` **only** for Linux deb/rpm/pacman (its `FpmTarget`),
-not for AppImage (detected via `APPIMAGE`) and not on Windows. Consequences:
+## Runtime install-type detection
 
-- **Linux & macOS** need no baked marker — batching is clean and electron-builder can own
-  the manifest.
-- **Windows** has no electron-builder marker. To disambiguate `nsis` vs `msi` when a release
-  ships both, Nucleus must write its own per-target `package-type`. If a release ships a
-  single Windows installer, `UNKNOWN` + platform fallback (see `UpdateArtifactSelector`)
-  selects it correctly with no marker.
+The headline change vs. upstream: the install format is detected **at runtime** rather than baked
+into the app before packaging. This is what lets the packaging plugin build every format of an OS
+in a single electron-builder invocation. Detection (`InstallTypeDetector`) mirrors
+electron-updater's factory:
 
-## Module layout
+- **Linux** — `APPIMAGE` / `SNAP` / `FLATPAK` env, else electron-builder's per-target
+  `resources/package-type` (deb/rpm), else fall back to the legacy `nucleus.executable.type` marker.
+- **macOS** — always the ZIP.
+- **Windows** — a per-target `package-type` (nsis/msi) if present, else the legacy marker, else NSIS.
 
-- `Platform` — OS family detection.
-- `InstallType` — the format enum, with `selfUpdatable` and the artifact-matching rule
-  (`ArtifactMatch`) used to pick the right file from a manifest.
-- `Environment` / `SystemEnvironment` — the host-access seam (env vars, system properties,
-  files, process executable path), so detection is fully unit-testable.
-- `InstallTypeDetector` — the per-platform detection above.
-- `UpdateArtifactSelector` — maps a detected `InstallType` to the matching artifact, with
-  platform-default fallback (mirrors the updater-runtime `FileSelector`).
+It is fully unit-tested through an injectable `InstallEnvironment` seam.
 
-## Open questions (need a real build to confirm)
+## Layout
 
-1. **Where `resources/package-type` lands in Nucleus's jpackage install layout.**
-   `resourceDirCandidates()` probes the likely locations relative to `java.home` and the
-   launcher path; confirm against a real `.deb`/`.rpm` install.
-2. **That electron-builder emits `package-type` for prepackaged jpackage deb/rpm builds**
-   (it's gated on publish-config presence, which Nucleus has).
-3. **pacman artifact naming** — `PACMAN` assumes a `.pacman` artifact; verify against an
-   actual electron-builder pacman build.
+```
+com/seanproctor/potassium/updater/
+├── PotassiumUpdater.kt        entry point (checkForUpdates / download / installAndRestart)
+├── UpdaterConfig.kt           DSL config (provider, channel, currentVersion, …)
+├── Update{Result,Info,Event,Level}.kt · DownloadProgress.kt · Version.kt
+├── exception/UpdateException.kt
+├── provider/                  UpdateProvider · GitHubProvider · GenericProvider
+├── internal/                  InstallTypeDetector · InstallEnvironment · FileSelector ·
+│                              PlatformInstaller · PlatformInfo · YamlParser · ChecksumVerifier ·
+│                              UpdateMarker
+└── runtime/                   vendored from core-runtime, trimmed + rebranded:
+    ├── Platform.kt            OS detection
+    ├── PotassiumRuntime.kt    the InstallType enum + legacy executable-type marker reader
+    └── PotassiumApp.kt        app id/version (trimmed to what the updater uses)
+```
 
-## How it plugs into the rest of Nucleus
+### What was vendored from `core-runtime` (and what wasn't)
 
-- **`updater-runtime`** (`../Nucleus`): replace `ExecutableRuntime.type()` / the `format`
-  resolution in `NucleusUpdater` with `InstallTypeDetector.detect()`, keeping a fallback to
-  the existing `nucleus.executable.type` system property during migration.
-- **`nucleus-plugin`**: stop baking the marker for Linux/macOS, batch each OS's formats into
-  one electron-builder invocation, and let electron-builder own `latest-<os>.yml`. Keep a
-  per-target marker on Windows only if shipping nsis + msi together.
+Only what the updater actually imports: `Platform`, `ExecutableType` (→ `InstallType`),
+`ExecutableRuntime` (→ `PotassiumRuntime`), and `NucleusApp` (→ `PotassiumApp`, trimmed to
+`appId`/`version`). The rest of `core-runtime` — deep links, native library loading, single-instance,
+desktop-environment/Logger tools — is unrelated to updating and was left behind.
 
 ## Build
 
@@ -79,6 +67,9 @@ not for AppImage (detected via `APPIMAGE`) and not on Windows. Consequences:
 ./gradlew test
 ```
 
-Package namespace is `com.seanproctor.nucleus.updater`. If this is folded into the existing
-`updater-runtime`, the public types can keep the `io.github.kdroidfilter.nucleus.updater`
-package for drop-in source compatibility with current consumers.
+Kotlin 2.3.21 / JVM 17. 79 tests.
+
+## Status & attribution
+
+Draft / work in progress. Forked from kdroidFilter's Nucleus (`updater-runtime` + `core-runtime`);
+original copyright headers are retained. Package imports stay under `com.seanproctor.potassium.updater`.

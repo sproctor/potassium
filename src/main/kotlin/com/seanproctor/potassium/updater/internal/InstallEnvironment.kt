@@ -1,12 +1,15 @@
-package com.seanproctor.nucleus.updater
+package com.seanproctor.potassium.updater.internal
 
+import com.seanproctor.potassium.updater.runtime.PotassiumRuntime
+import com.seanproctor.potassium.updater.runtime.InstallType
+import com.seanproctor.potassium.updater.runtime.Platform
 import java.io.File
 
 /**
- * Host-environment accessors, abstracted so [InstallTypeDetector] is unit-testable with a
- * fake. The production implementation is [SystemEnvironment].
+ * Host-environment accessors, abstracted so [InstallTypeDetector] can be unit-tested with a
+ * fake. The production implementation is [SystemInstallEnvironment].
  */
-interface Environment {
+internal interface InstallEnvironment {
     /** The current platform. */
     val platform: Platform
 
@@ -24,11 +27,18 @@ interface Environment {
 
     /** The current process's executable path (used to locate the install dir), or null. */
     fun executablePath(): String?
+
+    /**
+     * The legacy install type baked by the plugin into the app before electron-builder runs
+     * (`-Dnucleus.executable.type=…`, or the GraalVM marker file). Used as a fallback while the
+     * plugin still embeds it; resolves via [PotassiumRuntime.type].
+     */
+    fun legacyType(): InstallType
 }
 
-/** [Environment] backed by the real JVM and filesystem. */
-object SystemEnvironment : Environment {
-    override val platform: Platform get() = Platform.current
+/** [InstallEnvironment] backed by the real JVM and filesystem. */
+internal object SystemInstallEnvironment : InstallEnvironment {
+    override val platform: Platform get() = Platform.Current
 
     override fun getenv(name: String): String? = System.getenv(name)
 
@@ -39,4 +49,6 @@ object SystemEnvironment : Environment {
     override fun readText(path: String): String? = File(path).takeIf { it.isFile }?.readText()
 
     override fun executablePath(): String? = ProcessHandle.current().info().command().orElse(null)
+
+    override fun legacyType(): InstallType = PotassiumRuntime.type()
 }

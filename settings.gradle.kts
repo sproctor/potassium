@@ -1,1 +1,1 @@
-rootProject.name = "nucleus-updater"
+rootProject.name = "potassium-updater"
