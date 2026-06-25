@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - '*'
+  # Allow re-running a release on demand against a tag/branch ref.
+  workflow_dispatch:
 
 jobs:
   gradle:
