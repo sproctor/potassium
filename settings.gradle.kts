@@ -26,6 +26,6 @@ develocity {
     }
 }
 
-rootProject.name = ("NucleusPlugin")
+rootProject.name = ("potassium-packager")
 
 include(":plugin")

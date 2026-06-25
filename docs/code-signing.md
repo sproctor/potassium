@@ -1,6 +1,6 @@
 # Code Signing
 
-Code signing ensures your application is trusted by the operating system and not flagged as malware. Nucleus supports signing for Windows and macOS.
+Code signing ensures your application is trusted by the operating system and not flagged as malware. Potassium supports signing for Windows and macOS.
 
 ## Windows
 
@@ -222,7 +222,7 @@ For GitHub Actions, import the certificate into a temporary keychain:
 
 When building universal (fat) macOS binaries, `lipo` invalidates all code signatures. Signing must happen **after** the universal merge, in the `universal-macos` CI job.
 
-Nucleus provides a `setup-macos-signing` composite action (`.github/actions/setup-macos-signing`) that creates a temporary keychain and imports certificates:
+Potassium provides a `setup-macos-signing` composite action (`.github/actions/setup-macos-signing`) that creates a temporary keychain and imports certificates:
 
 ```yaml
 - name: Setup macOS signing

@@ -1,13 +1,13 @@
 # CI/CD
 
-Nucleus provides reusable composite actions and ready-to-use GitHub Actions workflows for building, packaging, and publishing desktop applications across all platforms.
+Potassium provides reusable composite actions and ready-to-use GitHub Actions workflows for building, packaging, and publishing desktop applications across all platforms.
 
-!!! tip "Use Nucleus actions in your own project"
+!!! tip "Use Potassium actions in your own project"
 
-    All composite actions can be referenced directly from the Nucleus repository — no need to copy them into your project:
+    All composite actions can be referenced directly from the Potassium repository — no need to copy them into your project:
 
     ```yaml
-    - uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+    - uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
     ```
 
     Replace `@main` with a specific tag (e.g. `@v1.0.0`) to pin a stable version.
@@ -35,14 +35,14 @@ flowchart TB
 
 ```
 
-## `setup-nucleus` Action
+## `setup-potassium` Action
 
-The `setup-nucleus` composite action (`.github/actions/setup-nucleus`) sets up the complete build environment: JetBrains Runtime 25, packaging tools, Gradle, and Node.js — all cross-platform.
+The `setup-potassium` composite action (`.github/actions/setup-potassium`) sets up the complete build environment: JetBrains Runtime 25, packaging tools, Gradle, and Node.js — all cross-platform.
 
 ### Usage
 
 ```yaml
-- uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+- uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
   with:
     jbr-version: '25.0.2b329.66'
     packaging-tools: 'true'
@@ -79,7 +79,7 @@ The `setup-nucleus` composite action (`.github/actions/setup-nucleus`) sets up t
 When `graalvm: 'true'` is set, the action installs **BellSoft Liberica NIK** instead of JBR, plus platform-specific toolchains:
 
 ```yaml
-- uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+- uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
   with:
     graalvm: 'true'
     setup-gradle: 'true'
@@ -171,8 +171,8 @@ jobs:
           tag="$(git describe --tags --abbrev=0)"
           echo "RELEASE_VERSION=$tag" >> "$GITHUB_ENV"
 
-      - name: Setup Nucleus
-        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+      - name: Setup Potassium
+        uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
         with:
           jbr-version: '25.0.2b329.66'
           packaging-tools: 'true'
@@ -225,7 +225,7 @@ matrix:
       jbr-download-url: 'https://example.com/jbr-25-macos-x64-custom.tar.gz'
 
 steps:
-  - uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+  - uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
     with:
       jbr-version: '25.0.2b329.66'
       jbr-download-url: ${{ matrix.jbr-download-url || '' }}
@@ -241,7 +241,7 @@ val releaseVersion = System.getenv("RELEASE_VERSION")
     ?.takeIf { it.isNotBlank() }
     ?: "1.0.0"
 
-nucleus.application {
+potassium.application {
     nativeDistributions {
         packageVersion = releaseVersion
     }
@@ -250,7 +250,7 @@ nucleus.application {
 
 ## Universal macOS Binaries
 
-Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then optionally sign and notarize. Nucleus includes reusable composite actions (`setup-macos-signing` and `build-macos-universal`):
+Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then optionally sign and notarize. Potassium includes reusable composite actions (`setup-macos-signing` and `build-macos-universal`):
 
 ```yaml
   universal-macos:
@@ -353,7 +353,7 @@ Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then opti
 
 ## Windows MSIX Bundle
 
-Combine amd64 and arm64 `.appx` files into a single `.msixbundle`. Nucleus includes a reusable composite action (`build-windows-appxbundle`):
+Combine amd64 and arm64 `.appx` files into a single `.msixbundle`. Potassium includes a reusable composite action (`build-windows-appxbundle`):
 
 ```yaml
   bundle-windows:
@@ -391,7 +391,7 @@ Combine amd64 and arm64 `.appx` files into a single `.msixbundle`. Nucleus inclu
 
 ## Publish to GitHub Releases
 
-After all builds complete, create a GitHub Release with all artifacts and update YML files. Nucleus includes composite actions for both (`generate-update-yml` and `publish-release`):
+After all builds complete, create a GitHub Release with all artifacts and update YML files. Potassium includes composite actions for both (`generate-update-yml` and `publish-release`):
 
 ```yaml
   publish:
@@ -467,11 +467,11 @@ After all builds complete, create a GitHub Release with all artifacts and update
 
 ## Composite Actions Reference
 
-Nucleus provides reusable composite actions that you can reference directly in your workflows using `kdroidFilter/Nucleus/.github/actions/<action>@main`:
+Potassium provides reusable composite actions that you can reference directly in your workflows using `kdroidFilter/Nucleus/.github/actions/<action>@main`:
 
 | Action | Usage | Description |
 |--------|-------|-------------|
-| `setup-nucleus` | `kdroidFilter/Nucleus/.github/actions/setup-nucleus@main` | Setup JBR 25, packaging tools, Gradle, Node.js |
+| `setup-potassium` | `kdroidFilter/Nucleus/.github/actions/setup-potassium@main` | Setup JBR 25, packaging tools, Gradle, Node.js |
 | `setup-macos-signing` | `kdroidFilter/Nucleus/.github/actions/setup-macos-signing@main` | Create temporary keychain and import signing certificates |
 | `build-macos-universal` | `kdroidFilter/Nucleus/.github/actions/build-macos-universal@main` | Merge arm64 + x64 into universal binary via `lipo`, sign, and package |
 | `build-windows-appxbundle` | `kdroidFilter/Nucleus/.github/actions/build-windows-appxbundle@main` | Combine amd64 + arm64 `.appx` into `.msixbundle` |
@@ -480,7 +480,7 @@ Nucleus provides reusable composite actions that you can reference directly in y
 
 ## GraalVM Native Image Release
 
-Build and publish GraalVM native packages (DEB, DMG, NSIS) on tag push. Uses `setup-nucleus` with `graalvm: 'true'` and the `packageGraalvm<Format>` tasks:
+Build and publish GraalVM native packages (DEB, DMG, NSIS) on tag push. Uses `setup-potassium` with `graalvm: 'true'` and the `packageGraalvm<Format>` tasks:
 
 ```yaml
 name: Release GraalVM Native Image
@@ -520,8 +520,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Nucleus (GraalVM)
-        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+      - name: Setup Potassium (GraalVM)
+        uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
         with:
           graalvm: 'true'
           setup-gradle: 'true'
@@ -561,11 +561,11 @@ These tasks first compile the native image via `packageGraalvmNative`, then pack
 
 ## Tips
 
-- **JBR 25 required**: Use `setup-nucleus` for all packaging builds — it installs JBR 25 automatically
+- **JBR 25 required**: Use `setup-potassium` for all packaging builds — it installs JBR 25 automatically
 - **Pin a version**: Use a tag (e.g. `@v1.0.0`) instead of `@main` for reproducible builds
 - **Concurrency**: Use `concurrency` to prevent parallel releases
 - **fail-fast: false**: Continue building other platforms if one fails
 - **Timeout**: Set generous timeouts (120min) for Flatpak/Snap builds
-- **Caching**: `setup-nucleus` enables Gradle caching automatically via `gradle/actions/setup-gradle@v4`
-- **No checkout needed**: When using actions from `kdroidFilter/Nucleus`, GitHub fetches them automatically — no need to checkout the Nucleus repository
+- **Caching**: `setup-potassium` enables Gradle caching automatically via `gradle/actions/setup-gradle@v4`
+- **No checkout needed**: When using actions from `kdroidFilter/Nucleus`, GitHub fetches them automatically — no need to checkout the Potassium repository
 - **workflow_dispatch**: Add it as a trigger to allow re-running a release manually

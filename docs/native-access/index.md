@@ -1,11 +1,11 @@
 # Nucleus Native Access
 
-Every now and then, no runtime library covers your exact native API need. Nucleus handles the common cases with JNI — but when you need something specific (a platform API, a custom algorithm, a C library), the usual path involves writing JNI glue in C, building a `.so`/`.dylib`/`.dll`, bundling it, and wiring it up from Kotlin. That's a lot of friction for what should be a simple call.
+Every now and then, no runtime library covers your exact native API need. Potassium handles the common cases with JNI — but when you need something specific (a platform API, a custom algorithm, a C library), the usual path involves writing JNI glue in C, building a `.so`/`.dylib`/`.dll`, bundling it, and wiring it up from Kotlin. That's a lot of friction for what should be a simple call.
 
 **Nucleus Native Access** removes that friction. Write your native logic in **Kotlin/Native**, and the plugin generates the FFM bridge automatically. No C, no build scripts, no manual JNI plumbing — just Kotlin on both sides.
 
 !!! note "FFM, not JNI"
-    Nucleus's built-in runtime libraries (decorated windows, dark mode, notifications…) use **JNI** for broad compatibility. Nucleus Native Access uses the **Foreign Function & Memory (FFM) API** (JEP 454, stable since JDK 22). Both are valid approaches, but FFM lets you write the native side in pure Kotlin rather than C.
+    Potassium's built-in runtime libraries (decorated windows, dark mode, notifications…) use **JNI** for broad compatibility. Nucleus Native Access uses the **Foreign Function & Memory (FFM) API** (JEP 454, stable since JDK 22). Both are valid approaches, but FFM lets you write the native side in pure Kotlin rather than C.
 
 ## How It Works
 
@@ -30,7 +30,7 @@ The generated JVM proxies have **the exact same API** as your native classes —
 ## Setup
 
 !!! note "Separate versioning"
-    Nucleus Native Access is versioned independently from Nucleus. Check the latest version on the [NucleusNativeAccess repository](https://github.com/kdroidFilter/NucleusNativeAccess).
+    Nucleus Native Access is versioned independently from Potassium. Check the latest version on the [NucleusNativeAccess repository](https://github.com/kdroidFilter/NucleusNativeAccess).
 
 Add the plugin to your Kotlin Multiplatform module:
 
@@ -67,7 +67,7 @@ The Compose compiler plugin doesn't support arbitrary Kotlin/Native targets (e.g
 my-app/
 ├── native/              ← Kotlin/Native + nucleusnativeaccess (no Compose)
 │   └── build.gradle.kts
-├── app/                 ← Compose Desktop + Nucleus, depends on :native
+├── app/                 ← Compose Desktop + Potassium, depends on :native
 │   └── build.gradle.kts
 └── settings.gradle.kts
 ```
@@ -99,7 +99,7 @@ plugins {
     kotlin("multiplatform")
     id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.seanproctor.nucleus") version "1.15.11"
+    id("com.seanproctor.potassium") version "1.15.11"
 }
 
 kotlin {
@@ -116,7 +116,7 @@ kotlin {
     }
 }
 
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
     jvmArgs += listOf("--enable-native-access=ALL-UNNAMED")
 }
@@ -130,7 +130,7 @@ Nucleus Native Access includes full GraalVM metadata generation:
 - `resource-config.json` for bundled native libraries
 - `reachability-metadata.json` for FFM descriptors
 
-No manual configuration needed — the generated metadata is picked up automatically by the [Nucleus GraalVM plugin](../graalvm/index.md).
+No manual configuration needed — the generated metadata is picked up automatically by the [Potassium GraalVM plugin](../graalvm/index.md).
 
 ## Repository
 

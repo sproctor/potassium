@@ -3,7 +3,7 @@
 ## Gradle DSL
 
 ```kotlin
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
 
     graalvm {
@@ -39,7 +39,7 @@ nucleus.application {
 ```
 
 !!! info "About `nativeImageConfigBaseDir`"
-    Nucleus ships all generic and platform-specific reflection metadata automatically. The `nativeImageConfigBaseDir` is only needed if you have app-specific entries that the automatic metadata doesn't cover — which is rare.
+    Potassium ships all generic and platform-specific reflection metadata automatically. The `nativeImageConfigBaseDir` is only needed if you have app-specific entries that the automatic metadata doesn't cover — which is rare.
 
 ## DSL Reference
 

@@ -1,17 +1,17 @@
-# Nucleus Gradle Plugin
+# Potassium Packager
 
 <p align="center">
-  <img src="assets/header.png" alt="Nucleus" />
+  <img src="assets/header.png" alt="Potassium" />
 </p>
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.seanproctor/nucleus-gradle-plugin?label=Maven%20Central)](https://central.sonatype.com/artifact/com.seanproctor/nucleus-gradle-plugin)
-[![License: MIT](https://img.shields.io/github/license/sproctor/nucleus-plugin)](https://github.com/sproctor/nucleus-plugin/blob/main/LICENSE)
+[![Maven Central](https://img.shields.io/maven-central/v/com.seanproctor/potassium-packager?label=Maven%20Central)](https://central.sonatype.com/artifact/com.seanproctor/potassium-packager)
+[![License: MIT](https://img.shields.io/github/license/sproctor/potassium-packager)](https://github.com/sproctor/potassium-packager/blob/main/LICENSE)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0%2B-7F52FF?logo=kotlin&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)
 
-**Nucleus is a Gradle plugin for packaging and distributing Compose / JVM desktop applications** on macOS, Windows, and Linux.
+**Potassium is a Gradle plugin for packaging and distributing Compose / JVM desktop applications** on macOS, Windows, and Linux.
 
-It is a drop-in extension of the official JetBrains Compose Desktop plugin — keep your existing `compose.desktop` configuration and opt into the capabilities you need. Nucleus picks up where jpackage stops: more installer formats, real code signing and notarization, built-in auto-update, and GraalVM Native Image builds, all from a single Gradle DSL.
+It is a drop-in extension of the official JetBrains Compose Desktop plugin — keep your existing `compose.desktop` configuration and opt into the capabilities you need. Potassium picks up where jpackage stops: more installer formats, real code signing and notarization, built-in auto-update, and GraalVM Native Image builds, all from a single Gradle DSL.
 
 ## What it does
 
@@ -25,7 +25,7 @@ It is a drop-in extension of the official JetBrains Compose Desktop plugin — k
 
 ### Go further
 
-- **GraalVM Native Image** — compile your app into a standalone native binary. Nucleus resolves the reachability metadata transparently, so most apps build with zero manual reflection config.
+- **GraalVM Native Image** — compile your app into a standalone native binary. Potassium resolves the reachability metadata transparently, so most apps build with zero manual reflection config.
 - **AOT cache** — enable the JDK 25+ ahead-of-time cache for faster startup with a single flag.
 - **ProGuard release builds** — optimization and obfuscation for production.
 - **Trusted CA certificates** — import custom root CAs into the bundled JVM's `cacerts` at build time.
@@ -49,10 +49,10 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.nucleus") version "1.15.11"
+    id("com.seanproctor.potassium") version "1.15.11"
 }
 
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
 
     nativeDistributions {
@@ -68,17 +68,16 @@ nucleus.application {
 ./gradlew packageDistributionForCurrentOS  # Build installers for the current OS
 ```
 
-!!! note "DSL imports stay the same"
-    The Kotlin DSL types remain under `io.github.kdroidfilter.nucleus.*` (for example
-    `import io.github.kdroidfilter.nucleus.desktop.application.dsl.TargetFormat`). Only the
-    Maven coordinates and the plugin id use the `com.seanproctor` group.
+!!! note "Kotlin DSL imports"
+    The Kotlin DSL types live under `com.seanproctor.potassium.*` (for example
+    `import com.seanproctor.potassium.desktop.application.dsl.TargetFormat`).
 
 ## Coordinates
 
-- **Plugin id:** `com.seanproctor.nucleus`
+- **Plugin id:** `com.seanproctor.potassium`
 - **Latest version:** `1.15.11`
 - **Published to:** Maven Central
-- **Repository:** [github.com/sproctor/nucleus-plugin](https://github.com/sproctor/nucleus-plugin)
+- **Repository:** [github.com/sproctor/potassium-packager](https://github.com/sproctor/potassium-packager)
 
 ## Requirements
 
@@ -97,5 +96,5 @@ nucleus.application {
 
 ## License
 
-MIT — See [LICENSE](https://github.com/sproctor/nucleus-plugin/blob/main/LICENSE).
+MIT — See [LICENSE](https://github.com/sproctor/potassium-packager/blob/main/LICENSE).
 </content>

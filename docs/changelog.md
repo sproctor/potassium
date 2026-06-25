@@ -6,7 +6,7 @@
 
 ### New Modules
 
-- **Notification Common** (`nucleus.notification-common`) — Unified cross-platform notification API for Linux, Windows, and macOS behind a single DSL. Supports per-notification callbacks, up to 5 action buttons, image attachments, and dismiss handling.
+- **Notification Common** (`potassium.notification-common`) — Unified cross-platform notification API for Linux, Windows, and macOS behind a single DSL. Supports per-notification callbacks, up to 5 action buttons, image attachments, and dismiss handling.
 
 ### New Features
 
@@ -14,7 +14,7 @@
 - **Title bar controls-side plumbing (core/JBR/JNI)** — Add non-breaking `WindowControlsSide` + `LocalWindowControlsSide` infrastructure to share platform-resolved window controls side with core layout. This stage is infrastructure only and does not change current title bar layout behavior.
 - **GraalVM reachability metadata for FileKit and dbus-java** — Apps using FileKit on Linux no longer need manual reachability entries for xdg-desktop-portal file dialogs. Includes new dbus-java conditional library metadata and Linux JDK internals (`UnixSystem`, `NativePRNG$NonBlocking`, `CollationData`).
 - **Windows notification shortcut policies** — New `ShortcutPolicy` enum on `WindowsNotificationCenter` for finer control over Start Menu shortcut creation behavior.
-- **`NucleusApp.appName` and `NucleusApp.aumid` properties** — Expose application name and AUMID for better configuration handling.
+- **`PotassiumApp.appName` and `PotassiumApp.aumid` properties** — Expose application name and AUMID for better configuration handling.
 
 ### Bug Fixes
 
@@ -30,7 +30,7 @@
 
 - **GraalVM status updated to alpha** — GraalVM Native Image support is now labeled "alpha" instead of "experimental", reflecting the improved out-of-the-box experience with centralized reachability metadata.
 - **New System Tray documentation** — Full documentation section for ComposeNativeTray with screenshots and demo GIFs.
-- **Landing page rewrite** — Repositioned Nucleus as a native Electron successor with bold performance comparisons.
+- **Landing page rewrite** — Repositioned Potassium as a native Electron successor with bold performance comparisons.
 
 ---
 
@@ -40,7 +40,7 @@
 
 ### New Modules
 
-- **System Info** (`nucleus.system-info`) — Cross-platform system information module with JNI native implementations for Linux, Windows, and macOS. Exposes CPU, memory, and GPU metrics in real-time.
+- **System Info** (`potassium.system-info`) — Cross-platform system information module with JNI native implementations for Linux, Windows, and macOS. Exposes CPU, memory, and GPU metrics in real-time.
     - **GPU detection and live metrics** — Temperature, usage, VRAM, clock speeds, power draw, and fan speed on all platforms
     - **macOS**: IOKit & SMC for GPU metrics, supports Apple Silicon and discrete GPUs
     - **Windows**: DXGI for GPU enumeration, NVIDIA NVML + AMD ADL2 + Intel IGCL for live metrics, WMI thermal zone sensors, performance data for real-time CPU frequency
@@ -184,29 +184,29 @@
 
 ### New Modules
 
-- **Notification macOS** (`nucleus.notification-macos`) — Full UserNotifications API mapping via JNI. Supports rich notifications with title, subtitle, body, sound, badge, categories with actions, and delivery scheduling. Thread safety with EDT dispatch for delegate callbacks.
+- **Notification macOS** (`potassium.notification-macos`) — Full UserNotifications API mapping via JNI. Supports rich notifications with title, subtitle, body, sound, badge, categories with actions, and delivery scheduling. Thread safety with EDT dispatch for delegate callbacks.
 
-- **Notification Linux** (`nucleus.notification-linux`) — Full freedesktop Desktop Notifications API mapping via JNI (D-Bus `org.freedesktop.Notifications`). Supports notification actions, icons, urgency levels, and expiration.
+- **Notification Linux** (`potassium.notification-linux`) — Full freedesktop Desktop Notifications API mapping via JNI (D-Bus `org.freedesktop.Notifications`). Supports notification actions, icons, urgency levels, and expiration.
 
-- **Notification Windows** (`nucleus.notification-windows`) — Full Windows Toast Notifications API via JNI (WinRT). Rich toast templates with text, images, buttons, and audio.
+- **Notification Windows** (`potassium.notification-windows`) — Full Windows Toast Notifications API via JNI (WinRT). Rich toast templates with text, images, buttons, and audio.
 
-- **Launcher Linux** (`nucleus.launcher-linux`) — Full Unity Launcher API mapping via JNI (`com.canonical.Unity.LauncherEntry` + `com.canonical.dbusmenu`). Badge count, progress bar, urgency flag, and quicklist menus with D-Bus menu support. Compatible with GNOME, KDE Plasma, and other DEs.
+- **Launcher Linux** (`potassium.launcher-linux`) — Full Unity Launcher API mapping via JNI (`com.canonical.Unity.LauncherEntry` + `com.canonical.dbusmenu`). Badge count, progress bar, urgency flag, and quicklist menus with D-Bus menu support. Compatible with GNOME, KDE Plasma, and other DEs.
 
-- **Launcher macOS** (`nucleus.launcher-macos`) — Dock menu API via JNI. Custom Dock context menu items with native callbacks. Requires `CRITICAL_ALERT` entitlement for certain notification features.
+- **Launcher macOS** (`potassium.launcher-macos`) — Dock menu API via JNI. Custom Dock context menu items with native callbacks. Requires `CRITICAL_ALERT` entitlement for certain notification features.
 
-- **Launcher Windows** (`nucleus.launcher-windows`) — Windows Launcher API via JNI (WinRT/COM). Badge notifications, Jump Lists (`ICustomDestinationList`), overlay icons, and thumbnail toolbar buttons (`ITaskbarList3`) on the taskbar.
+- **Launcher Windows** (`potassium.launcher-windows`) — Windows Launcher API via JNI (WinRT/COM). Badge notifications, Jump Lists (`ICustomDestinationList`), overlay icons, and thumbnail toolbar buttons (`ITaskbarList3`) on the taskbar.
 
-- **Freedesktop Icons** (`nucleus.freedesktop-icons`) — Type-safe constants for the freedesktop Icon Naming Specification. Shared dependency between `notification-linux` and `launcher-linux`.
+- **Freedesktop Icons** (`potassium.freedesktop-icons`) — Type-safe constants for the freedesktop Icon Naming Specification. Shared dependency between `notification-linux` and `launcher-linux`.
 
-- **Global Hotkey** (`nucleus.global-hotkey`) — Cross-platform global keyboard shortcut registration.
+- **Global Hotkey** (`potassium.global-hotkey`) — Cross-platform global keyboard shortcut registration.
     - **Windows**: Low-level keyboard hook
     - **macOS**: Carbon API (`RegisterEventHotKey`)
     - **Linux**: X11 key grabbing + Wayland portal (`org.freedesktop.portal.GlobalShortcuts`)
     - Thread-safe registration/unregistration with synchronized init
 
-- **Menu macOS** (`nucleus.menu-macos`) — Native macOS menu bar API via JNI. Includes GraalVM reachability metadata for JNI callbacks.
+- **Menu macOS** (`potassium.menu-macos`) — Native macOS menu bar API via JNI. Includes GraalVM reachability metadata for JNI callbacks.
 
-- **SF Symbols** (`nucleus.sf-symbols`) — Apple SF Symbols integration module.
+- **SF Symbols** (`potassium.sf-symbols`) — Apple SF Symbols integration module.
 
 ### Bug Fixes
 
@@ -262,7 +262,7 @@
     - JNI superclass resolution — includes parent classes needed for field access
     - Enriched class entries — adds non-native methods and fields to JNI class metadata
 
-- **`CleanupGraalvmMetadataTask`** — New Gradle task that removes entries from your manual `reachability-metadata.json` that are already covered by Nucleus library metadata (L1/L2/L3). Keeps manual config minimal.
+- **`CleanupGraalvmMetadataTask`** — New Gradle task that removes entries from your manual `reachability-metadata.json` that are already covered by Potassium library metadata (L1/L2/L3). Keeps manual config minimal.
 
 - **File association support for GraalVM native image on macOS** — Register file type associations in the native image `.app` bundle so macOS opens files with your application.
 
@@ -343,18 +343,18 @@ nativeDistributions {
 
 ### New Modules
 
-- **Taskbar Progress** (`nucleus.taskbar-progress`) — Native taskbar/dock progress bar and attention requests on all platforms. Shows download progress, build status, or any long-running operation directly in the OS taskbar. See Taskbar Progress.
+- **Taskbar Progress** (`potassium.taskbar-progress`) — Native taskbar/dock progress bar and attention requests on all platforms. Shows download progress, build status, or any long-running operation directly in the OS taskbar. See Taskbar Progress.
     - **Windows**: `ITaskbarList3` (progress value/state) + `FlashWindowEx` (attention)
     - **macOS**: `NSDockTile` with custom `NSProgressIndicator` overlay + `NSApplication.requestUserAttention`
     - **Linux**: D-Bus `com.canonical.Unity.LauncherEntry` (GNOME, KDE Plasma, and compatible DEs)
     - Five states: `NO_PROGRESS`, `INDETERMINATE`, `NORMAL`, `ERROR`, `PAUSED`
     - Attention requests: `INFORMATIONAL` (brief flash) and `CRITICAL` (until focus)
 
-- **App Metadata at Runtime** (`NucleusApp`) — New singleton in `core-runtime` that exposes plugin-injected metadata at runtime: `appId`, `version`, `vendor`, `description`. Populated via system properties and a generated `nucleus-app.properties` classpath resource. See Runtime APIs.
+- **App Metadata at Runtime** (`PotassiumApp`) — New singleton in `core-runtime` that exposes plugin-injected metadata at runtime: `appId`, `version`, `vendor`, `description`. Populated via system properties and a generated `potassium-app.properties` classpath resource. See Runtime APIs.
 
 ### New Features
 
-- **Centralized GraalVM native-image metadata** — Nucleus now ships all generic and platform-specific reflection metadata out of the box, organized in three levels:
+- **Centralized GraalVM native-image metadata** — Potassium now ships all generic and platform-specific reflection metadata out of the box, organized in three levels:
     - **L1 (graalvm-runtime JAR)** — Generic cross-platform reflection entries for Compose Desktop, AWT/Swing, Skiko, security providers, font managers, and more (~300+ types). Automatically picked up from the classpath by native-image.
     - **L2 (Oracle Reachability Metadata Repository)** — Automatic resolution of metadata for all runtime classpath dependencies from the [Oracle GraalVM Reachability Metadata Repository](https://github.com/oracle/graalvm-reachability-metadata). Covers popular libraries like ktor, kotlinx.serialization, SLF4J, Logback, and many others. Enabled by default.
     - **L3 (plugin platform metadata)** — Platform-specific AWT/Java2D/font/security metadata for macOS, Windows, and Linux, shipped inside the Gradle plugin. Written to the build directory at compile time — no per-platform `when` block needed in your build script.
@@ -367,13 +367,13 @@ nativeDistributions {
 
 - **Auto-include Compose Multiplatform resources** — `graalvm-runtime` now includes `composeResources/.*` in the `native-image.properties` resource patterns, so all Compose resources (images, strings, fonts loaded via `Res.*`) are included automatically.
 
-- **Smart agent merge and deduplication** — The `runWithNativeAgent` task now deduplicates agent output against library metadata already shipped in classpath JARs. This prevents the tracing agent from re-adding entries that Nucleus (or other libraries) already provide, keeping your app-specific config clean and minimal.
+- **Smart agent merge and deduplication** — The `runWithNativeAgent` task now deduplicates agent output against library metadata already shipped in classpath JARs. This prevents the tracing agent from re-adding entries that Potassium (or other libraries) already provide, keeping your app-specific config clean and minimal.
 
 - **All JDK locale bundles auto-included** — Locale-specific resource bundles are now part of the centralized metadata, reducing runtime `MissingResourceException` crashes.
 
 - **`UpdateLevel` enum** — `UpdateResult.Available` now carries an `UpdateLevel` (`MAJOR`, `MINOR`, `PATCH`, `PRE_RELEASE`) computed by comparing semantic version numbers. Allows the UI to adapt messaging based on update significance. See [Auto Update](auto-update.md#update-level).
 
-- **Post-update detection** — New `NucleusUpdater.consumeUpdateEvent()` and `wasJustUpdated()` methods detect that the app was just updated and return an `UpdateEvent` with `previousVersion`, `newVersion`, and `updateLevel`. Useful for "What's new" dialogs, migrations, or analytics. See [Auto Update](auto-update.md#post-update-detection).
+- **Post-update detection** — New `PotassiumUpdater.consumeUpdateEvent()` and `wasJustUpdated()` methods detect that the app was just updated and return an `UpdateEvent` with `previousVersion`, `newVersion`, and `updateLevel`. Useful for "What's new" dialogs, migrations, or analytics. See [Auto Update](auto-update.md#post-update-detection).
 
 - **Default jlink modules expanded** — `java.net.http` and `jdk.accessibility` are now included in the default jlink module list alongside `java.base`, `java.desktop`, `java.logging`, and `jdk.crypto.ec`. No need to add them manually.
 
@@ -382,7 +382,7 @@ nativeDistributions {
 ### Bug Fixes
 
 - **Eliminate resize flash on `DecoratedDialog` (Windows)** — Add native `WndProc` subclass for dialogs that handles `WM_ERASEBKGND` and `WM_WINDOWPOSCHANGING` to prevent white flash during dialog resize.
-- **Fix WM_CLASS showing `LambdaForm` class name in GNOME under native image** — Add `@TargetClass` substitution for `XToolkit.getAWTAppClassName()` that returns the real app name from `NucleusApp.appId` instead of the internal LambdaForm class.
+- **Fix WM_CLASS showing `LambdaForm` class name in GNOME under native image** — Add `@TargetClass` substitution for `XToolkit.getAWTAppClassName()` that returns the real app name from `PotassiumApp.appId` instead of the internal LambdaForm class.
 - **Fix Linux executable alias for GraalVM native image layout** — Support the native image binary directory structure when creating the executable symlink.
 - **Align native image WM_CLASS with `.desktop` `StartupWMClass`** — Ensures the GNOME taskbar icon matches the `.desktop` file.
 - **High-quality Linux icon generation** — Replace single-step `Graphics2D` resizing with Thumbnailator progressive bilinear downscaling, fixing blurry icons in DEB packages at small sizes (16x16, 32x32).
@@ -421,7 +421,7 @@ nativeDistributions {
 
 ### New Features
 
-- **Automatic resource inclusion for GraalVM native-image** — `graalvm-runtime` now ships a `native-image.properties` that auto-includes all `.svg`, `.ttf`, `.otf` resources, `nucleus/native/*` JNI libraries, and `META-INF/services/*` descriptors via glob patterns. Projects no longer need to run the tracing agent just to discover icon and font resources — they are embedded in the native binary automatically. The tracing agent is still required for reflection, JNI, resource bundles, and non-standard resources. See [Automatic Resource Inclusion](graalvm/index.md#automatic-resource-inclusion).
+- **Automatic resource inclusion for GraalVM native-image** — `graalvm-runtime` now ships a `native-image.properties` that auto-includes all `.svg`, `.ttf`, `.otf` resources, `potassium/native/*` JNI libraries, and `META-INF/services/*` descriptors via glob patterns. Projects no longer need to run the tracing agent just to discover icon and font resources — they are embedded in the native binary automatically. The tracing agent is still required for reflection, JNI, resource bundles, and non-standard resources. See [Automatic Resource Inclusion](graalvm/index.md#automatic-resource-inclusion).
 
 ---
 
@@ -501,7 +501,7 @@ nativeDistributions {
 
 ### New Features
 
-- **Automatic Liquid Glass support via `macOsSdkVersion`** — Nucleus now automatically patches the app launcher's `LC_BUILD_VERSION` Mach-O header to macOS SDK 26.0 using `vtool`, enabling Liquid Glass window decorations (larger traffic lights, rounded corners). This works with **any JDK** — a JDK compiled with Xcode 26 is no longer required. The `run` task uses a cached patched copy of the JVM, while distributable builds patch the launcher before signing. Controlled via `macOS { macOsSdkVersion = "26.0" }` (enabled by default, set to `null` to disable). Requires Xcode Command Line Tools. See [macOS 26 Window Appearance](targets/macos.md#macos-26-window-appearance-liquid-glass).
+- **Automatic Liquid Glass support via `macOsSdkVersion`** — Potassium now automatically patches the app launcher's `LC_BUILD_VERSION` Mach-O header to macOS SDK 26.0 using `vtool`, enabling Liquid Glass window decorations (larger traffic lights, rounded corners). This works with **any JDK** — a JDK compiled with Xcode 26 is no longer required. The `run` task uses a cached patched copy of the JVM, while distributable builds patch the launcher before signing. Controlled via `macOS { macOsSdkVersion = "26.0" }` (enabled by default, set to `null` to disable). Requires Xcode Command Line Tools. See [macOS 26 Window Appearance](targets/macos.md#macos-26-window-appearance-liquid-glass).
 - **`Modifier.clientRegion()` for JBR title bar hit testing** — New modifier function that registers composable elements as interactive client regions within a `DecoratedWindow`'s title bar. Client regions receive mouse events (clicks, presses) instead of triggering window dragging. Uses AWT-level mouse listeners with precise coordinate-based hit testing, replacing the old pointer-event-based `customTitleBarMouseEventHandler`. See Decorated Window.
 - **`decorated-window-jewel` module** — New module providing Jewel theme integration for `DecoratedWindow`. Used by the jewel-sample app.
 - **`decorated-window-material2` module** — New module providing Material 2 theme color mapping for `DecoratedWindow`, complementing the existing Material 3 module.
@@ -638,8 +638,8 @@ nativeDistributions {
 
 - **Native fullscreen with sliding title bar** — Platform-native fullscreen experience: Safari-like on macOS, Edge-like on Windows, Firefox-like on Linux. When the window enters fullscreen, the title bar becomes a floating overlay that slides down on hover near the top edge and slides back up when the pointer moves away. Enable with `Modifier.newFullscreenControls()` on `TitleBar` / `MaterialTitleBar`. See Decorated Window.
 - **macOS large corner radius** — New `Modifier.macOSLargeCornerRadius()` modifier applies the 26pt window corner radius used by Finder and Safari. Installs an invisible `NSToolbar` and repositions traffic light buttons to match Apple's native inset. See Decorated Window.
-- **System Color module** (`nucleus.system-color`) — Reactive detection of OS accent color and high contrast mode via JNI. Supports macOS (`NSColor.controlAccentColor`), Windows (DWM registry), and Linux (XDG Desktop Portal D-Bus). Composable APIs: `systemAccentColor()`, `isSystemInHighContrast()`. See System Color.
-- **Energy Manager module** (`nucleus.energy-manager`) — Comprehensive energy management with three tiers: full efficiency mode (EcoQoS + IDLE_PRIORITY_CLASS on Windows, `PRIO_DARWIN_BG` + task_policy_set on macOS, nice +19/ioprio/timerslack on Linux), light efficiency mode (CPU deprioritization only, no I/O throttling), and thread-level efficiency mode. Includes screen-awake (caffeine) API to prevent display sleep (IOPMAssertion on macOS, SetThreadExecutionState on Windows, D-Bus/X11 on Linux). Coroutine helpers: `withEfficiencyMode()`, `withLightEfficiencyMode()`. See Energy Manager.
+- **System Color module** (`potassium.system-color`) — Reactive detection of OS accent color and high contrast mode via JNI. Supports macOS (`NSColor.controlAccentColor`), Windows (DWM registry), and Linux (XDG Desktop Portal D-Bus). Composable APIs: `systemAccentColor()`, `isSystemInHighContrast()`. See System Color.
+- **Energy Manager module** (`potassium.energy-manager`) — Comprehensive energy management with three tiers: full efficiency mode (EcoQoS + IDLE_PRIORITY_CLASS on Windows, `PRIO_DARWIN_BG` + task_policy_set on macOS, nice +19/ioprio/timerslack on Linux), light efficiency mode (CPU deprioritization only, no I/O throttling), and thread-level efficiency mode. Includes screen-awake (caffeine) API to prevent display sleep (IOPMAssertion on macOS, SetThreadExecutionState on Windows, D-Bus/X11 on Linux). Coroutine helpers: `withEfficiencyMode()`, `withLightEfficiencyMode()`. See Energy Manager.
 - **Auto-center `DecoratedDialog` on parent window** — Dialogs are now automatically centered on their parent with reliable positioning via `windowOpened` event. See Decorated Window.
 - **macOS RTL traffic-light support** — Correct traffic light button positioning in right-to-left layouts. See Decorated Window.
 - **Centralized native library loading** — New `NativeLibraryLoader` with persistent cache replaces per-module loading logic.
@@ -695,7 +695,7 @@ nativeDistributions {
 - Restore title bar appearance before fullscreen exit animation.
 - Fallback to default icon for GraalVM native image on Windows.
 - Update `latest-mac.yml` checksums and file sizes after notarization.
-- Remove `xvfb-run` from test-graalvm workflow (Xvfb already started by `setup-nucleus`).
+- Remove `xvfb-run` from test-graalvm workflow (Xvfb already started by `setup-potassium`).
 
 ---
 
@@ -715,7 +715,7 @@ nativeDistributions {
 
 ### Bug Fixes
 
-- Remove `xvfb-run` from graalvm workflow (Xvfb already started by `setup-nucleus`).
+- Remove `xvfb-run` from graalvm workflow (Xvfb already started by `setup-potassium`).
 
 ---
 
@@ -725,7 +725,7 @@ nativeDistributions {
 
 ### New Features
 
-- Add `graalvm` option to `setup-nucleus` composite action.
+- Add `graalvm` option to `setup-potassium` composite action.
 - Configure Windows code signing for jewel-sample using shared certificate.
 
 ### Bug Fixes
@@ -764,7 +764,7 @@ No user-facing changes (tag only).
 ### New Features
 
 - **GraalVM Native Image support (experimental)** — Compile Compose Desktop apps into standalone native binaries with instant cold boot (~0.5 s), lower memory usage (~100–150 MB vs ~300–400 MB on JVM), and smaller bundles. New `graalvm {}` DSL block, `runWithNativeAgent` task for reflection metadata collection, and `packageGraalvmNative` / `packageGraalvmDeb` / `packageGraalvmDmg` / `packageGraalvmNsis` packaging tasks. Requires [BellSoft Liberica NIK 25](https://bell-sw.com/liberica-native-image-kit/). See [GraalVM Native Image](graalvm/index.md).
-- **New `graalvm-runtime` module** (`nucleus.graalvm-runtime`) — Centralizes native-image bootstrap logic into a single `GraalVmInitializer.initialize()` call: Metal L&F, `java.home`/`java.library.path` setup, charset/fontmanager early init, Linux HiDPI detection, and GraalVM `@TargetClass` font substitutions for Windows and Linux.
+- **New `graalvm-runtime` module** (`potassium.graalvm-runtime`) — Centralizes native-image bootstrap logic into a single `GraalVmInitializer.initialize()` call: Metal L&F, `java.home`/`java.library.path` setup, charset/fontmanager early init, Linux HiDPI detection, and GraalVM `@TargetClass` font substitutions for Windows and Linux.
 - **Decorated Window module split** — `decorated-window` split into `decorated-window-core`, `decorated-window-jbr` (JBR-based, same behavior as before), and `decorated-window-jni` (JBR-free, works with GraalVM). See [Migration Guide](#migration-guide-12x--13x) below.
 - **`decorated-window-jni` module** — New JNI-based implementation of `DecoratedWindow` that works without JetBrains Runtime, including support for Linux via native JNI bridge. Compatible with GraalVM Native Image.
 - **Linux HiDPI scaling support** — Native `GDK_SCALE` handling for correct rendering on HiDPI Linux displays.
@@ -803,24 +803,24 @@ The `decorated-window` module has been split into three modules:
 
 | Before (1.2.x) | After (1.3.x) |
 |---|---|
-| `nucleus.decorated-window` | `nucleus.decorated-window-core` (shared) |
-| | `nucleus.decorated-window-jbr` (JBR implementation) |
-| | `nucleus.decorated-window-jni` (JNI implementation, new) |
+| `potassium.decorated-window` | `potassium.decorated-window-core` (shared) |
+| | `potassium.decorated-window-jbr` (JBR implementation) |
+| | `potassium.decorated-window-jni` (JNI implementation, new) |
 
 **Dependency update** — replace:
 
 ```kotlin
-implementation("io.github.kdroidfilter:nucleus.decorated-window:<version>")
+implementation("io.github.kdroidfilter:potassium.decorated-window:<version>")
 ```
 
 With one of:
 
 ```kotlin
 // JBR-based (same behavior as before)
-implementation("io.github.kdroidfilter:nucleus.decorated-window-jbr:<version>")
+implementation("io.github.kdroidfilter:potassium.decorated-window-jbr:<version>")
 
 // JNI-based (no JBR dependency, works with GraalVM)
-implementation("io.github.kdroidfilter:nucleus.decorated-window-jni:<version>")
+implementation("io.github.kdroidfilter:potassium.decorated-window-jni:<version>")
 ```
 
 **Breaking changes in `TitleBarColors`** — the following fields have been **removed**:
@@ -915,8 +915,8 @@ See Decorated Window for full details on choosing between JBR and JNI.
 
 ### New Features
 
-- **Native SSL module** (`nucleus.native-ssl`) — Load OS-trusted certificates via JNI: macOS Keychain (`SecTrustCopyAnchorCertificates`), Windows Crypt32, Linux system cert paths. Aligns with JetBrains `jvm-native-trusted-roots`. Includes cryptographic `isSelfSigned` verification on macOS. See Native SSL.
-- **Native HTTP modules** (`nucleus.native-http`, `nucleus.native-http-okhttp`, `nucleus.native-http-ktor`) — HTTP clients that use the OS trust store out of the box, with OkHttp and Ktor adapters. See Native HTTP.
+- **Native SSL module** (`potassium.native-ssl`) — Load OS-trusted certificates via JNI: macOS Keychain (`SecTrustCopyAnchorCertificates`), Windows Crypt32, Linux system cert paths. Aligns with JetBrains `jvm-native-trusted-roots`. Includes cryptographic `isSelfSigned` verification on macOS. See Native SSL.
+- **Native HTTP modules** (`potassium.native-http`, `potassium.native-http-okhttp`, `potassium.native-http-ktor`) — HTTP clients that use the OS trust store out of the box, with OkHttp and Ktor adapters. See Native HTTP.
 - **CA certificate patching** — New build-time task patches the JVM's `cacerts` with OS-trusted certificates.
 - **ProGuard JNI keep rules** — Default ProGuard template now includes keep rules for `native-ssl`.
 
@@ -975,7 +975,7 @@ See Decorated Window for full details on choosing between JBR and JNI.
 
 ### Documentation
 
-- Add `TargetFormat` import change note (from `compose` to `nucleus`) to migration guide.
+- Add `TargetFormat` import change note (from `compose` to `potassium`) to migration guide.
 - Add ProGuard rules documentation for JNI libraries.
 - Add LLM documentation (`llms.txt`, `llms-full.txt`).
 - Add comprehensive packaging tools comparison page.
@@ -998,9 +998,9 @@ See Decorated Window for full details on choosing between JBR and JNI.
 
 ### New Features
 
-- **Decorated Window module** (`nucleus.decorated-window`) — Custom window decorations with native title bars, traffic light buttons on macOS, window controls on Windows (close/minimize/maximize), and GNOME/KDE styling on Linux. Replaces JNA/Unsafe with an Objective-C JNI bridge on macOS. See Decorated Window.
-- **Material theme module** (`nucleus.decorated-window-material`) — Automatic Material 3 color mapping for `DecoratedWindow`.
-- **Darkmode Detector module** (`nucleus.darkmode-detector`) — Reactive OS dark mode detection via JNI on macOS, Windows, and Linux (XDG Desktop Portal). Replaces the JNA-based implementation with pure JNI for smaller binaries and no external dependencies. See Darkmode Detector.
+- **Decorated Window module** (`potassium.decorated-window`) — Custom window decorations with native title bars, traffic light buttons on macOS, window controls on Windows (close/minimize/maximize), and GNOME/KDE styling on Linux. Replaces JNA/Unsafe with an Objective-C JNI bridge on macOS. See Decorated Window.
+- **Material theme module** (`potassium.decorated-window-material`) — Automatic Material 3 color mapping for `DecoratedWindow`.
+- **Darkmode Detector module** (`potassium.darkmode-detector`) — Reactive OS dark mode detection via JNI on macOS, Windows, and Linux (XDG Desktop Portal). Replaces the JNA-based implementation with pure JNI for smaller binaries and no external dependencies. See Darkmode Detector.
 - **RTL layout support** — Title bar respects right-to-left layout direction with dedicated toggle icons.
 - **KDE Breeze window styling** — Dedicated icon set, corner radius, and hover/pressed states matching KDE Plasma.
 - **GNOME window styling** — Rounded corners, subtle border, and inactive title bar styling matching GNOME/Adwaita.
@@ -1113,7 +1113,7 @@ See Decorated Window for full details on choosing between JBR and JNI.
 
 **Released: 2026-02-17**
 
-Initial release — fork of the JetBrains Compose Desktop Gradle plugin, repackaged as **Nucleus** with extended packaging, distribution, and runtime features.
+Initial release — fork of the JetBrains Compose Desktop Gradle plugin, repackaged as **Potassium** with extended packaging, distribution, and runtime features.
 
 ### Packaging & Distribution
 
@@ -1138,7 +1138,7 @@ Initial release — fork of the JetBrains Compose Desktop Gradle plugin, repacka
 
 ### Build & CI
 
-- **Composite actions** — `setup-nucleus`, `update-yml`, and release publishing actions.
+- **Composite actions** — `setup-potassium`, `update-yml`, and release publishing actions.
 - **Cross-platform release workflow** — macOS (arm64 + x64 + universal), Windows (x64 + arm64), Linux (x64 + arm64).
 - **Configuration cache support** — Full Gradle configuration cache compatibility.
 - **Plugin version from Git tag** — No manual version management in `gradle.properties`.

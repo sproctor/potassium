@@ -1,4 +1,4 @@
-/* Nucleus brand colors — matches the header background (#0D1B2A) */
+/* Potassium brand colors — matches the header background (#0D1B2A) */
 
 [data-md-color-primary="custom"] {
   --md-primary-fg-color: #0D1B2A;
@@ -14,7 +14,7 @@
   --md-primary-fg-color--dark: #060F1A;
 }
 
-/* Accent — blue from the Nucleus atom glow */
+/* Accent — blue from the Potassium atom glow */
 [data-md-color-accent="indigo"] {
   --md-accent-fg-color: #5B8DEF;
 }

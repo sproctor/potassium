@@ -1,15 +1,15 @@
-# Nucleus Gradle Plugin
+# Potassium Packager
 
-> Nucleus is a Gradle plugin for packaging and distributing Compose / JVM desktop applications on macOS, Windows, and Linux. It extends the official JetBrains Compose Desktop plugin and adds many installer formats (deb/rpm/AppImage/snap/flatpak, msi/exe/appx, dmg/pkg), code signing & notarization, electron-builder-based auto-update, and GraalVM Native Image builds. Plugin id: com.seanproctor.nucleus.
+> Potassium is a Gradle plugin for packaging and distributing Compose / JVM desktop applications on macOS, Windows, and Linux. It extends the official JetBrains Compose Desktop plugin and adds many installer formats (deb/rpm/AppImage/snap/flatpak, msi/exe/appx, dmg/pkg), code signing & notarization, electron-builder-based auto-update, and GraalVM Native Image builds. Plugin id: com.seanproctor.potassium.
 
-- Docs: https://github.com/sproctor/nucleus-plugin
-- GitHub: https://github.com/sproctor/nucleus-plugin
-- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/nucleus-gradle-plugin
+- Docs: https://github.com/sproctor/potassium-packager
+- GitHub: https://github.com/sproctor/potassium-packager
+- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/potassium-packager
 - License: MIT
 
-**Nucleus is a Gradle plugin for packaging and distributing Compose / JVM desktop applications** on macOS, Windows, and Linux.
+**Potassium is a Gradle plugin for packaging and distributing Compose / JVM desktop applications** on macOS, Windows, and Linux.
 
-It is a drop-in extension of the official JetBrains Compose Desktop plugin — keep your existing `compose.desktop` configuration and opt into the capabilities you need. Nucleus picks up where jpackage stops: more installer formats, real code signing and notarization, built-in auto-update, and GraalVM Native Image builds, all from a single Gradle DSL.
+It is a drop-in extension of the official JetBrains Compose Desktop plugin — keep your existing `compose.desktop` configuration and opt into the capabilities you need. Potassium picks up where jpackage stops: more installer formats, real code signing and notarization, built-in auto-update, and GraalVM Native Image builds, all from a single Gradle DSL.
 
 ## What it does
 
@@ -23,7 +23,7 @@ It is a drop-in extension of the official JetBrains Compose Desktop plugin — k
 
 ### Go further
 
-- **GraalVM Native Image** — compile your app into a standalone native binary. Nucleus resolves the reachability metadata transparently, so most apps build with zero manual reflection config.
+- **GraalVM Native Image** — compile your app into a standalone native binary. Potassium resolves the reachability metadata transparently, so most apps build with zero manual reflection config.
 - **AOT cache** — enable the JDK 25+ ahead-of-time cache for faster startup with a single flag.
 - **ProGuard release builds** — optimization and obfuscation for production.
 - **Trusted CA certificates** — import custom root CAs into the bundled JVM's `cacerts` at build time.
@@ -47,10 +47,10 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.nucleus") version "1.15.11"
+    id("com.seanproctor.potassium") version "1.15.11"
 }
 
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
 
     nativeDistributions {
@@ -66,15 +66,14 @@ nucleus.application {
 ./gradlew packageDistributionForCurrentOS  # Build installers for the current OS
 ```
 
-**DSL imports stay the same:** The Kotlin DSL types remain under `io.github.kdroidfilter.nucleus.*` (for example
-`import io.github.kdroidfilter.nucleus.desktop.application.dsl.TargetFormat`). Only the
-Maven coordinates and the plugin id use the `com.seanproctor` group.
+**Kotlin DSL imports:** The Kotlin DSL types live under `com.seanproctor.potassium.*` (for example
+`import com.seanproctor.potassium.desktop.application.dsl.TargetFormat`).
 ## Coordinates
 
-- **Plugin id:** `com.seanproctor.nucleus`
+- **Plugin id:** `com.seanproctor.potassium`
 - **Latest version:** `1.15.11`
 - **Published to:** Maven Central
-- **Repository:** [github.com/sproctor/nucleus-plugin](https://github.com/sproctor/nucleus-plugin)
+- **Repository:** [github.com/sproctor/potassium-packager](https://github.com/sproctor/potassium-packager)
 
 ## Requirements
 
@@ -93,7 +92,7 @@ Maven coordinates and the plugin id use the `com.seanproctor` group.
 
 ## License
 
-MIT — See [LICENSE](https://github.com/sproctor/nucleus-plugin/blob/main/LICENSE).
+MIT — See [LICENSE](https://github.com/sproctor/potassium-packager/blob/main/LICENSE).
 </content>
 
 ---
@@ -102,7 +101,7 @@ MIT — See [LICENSE](https://github.com/sproctor/nucleus-plugin/blob/main/LICEN
 
 ## Prerequisites
 
-Nucleus uses [electron-builder](https://www.electron.build/) under the hood to produce platform-specific installers (DMG, NSIS, DEB, RPM, AppImage, etc.). This requires **Node.js 18+** and **npm** installed on your build machine.
+Potassium uses [electron-builder](https://www.electron.build/) under the hood to produce platform-specific installers (DMG, NSIS, DEB, RPM, AppImage, etc.). This requires **Node.js 18+** and **npm** installed on your build machine.
 
 ```bash
 # Verify your installation
@@ -110,7 +109,7 @@ node --version   # v18.0.0 or later
 npm --version
 ```
 
-**CI/CD:** The `setup-nucleus` composite action installs Node.js automatically. See [CI/CD](ci-cd.md) for details.
+**CI/CD:** The `setup-potassium` composite action installs Node.js automatically. See [CI/CD](ci-cd.md) for details.
 ## Installation
 
 The plugin is published to Maven Central. Add Maven Central to your plugin repositories, then apply the plugin in your build script:
@@ -131,17 +130,16 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.nucleus") version "1.15.11"
+    id("com.seanproctor.potassium") version "1.15.11"
 }
 ```
 
-**DSL imports stay the same:** The Kotlin DSL types remain under `io.github.kdroidfilter.nucleus.*` (for example
-`import io.github.kdroidfilter.nucleus.desktop.application.dsl.TargetFormat`). Only the
-Maven coordinates and the plugin id use the `com.seanproctor` group.
+**Kotlin DSL imports:** The Kotlin DSL types live under `com.seanproctor.potassium.*` (for example
+`import com.seanproctor.potassium.desktop.application.dsl.TargetFormat`).
 ## Minimal Configuration
 
 ```kotlin
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
 
     nativeDistributions {
@@ -163,9 +161,9 @@ nucleus.application {
 
 #### Compose Hot Reload
 
-Nucleus is fully compatible with [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html). Since Nucleus extends the Compose plugin (not replaces it), Hot Reload works out of the box.
+Potassium is fully compatible with [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html). Since Potassium extends the Compose plugin (not replaces it), Hot Reload works out of the box.
 
-The `hotRun` task reads `mainClass` from the `compose.desktop.application` block. If you only set it in `nucleus.application`, add a minimal Compose block:
+The `hotRun` task reads `mainClass` from the `compose.desktop.application` block. If you only set it in `potassium.application`, add a minimal Compose block:
 
 ```kotlin
 compose.desktop.application {
@@ -318,12 +316,12 @@ val resourcesDir = File(System.getProperty("compose.application.resources.dir"))
 
 # Configuration
 
-All Nucleus configuration lives inside the `nucleus.application { }` block in your `build.gradle.kts`.
+All Potassium configuration lives inside the `potassium.application { }` block in your `build.gradle.kts`.
 
 ## Overview
 
 ```kotlin
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
     jvmArgs += listOf("-Xmx512m")
 
@@ -355,7 +353,7 @@ nucleus.application {
         // JDK modules
         modules("java.sql", "java.net.http")
 
-        // Nucleus features
+        // Potassium features
         cleanupNativeLibs = true
         enableAotCache = true
         splashImage = "splash.png"
@@ -436,7 +434,7 @@ Different platforms have different version requirements:
 | Linux DEB | `[EPOCH:]UPSTREAM[-REVISION]` | `1.2.3` |
 | Linux RPM | No dashes | `1.2.3` |
 
-## Nucleus-Specific Features
+## Potassium-Specific Features
 
 ### Native Library Cleanup
 
@@ -597,7 +595,7 @@ Release build tasks are suffixed with `Release`:
 ## Full DSL Tree
 
 ```
-nucleus.application {
+potassium.application {
     mainClass
     jvmArgs
     buildTypes {
@@ -632,7 +630,7 @@ nucleus.application {
 
 # Migration from org.jetbrains.compose
 
-Nucleus is a drop-in extension of the official JetBrains Compose Desktop plugin. All existing configuration is preserved — Nucleus only adds new capabilities.
+Potassium is a drop-in extension of the official JetBrains Compose Desktop plugin. All existing configuration is preserved — Potassium only adds new capabilities.
 
 ## Step 1: Add the Plugin
 
@@ -641,11 +639,11 @@ Nucleus is a drop-in extension of the official JetBrains Compose Desktop plugin.
      id("org.jetbrains.kotlin.jvm") version "2.3.10"
      id("org.jetbrains.kotlin.plugin.compose") version "2.3.10"
      id("org.jetbrains.compose") version "1.10.1"
-+    id("com.seanproctor.nucleus") version "1.15.11"
++    id("com.seanproctor.potassium") version "1.15.11"
  }
 ```
 
-> The official `org.jetbrains.compose` plugin remains — Nucleus extends it, not replaces it.
+> The official `org.jetbrains.compose` plugin remains — Potassium extends it, not replaces it.
 
 The plugin is published to Maven Central, so make sure `mavenCentral()` is in your `pluginManagement.repositories`:
 
@@ -661,22 +659,22 @@ pluginManagement {
 
 ## Step 2: Update Imports
 
-Replace the JetBrains Compose DSL imports with the Nucleus equivalents:
+Replace the JetBrains Compose DSL imports with the Potassium equivalents:
 
 ```diff
 -import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-+import io.github.kdroidfilter.nucleus.desktop.application.dsl.TargetFormat
++import com.seanproctor.potassium.desktop.application.dsl.TargetFormat
 ```
 
 This applies to all DSL types used in your `build.gradle.kts` (e.g. `TargetFormat`, `CompressionLevel`, `SigningAlgorithm`, etc.).
 
-## Step 3: Use the Nucleus DSL
+## Step 3: Use the Potassium DSL
 
-Replace the `compose.desktop.application` block with `nucleus.application` for packaging and distribution:
+Replace the `compose.desktop.application` block with `potassium.application` for packaging and distribution:
 
 ```diff
 -compose.desktop.application {
-+nucleus.application {
++potassium.application {
      mainClass = "com.example.MainKt"
 
      nativeDistributions {
@@ -700,7 +698,7 @@ Replace the `compose.desktop.application` block with `nucleus.application` for p
  }
 ```
 
-**Using Compose Hot Reload?:** Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `nucleus.application`. If you use [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html), either keep a minimal Compose block alongside Nucleus:
+**Using Compose Hot Reload?:** Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `potassium.application`. If you use [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html), either keep a minimal Compose block alongside Potassium:
     ```kotlin
     compose.desktop.application {
         mainClass = "com.example.MainKt"
@@ -713,12 +711,12 @@ Replace the `compose.desktop.application` block with `nucleus.application` for p
     ./gradlew hotRun -PmainClass=com.example.MainKt
     ```
 
-## Step 4: Add Nucleus Features (Optional)
+## Step 4: Add Potassium Features (Optional)
 
 Enable the features you need. All are opt-in:
 
 ```kotlin
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
 
     nativeDistributions {
@@ -726,7 +724,7 @@ nucleus.application {
         packageName = "MyApp"
         packageVersion = "1.0.0"
 
-        // --- New Nucleus features ---
+        // --- New Potassium features ---
         cleanupNativeLibs = true
         enableAotCache = true
         splashImage = "splash.png"
@@ -772,10 +770,10 @@ nucleus.application {
 
 ## What Changes
 
-| Feature | Before (compose) | After (nucleus)                                                                                                                       |
+| Feature | Before (compose) | After (potassium)                                                                                                                       |
 |---------|-------------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| DSL entry point | `compose.desktop.application` | `nucleus.application`                                                                                                                 |
-| DSL imports | `org.jetbrains.compose.desktop.application.dsl.*` | `io.github.kdroidfilter.nucleus.desktop.application.dsl.*`                                                                            |
+| DSL entry point | `compose.desktop.application` | `potassium.application`                                                                                                                 |
+| DSL imports | `org.jetbrains.compose.desktop.application.dsl.*` | `com.seanproctor.potassium.desktop.application.dsl.*`                                                                            |
 | Target formats | DMG, PKG, MSI, EXE, DEB, RPM | + NSIS, AppX, Portable, AppImage, Snap, Flatpak, archives                                                                             |
 | Native lib cleanup | Manual | `cleanupNativeLibs = true`                                                                                                            |
 | AOT cache | Not available | `enableAotCache = true`                                                                                                               |
@@ -796,7 +794,7 @@ nucleus.application {
 
 ### `homepage` is Required for Linux DEB
 
-Unlike Compose Desktop (which uses jpackage), Nucleus uses electron-builder for packaging. Electron-builder **requires** the `homepage` property when building DEB packages. Without it, the build will fail with:
+Unlike Compose Desktop (which uses jpackage), Potassium uses electron-builder for packaging. Electron-builder **requires** the `homepage` property when building DEB packages. Without it, the build will fail with:
 
 ```
 Please specify project homepage, see https://electron.build/configuration
@@ -823,36 +821,36 @@ Everything from the official plugin works unchanged:
 - All existing Gradle tasks (`run`, `packageDmg`, `packageDeb`, etc.)
 - `compose.desktop.currentOs` dependency
 - Source set configuration
-- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Nucleus extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so set it there too or pass `-PmainClass=...` (see [Step 3](#step-3-use-the-nucleus-dsl))
+- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Potassium extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so set it there too or pass `-PmainClass=...` (see [Step 3](#step-3-use-the-potassium-dsl))
 
 ---
 
 ## Documentation
 
-- [Getting Started](https://github.com/sproctor/nucleus-plugin/getting-started/)
-- [Configuration](https://github.com/sproctor/nucleus-plugin/configuration/)
-- [macOS Targets](https://github.com/sproctor/nucleus-plugin/targets/macos/)
-- [Windows Targets](https://github.com/sproctor/nucleus-plugin/targets/windows/)
-- [Linux Targets](https://github.com/sproctor/nucleus-plugin/targets/linux/)
-- [Sandboxing](https://github.com/sproctor/nucleus-plugin/sandboxing/)
-- [Code Signing](https://github.com/sproctor/nucleus-plugin/code-signing/)
-- [Auto Update](https://github.com/sproctor/nucleus-plugin/auto-update/)
-- [Publishing](https://github.com/sproctor/nucleus-plugin/publishing/)
-- [Trusted CA Certificates](https://github.com/sproctor/nucleus-plugin/trusted-certificates/)
-- [GraalVM Native Image](https://github.com/sproctor/nucleus-plugin/graalvm/index/)
-- [Configuration](https://github.com/sproctor/nucleus-plugin/graalvm/configuration/)
-- [Automatic Metadata Resolution](https://github.com/sproctor/nucleus-plugin/graalvm/automatic-metadata/)
-- [Runtime Bootstrap](https://github.com/sproctor/nucleus-plugin/graalvm/runtime-bootstrap/)
-- [Tasks & CI/CD](https://github.com/sproctor/nucleus-plugin/graalvm/tasks-ci/)
-- [Nucleus Native Access](https://github.com/sproctor/nucleus-plugin/native-access/index/)
-- [Supported Types](https://github.com/sproctor/nucleus-plugin/native-access/types/)
-- [Usage & Patterns](https://github.com/sproctor/nucleus-plugin/native-access/usage/)
-- [CI/CD](https://github.com/sproctor/nucleus-plugin/ci-cd/)
-- [Packaging](https://github.com/sproctor/nucleus-plugin/comparison/packaging/)
-- [Migration from org.jetbrains.compose](https://github.com/sproctor/nucleus-plugin/migration/)
-- [Roadmap](https://github.com/sproctor/nucleus-plugin/roadmap/)
+- [Getting Started](https://github.com/sproctor/potassium-packager/getting-started/)
+- [Configuration](https://github.com/sproctor/potassium-packager/configuration/)
+- [macOS Targets](https://github.com/sproctor/potassium-packager/targets/macos/)
+- [Windows Targets](https://github.com/sproctor/potassium-packager/targets/windows/)
+- [Linux Targets](https://github.com/sproctor/potassium-packager/targets/linux/)
+- [Sandboxing](https://github.com/sproctor/potassium-packager/sandboxing/)
+- [Code Signing](https://github.com/sproctor/potassium-packager/code-signing/)
+- [Auto Update](https://github.com/sproctor/potassium-packager/auto-update/)
+- [Publishing](https://github.com/sproctor/potassium-packager/publishing/)
+- [Trusted CA Certificates](https://github.com/sproctor/potassium-packager/trusted-certificates/)
+- [GraalVM Native Image](https://github.com/sproctor/potassium-packager/graalvm/index/)
+- [Configuration](https://github.com/sproctor/potassium-packager/graalvm/configuration/)
+- [Automatic Metadata Resolution](https://github.com/sproctor/potassium-packager/graalvm/automatic-metadata/)
+- [Runtime Bootstrap](https://github.com/sproctor/potassium-packager/graalvm/runtime-bootstrap/)
+- [Tasks & CI/CD](https://github.com/sproctor/potassium-packager/graalvm/tasks-ci/)
+- [Nucleus Native Access](https://github.com/sproctor/potassium-packager/native-access/index/)
+- [Supported Types](https://github.com/sproctor/potassium-packager/native-access/types/)
+- [Usage & Patterns](https://github.com/sproctor/potassium-packager/native-access/usage/)
+- [CI/CD](https://github.com/sproctor/potassium-packager/ci-cd/)
+- [Packaging](https://github.com/sproctor/potassium-packager/comparison/packaging/)
+- [Migration from org.jetbrains.compose](https://github.com/sproctor/potassium-packager/migration/)
+- [Roadmap](https://github.com/sproctor/potassium-packager/roadmap/)
 
 ## Full LLM Documentation
 
-- [llms-full.txt](https://github.com/sproctor/nucleus-plugin/llms-full.txt): Complete documentation in a single file
+- [llms-full.txt](https://github.com/sproctor/potassium-packager/llms-full.txt): Complete documentation in a single file
 

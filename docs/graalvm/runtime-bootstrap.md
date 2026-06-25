@@ -6,14 +6,14 @@ The `graalvm-runtime` module provides everything needed to bootstrap a Compose D
 
 ```kotlin
 dependencies {
-    implementation("io.github.kdroidfilter:nucleus.graalvm-runtime:<version>")
+    implementation("io.github.kdroidfilter:potassium.graalvm-runtime:<version>")
 }
 ```
 
 Then call `GraalVmInitializer.initialize()` as the **first line** of your `main()` function, before any AWT or Compose usage:
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.graalvm.GraalVmInitializer
+import com.seanproctor.potassium.graalvm.GraalVmInitializer
 
 fun main() {
     GraalVmInitializer.initialize()
@@ -61,7 +61,7 @@ The `graalvm-runtime` module solves this automatically. It ships a `native-image
 |---------|----------------|
 | `.*\.(svg\|ttf\|otf)` | All SVG icons and font files on the classpath — Jewel, IntelliJ Platform icons, Compose resources, your own icons |
 | `composeResources/.*` | All Compose Multiplatform resources (images, strings, fonts loaded via `Res.*`) |
-| `nucleus/native/.*` | All Nucleus JNI native libraries (`.dll`, `.dylib`, `.so`) |
+| `potassium/native/.*` | All Potassium JNI native libraries (`.dll`, `.dylib`, `.so`) |
 | `META-INF/services/.*` | All `ServiceLoader` descriptors (ktor, coil, SLF4J, etc.) |
 
 This means:

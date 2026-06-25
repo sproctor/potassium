@@ -1,6 +1,6 @@
 # macOS Targets
 
-Nucleus supports two macOS installer formats and universal (fat) binaries.
+Potassium supports two macOS installer formats and universal (fat) binaries.
 
 ## Formats
 
@@ -120,7 +120,7 @@ Each `content()` call adds an entry with an `(x, y)` position and a `DmgContentT
 !!! tip "Mapping from `create-dmg`"
     If you are migrating from a `create-dmg` shell script, the `content()` DSL maps directly to the `--icon` and `--app-drop-link` flags:
 
-    | `create-dmg` flag | Nucleus equivalent |
+    | `create-dmg` flag | Potassium equivalent |
     |---|---|
     | `--icon "MyApp.app" 130 220` | `content(x = 130, y = 220, type = DmgContentType.File, name = "MyApp.app")` |
     | `--app-drop-link 410 220` | `content(x = 410, y = 220, type = DmgContentType.Link, path = "/Applications")` |
@@ -169,12 +169,12 @@ macOS 26 introduces a refreshed window chrome with **Liquid Glass**: larger traf
 
 ### Automatic SDK patching
 
-Nucleus **automatically patches** the app launcher's `LC_BUILD_VERSION` via `vtool` so that AppKit enables Liquid Glass. This works with **any JDK** — a JDK compiled with Xcode 26 is no longer required.
+Potassium **automatically patches** the app launcher's `LC_BUILD_VERSION` via `vtool` so that AppKit enables Liquid Glass. This works with **any JDK** — a JDK compiled with Xcode 26 is no longer required.
 
 The patching is controlled by the `macOsSdkVersion` DSL property (defaults to `"26.0"`):
 
 ```kotlin
-nucleus {
+potassium {
     nativeDistributions {
         macOS {
             macOsSdkVersion = "26.0"  // default — enables Liquid Glass
@@ -199,7 +199,7 @@ nucleus {
 - Only effective on macOS; ignored on other platforms.
 
 !!! note "How it works"
-    `vtool` modifies the `LC_BUILD_VERSION` load command in the Mach-O binary, setting the SDK version to 26.0. This is the same header that the linker writes when you compile with `-sdk_version 26.0`. The modification only affects metadata — no code is changed. For distributable builds, the launcher is patched before signing, so the code signature covers the patched binary. For the `run` task, a patched copy of the JVM is produced by the `nucleusPatchMacJvm` task into `build/nucleus/patched-jvm/` and reused across runs. JavaExec forks the patched binary directly, so IntelliJ's debugger attaches normally (breakpoints, stop button) with Liquid Glass active.
+    `vtool` modifies the `LC_BUILD_VERSION` load command in the Mach-O binary, setting the SDK version to 26.0. This is the same header that the linker writes when you compile with `-sdk_version 26.0`. The modification only affects metadata — no code is changed. For distributable builds, the launcher is patched before signing, so the code signature covers the patched binary. For the `run` task, a patched copy of the JVM is produced by the `potassiumPatchMacJvm` task into `build/potassium/patched-jvm/` and reused across runs. JavaExec forks the patched binary directly, so IntelliJ's debugger attaches normally (breakpoints, stop button) with Liquid Glass active.
 
 ### GraalVM Native Image
 
@@ -218,7 +218,7 @@ No custom JDK is needed at runtime since the output is a standalone native binar
 
 ## Universal Binaries
 
-Nucleus supports creating universal (fat) macOS binaries that run natively on both Apple Silicon and Intel. This requires building on both architectures and merging with `lipo`.
+Potassium supports creating universal (fat) macOS binaries that run natively on both Apple Silicon and Intel. This requires building on both architectures and merging with `lipo`.
 
 See [CI/CD](../ci-cd.md#universal-macos-binaries) for the GitHub Actions workflow.
 

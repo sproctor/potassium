@@ -17,8 +17,12 @@ site
 .claude/settings.local.json
 
 # Native libraries (built on CI via build-natives.yaml)
-**/src/main/resources/nucleus/native/
+**/src/main/resources/potassium/native/
 
 # MSVC build artifacts
 *.obj
 *.exp
+
+# Python
+__pycache__/
+*.pyc

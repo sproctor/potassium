@@ -1,6 +1,6 @@
 # Publishing
 
-Nucleus can publish your installers and update metadata to **GitHub Releases**, **Amazon S3**, or a **generic HTTP server**.
+Potassium can publish your installers and update metadata to **GitHub Releases**, **Amazon S3**, or a **generic HTTP server**.
 
 ## Configuration
 
@@ -58,7 +58,7 @@ publish {
 
 ### Release Structure
 
-A GitHub Release created by Nucleus contains:
+A GitHub Release created by Potassium contains:
 
 ```
 v1.0.0 (Release)
@@ -174,7 +174,7 @@ Users on the `beta` channel receive both `latest` and `beta` updates. Users on t
 Configure the channel in the updater runtime:
 
 ```kotlin
-NucleusUpdater {
+PotassiumUpdater {
     provider = GitHubProvider(owner = "myorg", repo = "myapp")
     channel = "beta" // Subscribe to beta updates
 }

@@ -233,7 +233,7 @@ java {
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_11)
-        freeCompilerArgs.add("-opt-in=io.github.kdroidfilter.nucleus.ExperimentalNucleusLibrary")
+        freeCompilerArgs.add("-opt-in=com.seanproctor.potassium.ExperimentalPotassiumLibrary")
     }
 }
 
@@ -245,7 +245,7 @@ val composeMaterial3Version = project.findProperty("compose.material3.version")?
 val pluginVersion = project.version.toString()
 val buildConfig =
     tasks.register("buildConfig", GenerateBuildConfig::class.java) {
-        classFqName.set("io.github.kdroidfilter.nucleus.NucleusBuildConfig")
+        classFqName.set("com.seanproctor.potassium.PotassiumBuildConfig")
         generatedOutputDir.set(buildConfigDir)
         fieldsToGenerate.put("composeVersion", composeVersion)
         fieldsToGenerate.put("composeMaterial3Version", composeMaterial3Version)
@@ -270,13 +270,13 @@ gradlePlugin {
             implementationClass = property("IMPLEMENTATION_CLASS").toString()
             displayName = property("DISPLAY_NAME").toString()
             description = property("DESCRIPTION").toString()
-            tags.set(listOf("nucleus", "desktop", "jvm", "packaging"))
+            tags.set(listOf("potassium", "packager", "desktop", "jvm", "packaging"))
         }
     }
 }
 
 mavenPublishing {
-    coordinates(property("GROUP").toString(), "nucleus-gradle-plugin", project.version.toString())
+    coordinates(property("GROUP").toString(), "potassium-packager", project.version.toString())
 
     pom {
         name.set(property("DISPLAY_NAME").toString())

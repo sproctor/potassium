@@ -1,9 +1,9 @@
 # Auto Update
 
-Nucleus provides a complete auto-update solution compatible with the [electron-builder update format](https://www.electron.build/auto-update). The system has two parts:
+Potassium provides a complete auto-update solution compatible with the [electron-builder update format](https://www.electron.build/auto-update). The system has two parts:
 
 1. **Build-time**: The plugin generates update metadata files (`latest-*.yml`) alongside your installers
-2. **Runtime**: The `nucleus.updater-runtime` library checks for updates, downloads, and installs them
+2. **Runtime**: The `potassium.updater-runtime` library checks for updates, downloads, and installs them
 
 ## How It Works
 
@@ -23,7 +23,7 @@ flowchart LR
 ```
 
 !!! tip "Try it yourself"
-    Download an **older version** of the Nucleus demo app from the [GitHub Releases page](https://github.com/kdroidFilter/Nucleus/releases), install it, and launch it. The app will automatically detect that a newer version is available, download the update with a progress bar, and offer an "Install & Restart" button. This is the exact same flow your users will experience.
+    Download an **older version** of the Potassium demo app from the [GitHub Releases page](https://github.com/kdroidFilter/Nucleus/releases), install it, and launch it. The app will automatically detect that a newer version is available, download the update with a progress bar, and offer an "Install & Restart" button. This is the exact same flow your users will experience.
 
 ## Updatable Formats
 
@@ -33,7 +33,7 @@ flowchart LR
 | Windows | EXE/NSIS, NSIS Web, MSI | AppX/MSIX |
 | Linux | DEB, RPM, AppImage | Snap, Flatpak |
 
-PKG (macOS), AppX/MSIX (Windows), Snap, and Flatpak are not supported by the auto-updater because Nucleus assumes these formats are distributed through their respective app stores (Mac App Store, Microsoft Store, Snapcraft, Flathub), which handle updates natively.
+PKG (macOS), AppX/MSIX (Windows), Snap, and Flatpak are not supported by the auto-updater because Potassium assumes these formats are distributed through their respective app stores (Mac App Store, Microsoft Store, Snapcraft, Flathub), which handle updates natively.
 
 !!! warning "macOS: ZIP is required alongside DMG"
     On macOS, the auto-updater uses the **ZIP** format to perform the update (extract and replace the `.app` bundle silently). The DMG is used for initial installation only. You **must** include `TargetFormat.Zip` in your `targetFormats` configuration, otherwise macOS auto-update will not work:
@@ -140,7 +140,7 @@ releaseDate: '2025-06-15T10:30:00.000Z'
 
 ## Release Channels
 
-Nucleus supports three release channels. Different YML files are generated for each:
+Potassium supports three release channels. Different YML files are generated for each:
 
 | Channel | YML Files | Tag Pattern |
 |---------|-----------|-------------|
@@ -221,18 +221,18 @@ See [Publishing](publishing.md) for the full configuration reference.
 
 ```kotlin
 dependencies {
-    implementation("io.github.kdroidfilter:nucleus.updater-runtime:1.0.0")
+    implementation("io.github.kdroidfilter:potassium.updater-runtime:1.0.0")
 }
 ```
 
 ### Quick Start
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.updater.NucleusUpdater
-import io.github.kdroidfilter.nucleus.updater.UpdateResult
-import io.github.kdroidfilter.nucleus.updater.provider.GitHubProvider
+import com.seanproctor.potassium.updater.PotassiumUpdater
+import com.seanproctor.potassium.updater.UpdateResult
+import com.seanproctor.potassium.updater.provider.GitHubProvider
 
-val updater = NucleusUpdater {
+val updater = PotassiumUpdater {
     provider = GitHubProvider(owner = "myorg", repo = "myapp")
 }
 
@@ -255,7 +255,7 @@ when (val result = updater.checkForUpdates()) {
 ### Configuration
 
 ```kotlin
-NucleusUpdater {
+PotassiumUpdater {
     // Current app version (auto-detected from jpackage.app-version system property)
     currentVersion = "1.0.0"
 
@@ -281,7 +281,7 @@ NucleusUpdater {
 #### GitHub Releases
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.updater.provider.GitHubProvider
+import com.seanproctor.potassium.updater.provider.GitHubProvider
 
 provider = GitHubProvider(
     owner = "myorg",
@@ -293,7 +293,7 @@ provider = GitHubProvider(
 #### Generic HTTP Server
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.updater.provider.GenericProvider
+import com.seanproctor.potassium.updater.provider.GenericProvider
 
 provider = GenericProvider(
     baseUrl = "https://updates.example.com"
@@ -310,7 +310,7 @@ https://updates.example.com/MyApp-1.2.3-macos-arm64.dmg
 
 ### API Reference
 
-#### NucleusUpdater
+#### PotassiumUpdater
 
 | Method | Description |
 |--------|-------------|
@@ -372,7 +372,7 @@ data class UpdateEvent(
 @Composable
 fun UpdateBanner() {
     val updater = remember {
-        NucleusUpdater {
+        PotassiumUpdater {
             provider = GitHubProvider(owner = "myorg", repo = "myapp")
         }
     }
@@ -459,19 +459,19 @@ To fix this, pass a client pre-configured with the OS trust store (for example v
 
 ```kotlin
 dependencies {
-    implementation("io.github.kdroidfilter:nucleus.updater-runtime:<version>")
-    implementation("io.github.kdroidfilter:nucleus.native-http:<version>")
+    implementation("io.github.kdroidfilter:potassium.updater-runtime:<version>")
+    implementation("io.github.kdroidfilter:potassium.native-http:<version>")
 }
 ```
 
 **2. Inject the client in the updater config**
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.nativehttp.NativeHttpClient
-import io.github.kdroidfilter.nucleus.updater.NucleusUpdater
-import io.github.kdroidfilter.nucleus.updater.provider.GitHubProvider
+import com.seanproctor.potassium.nativehttp.NativeHttpClient
+import com.seanproctor.potassium.updater.PotassiumUpdater
+import com.seanproctor.potassium.updater.provider.GitHubProvider
 
-val updater = NucleusUpdater {
+val updater = PotassiumUpdater {
     provider = GitHubProvider(owner = "myorg", repo = "myapp")
     httpClient = NativeHttpClient.create()
 }
@@ -482,11 +482,11 @@ The injected client is used for **both** the metadata check and the file downloa
 You can also compose additional options via the builder extension:
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.nativehttp.NativeHttpClient.withNativeSsl
+import com.seanproctor.potassium.nativehttp.NativeHttpClient.withNativeSsl
 import java.net.http.HttpClient
 import java.time.Duration
 
-val updater = NucleusUpdater {
+val updater = PotassiumUpdater {
     provider = GitHubProvider(owner = "myorg", repo = "myapp")
     httpClient = HttpClient.newBuilder()
         .withNativeSsl()
@@ -521,7 +521,7 @@ This allows you to adapt the UI — for example, force a confirmation dialog for
 After an update is installed (via `installAndRestart()` or `installAndQuit()`), the updater persists a marker file. On the next launch, you can detect that the app was just updated:
 
 ```kotlin
-val updater = NucleusUpdater {
+val updater = PotassiumUpdater {
     provider = GitHubProvider(owner = "myorg", repo = "myapp")
 }
 
@@ -543,7 +543,7 @@ if (event != null) {
 
 ```kotlin
 @Composable
-fun PostUpdateBanner(updater: NucleusUpdater) {
+fun PostUpdateBanner(updater: PotassiumUpdater) {
     var updateEvent by remember { mutableStateOf(updater.consumeUpdateEvent()) }
 
     updateEvent?.let { event ->
@@ -568,7 +568,7 @@ fun PostUpdateBanner(updater: NucleusUpdater) {
 }
 ```
 
-The marker file is stored in the platform-specific app data directory (resolved from `NucleusApp.appId`):
+The marker file is stored in the platform-specific app data directory (resolved from `PotassiumApp.appId`):
 
 - **Linux**: `$XDG_DATA_HOME/<appId>/` or `~/.local/share/<appId>/`
 - **macOS**: `~/Library/Application Support/<appId>/`

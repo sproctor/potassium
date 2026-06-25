@@ -1,11 +1,11 @@
 # Configuration
 
-All Nucleus configuration lives inside the `nucleus.application { }` block in your `build.gradle.kts`.
+All Potassium configuration lives inside the `potassium.application { }` block in your `build.gradle.kts`.
 
 ## Overview
 
 ```kotlin
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
     jvmArgs += listOf("-Xmx512m")
 
@@ -37,7 +37,7 @@ nucleus.application {
         // JDK modules
         modules("java.sql", "java.net.http")
 
-        // Nucleus features
+        // Potassium features
         cleanupNativeLibs = true
         enableAotCache = true
         splashImage = "splash.png"
@@ -118,7 +118,7 @@ Different platforms have different version requirements:
 | Linux DEB | `[EPOCH:]UPSTREAM[-REVISION]` | `1.2.3` |
 | Linux RPM | No dashes | `1.2.3` |
 
-## Nucleus-Specific Features
+## Potassium-Specific Features
 
 ### Native Library Cleanup
 
@@ -281,7 +281,7 @@ Release build tasks are suffixed with `Release`:
 ## Full DSL Tree
 
 ```
-nucleus.application {
+potassium.application {
     mainClass
     jvmArgs
     buildTypes {

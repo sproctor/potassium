@@ -1,6 +1,6 @@
 # Sandboxing
 
-Nucleus automatically manages a **store build pipeline** for store formats. When your target formats include PKG, AppX, or Flatpak, the plugin splits the build into two parallel pipelines: one for direct-distribution formats (DMG, NSIS, DEB...) and one for store formats that require special handling (sandboxing on macOS/Linux, native library extraction for all).
+Potassium automatically manages a **store build pipeline** for store formats. When your target formats include PKG, AppX, or Flatpak, the plugin splits the build into two parallel pipelines: one for direct-distribution formats (DMG, NSIS, DEB...) and one for store formats that require special handling (sandboxing on macOS/Linux, native library extraction for all).
 
 ## Store Formats
 
@@ -30,7 +30,7 @@ Both pipelines run in the same `./gradlew packageDistributionForCurrentOS` invoc
 
 ## What the Sandboxed Pipeline Does
 
-When at least one store format is configured, Nucleus registers additional Gradle tasks that handle the constraints imposed by OS-level sandboxing:
+When at least one store format is configured, Potassium registers additional Gradle tasks that handle the constraints imposed by OS-level sandboxing:
 
 ### 1. Extract Native Libraries from JARs
 
@@ -200,8 +200,8 @@ See [Linux Targets](targets/linux.md#flatpak) for all Flatpak settings.
 The sandboxed pipeline runs transparently in CI. A single `./gradlew packageReleaseDistributionForCurrentOS` builds both sandboxed and non-sandboxed formats:
 
 ```yaml
-- name: Setup Nucleus
-  uses: ./.github/actions/setup-nucleus
+- name: Setup Potassium
+  uses: ./.github/actions/setup-potassium
   with:
     jbr-version: '25.0.2b329.66'
     packaging-tools: 'true'
@@ -214,7 +214,7 @@ The sandboxed pipeline runs transparently in CI. A single `./gradlew packageRele
   run: ./gradlew packageReleaseDistributionForCurrentOS --stacktrace --no-daemon
 ```
 
-The `setup-nucleus` action installs all dependencies needed for sandboxed builds:
+The `setup-potassium` action installs all dependencies needed for sandboxed builds:
 
 - **Linux:** Flatpak SDK/runtime, Snapcraft
 - **macOS:** JBR 25 (for entitlements signing via `codesign`)

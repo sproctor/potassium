@@ -1,6 +1,6 @@
 # Windows Targets
 
-Nucleus supports five Windows installer formats and a portable mode.
+Potassium supports five Windows installer formats and a portable mode.
 
 ## Formats
 

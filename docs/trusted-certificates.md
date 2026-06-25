@@ -8,7 +8,7 @@ Corporate proxies, VPN gateways, or ISP-level filtering services often
 use a private root CA that is not trusted by the default JDK trust store. Without their
 certificate, any HTTPS connection your app makes will throw an `SSLHandshakeException`.
 
-Instead of asking users to patch their JVM manually, Nucleus lets you declare the
+Instead of asking users to patch their JVM manually, Potassium lets you declare the
 certificates once in your build script — they are imported automatically during packaging.
 
 ## Configuration
@@ -26,7 +26,7 @@ Both PEM (`-----BEGIN CERTIFICATE-----`) and DER (binary) formats are accepted.
 
 ## How It Works
 
-1. After the JLink runtime image is created, Nucleus copies it to a separate
+1. After the JLink runtime image is created, Potassium copies it to a separate
    `runtime-patched/` directory.
 2. For each certificate file, it runs:
    ```

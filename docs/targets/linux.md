@@ -1,6 +1,6 @@
 # Linux Targets
 
-Nucleus supports five Linux package formats.
+Potassium supports five Linux package formats.
 
 ## Formats
 
@@ -226,10 +226,10 @@ linux {
 
 Flatpak requires `flatpak` and `flatpak-builder` with the target runtime and SDK installed. If these tools are missing, the packaging task will skip gracefully with a clear message.
 
-**Using the `setup-nucleus` GitHub Action** (recommended):
+**Using the `setup-potassium` GitHub Action** (recommended):
 
 ```yaml
-- uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+- uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
   with:
     flatpak: 'true'
 ```

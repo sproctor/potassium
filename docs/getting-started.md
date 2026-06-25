@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-Nucleus uses [electron-builder](https://www.electron.build/) under the hood to produce platform-specific installers (DMG, NSIS, DEB, RPM, AppImage, etc.). This requires **Node.js 18+** and **npm** installed on your build machine.
+Potassium uses [electron-builder](https://www.electron.build/) under the hood to produce platform-specific installers (DMG, NSIS, DEB, RPM, AppImage, etc.). This requires **Node.js 18+** and **npm** installed on your build machine.
 
 ```bash
 # Verify your installation
@@ -11,7 +11,7 @@ npm --version
 ```
 
 !!! tip "CI/CD"
-    The `setup-nucleus` composite action installs Node.js automatically. See [CI/CD](ci-cd.md) for details.
+    The `setup-potassium` composite action installs Node.js automatically. See [CI/CD](ci-cd.md) for details.
 
 ## Installation
 
@@ -33,19 +33,18 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.nucleus") version "1.15.11"
+    id("com.seanproctor.potassium") version "1.15.11"
 }
 ```
 
-!!! note "DSL imports stay the same"
-    The Kotlin DSL types remain under `io.github.kdroidfilter.nucleus.*` (for example
-    `import io.github.kdroidfilter.nucleus.desktop.application.dsl.TargetFormat`). Only the
-    Maven coordinates and the plugin id use the `com.seanproctor` group.
+!!! note "Kotlin DSL imports"
+    The Kotlin DSL types live under `com.seanproctor.potassium.*` (for example
+    `import com.seanproctor.potassium.desktop.application.dsl.TargetFormat`).
 
 ## Minimal Configuration
 
 ```kotlin
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
 
     nativeDistributions {
@@ -67,9 +66,9 @@ nucleus.application {
 
 #### Compose Hot Reload
 
-Nucleus is fully compatible with [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html). Since Nucleus extends the Compose plugin (not replaces it), Hot Reload works out of the box.
+Potassium is fully compatible with [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html). Since Potassium extends the Compose plugin (not replaces it), Hot Reload works out of the box.
 
-The `hotRun` task reads `mainClass` from the `compose.desktop.application` block. If you only set it in `nucleus.application`, add a minimal Compose block:
+The `hotRun` task reads `mainClass` from the `compose.desktop.application` block. If you only set it in `potassium.application`, add a minimal Compose block:
 
 ```kotlin
 compose.desktop.application {

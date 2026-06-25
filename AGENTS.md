@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Goal
-- Help develop Nucleus with targeted, safe changes.
+- Help develop Potassium with targeted, safe changes.
 
 ## Principles
 - Prefer minimal changes that are easy to review.

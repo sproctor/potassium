@@ -1,6 +1,6 @@
 # LLM Documentation
 
-Nucleus provides machine-readable documentation files designed for Large Language Models (LLMs). These plain-text files follow the [llms.txt](https://llmstxt.org/) convention and allow AI assistants to quickly understand the project, its APIs, and configuration options.
+Potassium provides machine-readable documentation files designed for Large Language Models (LLMs). These plain-text files follow the [llms.txt](https://llmstxt.org/) convention and allow AI assistants to quickly understand the project, its APIs, and configuration options.
 
 ## Available Files
 
@@ -11,7 +11,7 @@ Nucleus provides machine-readable documentation files designed for Large Languag
 
 ## How They Stay Up to Date
 
-Both files are **auto-generated** from the MkDocs documentation pages by the [`scripts/generate-llms-docs.py`](https://github.com/kdroidFilter/Nucleus/blob/main/scripts/generate-llms-docs.py) script. A GitHub Actions workflow runs this script on every push to `main` that touches `docs/`, so `llms.txt` and `llms-full.txt` are always in sync with the documentation.
+Both files are **auto-generated** from the MkDocs documentation pages by the [`scripts/generate-llms-docs.py`](https://github.com/sproctor/potassium-packager/blob/main/scripts/generate-llms-docs.py) script. A GitHub Actions workflow runs this script on every push to `main` that touches `docs/`, so `llms.txt` and `llms-full.txt` are always in sync with the documentation.
 
 !!! tip "Contributing"
     Never edit `llms.txt` or `llms-full.txt` manually — edit the source `.md` files in `docs/` and the script regenerates them automatically.
@@ -23,8 +23,8 @@ Both files are **auto-generated** from the MkDocs documentation pages by the [`s
 Paste the URL directly in your prompt:
 
 ```
-Read https://nucleusframework.dev/llms-full.txt and help me configure
-a Nucleus project with NSIS installer, auto-update, and macOS signing.
+Read https://potassiumframework.dev/llms-full.txt and help me configure
+a Potassium project with NSIS installer, auto-update, and macOS signing.
 ```
 
 ### Cursor, Windsurf, Claude Code
@@ -32,7 +32,7 @@ a Nucleus project with NSIS installer, auto-update, and macOS signing.
 Add the URL as a documentation source in your AI-powered IDE, or reference it in your project instructions:
 
 ```
-@doc https://nucleusframework.dev/llms-full.txt
+@doc https://potassiumframework.dev/llms-full.txt
 ```
 
 ### Custom Agents / RAG Pipelines
@@ -40,8 +40,8 @@ Add the URL as a documentation source in your AI-powered IDE, or reference it in
 Fetch the files programmatically:
 
 ```bash
-curl -s https://nucleusframework.dev/llms.txt       # concise
-curl -s https://nucleusframework.dev/llms-full.txt   # complete
+curl -s https://potassiumframework.dev/llms.txt       # concise
+curl -s https://potassiumframework.dev/llms-full.txt   # complete
 ```
 
 ## What's Included

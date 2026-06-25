@@ -68,7 +68,7 @@ The `packageGraalvm<Format>` tasks produce installers in:
 
 ## CI/CD
 
-Native image compilation must happen **on each target platform**. Use `setup-nucleus` with `graalvm: 'true'`:
+Native image compilation must happen **on each target platform**. Use `setup-potassium` with `graalvm: 'true'`:
 
 ```yaml
 name: Build GraalVM Native Image
@@ -102,8 +102,8 @@ jobs:
 
       # Download pre-built JNI native libraries here...
 
-      - name: Setup Nucleus (GraalVM)
-        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+      - name: Setup Potassium (GraalVM)
+        uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
         with:
           graalvm: 'true'
           setup-gradle: 'true'
@@ -143,7 +143,7 @@ Run your native binary from the terminal. Reflection failures produce clear erro
 
 ### Cleaning up accumulated metadata
 
-Over time, manual `reachability-metadata.json` entries may become redundant as Nucleus adds coverage for more libraries. Run the cleanup task periodically:
+Over time, manual `reachability-metadata.json` entries may become redundant as Potassium adds coverage for more libraries. Run the cleanup task periodically:
 
 ```bash
 ./gradlew cleanupGraalvmMetadata
@@ -163,12 +163,12 @@ Even though the automatic metadata covers the vast majority of cases, running `r
 
 ### Use the Jewel sample as reference
 
-The [`jewel-sample`](https://github.com/kdroidFilter/Nucleus/tree/main/jewel-sample) in the Nucleus repository demonstrates a more complex native-image setup with the Jewel UI library. It is an excellent reference for advanced use cases.
+The [`jewel-sample`](https://github.com/kdroidFilter/Nucleus/tree/main/jewel-sample) in the Potassium repository demonstrates a more complex native-image setup with the Jewel UI library. It is an excellent reference for advanced use cases.
 
 ## Further Reading
 
 - [GraalVM Native Image documentation](https://www.graalvm.org/latest/reference-manual/native-image/)
 - [BellSoft Liberica NIK](https://bell-sw.com/liberica-native-image-kit/)
 - [Oracle GraalVM Reachability Metadata Repository](https://github.com/oracle/graalvm-reachability-metadata)
-- [Nucleus example app](https://github.com/kdroidFilter/Nucleus/tree/main/example) — minimal Compose Desktop + native-image setup
-- [Nucleus Jewel sample](https://github.com/kdroidFilter/Nucleus/tree/main/jewel-sample) — advanced setup with reflection-heavy dependencies
+- [Potassium example app](https://github.com/kdroidFilter/Nucleus/tree/main/example) — minimal Compose Desktop + native-image setup
+- [Potassium Jewel sample](https://github.com/kdroidFilter/Nucleus/tree/main/jewel-sample) — advanced setup with reflection-heavy dependencies

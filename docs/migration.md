@@ -1,6 +1,6 @@
 # Migration from org.jetbrains.compose
 
-Nucleus is a drop-in extension of the official JetBrains Compose Desktop plugin. All existing configuration is preserved — Nucleus only adds new capabilities.
+Potassium is a drop-in extension of the official JetBrains Compose Desktop plugin. All existing configuration is preserved — Potassium only adds new capabilities.
 
 ## Step 1: Add the Plugin
 
@@ -9,11 +9,11 @@ Nucleus is a drop-in extension of the official JetBrains Compose Desktop plugin.
      id("org.jetbrains.kotlin.jvm") version "2.3.10"
      id("org.jetbrains.kotlin.plugin.compose") version "2.3.10"
      id("org.jetbrains.compose") version "1.10.1"
-+    id("com.seanproctor.nucleus") version "1.15.11"
++    id("com.seanproctor.potassium") version "1.15.11"
  }
 ```
 
-> The official `org.jetbrains.compose` plugin remains — Nucleus extends it, not replaces it.
+> The official `org.jetbrains.compose` plugin remains — Potassium extends it, not replaces it.
 
 The plugin is published to Maven Central, so make sure `mavenCentral()` is in your `pluginManagement.repositories`:
 
@@ -29,22 +29,22 @@ pluginManagement {
 
 ## Step 2: Update Imports
 
-Replace the JetBrains Compose DSL imports with the Nucleus equivalents:
+Replace the JetBrains Compose DSL imports with the Potassium equivalents:
 
 ```diff
 -import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-+import io.github.kdroidfilter.nucleus.desktop.application.dsl.TargetFormat
++import com.seanproctor.potassium.desktop.application.dsl.TargetFormat
 ```
 
 This applies to all DSL types used in your `build.gradle.kts` (e.g. `TargetFormat`, `CompressionLevel`, `SigningAlgorithm`, etc.).
 
-## Step 3: Use the Nucleus DSL
+## Step 3: Use the Potassium DSL
 
-Replace the `compose.desktop.application` block with `nucleus.application` for packaging and distribution:
+Replace the `compose.desktop.application` block with `potassium.application` for packaging and distribution:
 
 ```diff
 -compose.desktop.application {
-+nucleus.application {
++potassium.application {
      mainClass = "com.example.MainKt"
 
      nativeDistributions {
@@ -69,7 +69,7 @@ Replace the `compose.desktop.application` block with `nucleus.application` for p
 ```
 
 !!! tip "Using Compose Hot Reload?"
-    Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `nucleus.application`. If you use [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html), either keep a minimal Compose block alongside Nucleus:
+    Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `potassium.application`. If you use [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html), either keep a minimal Compose block alongside Potassium:
 
     ```kotlin
     compose.desktop.application {
@@ -83,12 +83,12 @@ Replace the `compose.desktop.application` block with `nucleus.application` for p
     ./gradlew hotRun -PmainClass=com.example.MainKt
     ```
 
-## Step 4: Add Nucleus Features (Optional)
+## Step 4: Add Potassium Features (Optional)
 
 Enable the features you need. All are opt-in:
 
 ```kotlin
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
 
     nativeDistributions {
@@ -96,7 +96,7 @@ nucleus.application {
         packageName = "MyApp"
         packageVersion = "1.0.0"
 
-        // --- New Nucleus features ---
+        // --- New Potassium features ---
         cleanupNativeLibs = true
         enableAotCache = true
         splashImage = "splash.png"
@@ -142,10 +142,10 @@ nucleus.application {
 
 ## What Changes
 
-| Feature | Before (compose) | After (nucleus)                                                                                                                       |
+| Feature | Before (compose) | After (potassium)                                                                                                                       |
 |---------|-------------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| DSL entry point | `compose.desktop.application` | `nucleus.application`                                                                                                                 |
-| DSL imports | `org.jetbrains.compose.desktop.application.dsl.*` | `io.github.kdroidfilter.nucleus.desktop.application.dsl.*`                                                                            |
+| DSL entry point | `compose.desktop.application` | `potassium.application`                                                                                                                 |
+| DSL imports | `org.jetbrains.compose.desktop.application.dsl.*` | `com.seanproctor.potassium.desktop.application.dsl.*`                                                                            |
 | Target formats | DMG, PKG, MSI, EXE, DEB, RPM | + NSIS, AppX, Portable, AppImage, Snap, Flatpak, archives                                                                             |
 | Native lib cleanup | Manual | `cleanupNativeLibs = true`                                                                                                            |
 | AOT cache | Not available | `enableAotCache = true`                                                                                                               |
@@ -166,7 +166,7 @@ nucleus.application {
 
 ### `homepage` is Required for Linux DEB
 
-Unlike Compose Desktop (which uses jpackage), Nucleus uses electron-builder for packaging. Electron-builder **requires** the `homepage` property when building DEB packages. Without it, the build will fail with:
+Unlike Compose Desktop (which uses jpackage), Potassium uses electron-builder for packaging. Electron-builder **requires** the `homepage` property when building DEB packages. Without it, the build will fail with:
 
 ```
 Please specify project homepage, see https://electron.build/configuration
@@ -193,4 +193,4 @@ Everything from the official plugin works unchanged:
 - All existing Gradle tasks (`run`, `packageDmg`, `packageDeb`, etc.)
 - `compose.desktop.currentOs` dependency
 - Source set configuration
-- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Nucleus extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so set it there too or pass `-PmainClass=...` (see [Step 3](#step-3-use-the-nucleus-dsl))
+- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Potassium extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so set it there too or pass `-PmainClass=...` (see [Step 3](#step-3-use-the-potassium-dsl))

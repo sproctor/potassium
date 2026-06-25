@@ -1,8 +1,8 @@
-site_name: Nucleus Gradle Plugin
+site_name: Potassium Packager
 site_description: A Gradle plugin for packaging Compose/JVM desktop apps — installers (deb/rpm/AppImage/snap/flatpak, msi/exe/appx, dmg/pkg), code signing, auto-update, and GraalVM native-image builds on macOS, Windows, and Linux
-site_url: https://github.com/sproctor/nucleus-plugin
-repo_url: https://github.com/sproctor/nucleus-plugin
-repo_name: sproctor/nucleus-plugin
+site_url: https://github.com/sproctor/potassium-packager
+repo_url: https://github.com/sproctor/potassium-packager
+repo_name: sproctor/potassium-packager
 edit_uri: edit/main/docs/
 
 theme:
@@ -109,4 +109,4 @@ copyright: Made with ❤️ by <a href="https://eliegambache.kdroidfilter.com/" 
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/sproctor/nucleus-plugin
+      link: https://github.com/sproctor/potassium-packager

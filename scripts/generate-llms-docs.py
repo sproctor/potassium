@@ -39,7 +39,7 @@ SHORT_PAGES = {
     "migration.md",
 }
 
-SITE_URL = "https://github.com/sproctor/nucleus-plugin"
+SITE_URL = "https://github.com/sproctor/potassium-packager"
 
 # ---------------------------------------------------------------------------
 # Nav extraction (no PyYAML needed)
@@ -135,17 +135,17 @@ def clean_mkdocs_markup(content: str) -> str:
 # ---------------------------------------------------------------------------
 
 PREAMBLE = """\
-# Nucleus Gradle Plugin
+# Potassium Packager
 
-> Nucleus is a Gradle plugin for packaging and distributing Compose / JVM desktop \
+> Potassium is a Gradle plugin for packaging and distributing Compose / JVM desktop \
 applications on macOS, Windows, and Linux. It extends the official JetBrains Compose \
 Desktop plugin and adds many installer formats (deb/rpm/AppImage/snap/flatpak, \
 msi/exe/appx, dmg/pkg), code signing & notarization, electron-builder-based \
-auto-update, and GraalVM Native Image builds. Plugin id: com.seanproctor.nucleus.
+auto-update, and GraalVM Native Image builds. Plugin id: com.seanproctor.potassium.
 
 - Docs: {site_url}
-- GitHub: https://github.com/sproctor/nucleus-plugin
-- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/nucleus-gradle-plugin
+- GitHub: https://github.com/sproctor/potassium-packager
+- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/potassium-packager
 - License: MIT
 
 """.format(site_url=SITE_URL)
@@ -178,10 +178,10 @@ def build_doc(pages: list[str], page_filter: set[str] | None = None) -> str:
         if cleaned:
             sections.append(cleaned)
 
-    # The first section (index.md) starts with a "# Nucleus..." heading which
+    # The first section (index.md) starts with a "# Potassium..." heading which
     # duplicates the preamble title.  Strip the leading title from it.
     if sections:
-        sections[0] = re.sub(r"^# Nucleus[^\n]*\n+", "", sections[0])
+        sections[0] = re.sub(r"^# Potassium[^\n]*\n+", "", sections[0])
 
     return PREAMBLE + "\n\n---\n\n".join(sections)
 

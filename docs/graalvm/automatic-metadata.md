@@ -1,16 +1,16 @@
 # Automatic Metadata Resolution
 
-The goal of Nucleus is to make GraalVM native-image compilation **as transparent as possible**. In most cases, you should be able to run `packageGraalvmNative` and get a working binary without writing a single line of reflection configuration. To achieve this, Nucleus combines five complementary metadata sources that are resolved and merged automatically at build time.
+The goal of Potassium is to make GraalVM native-image compilation **as transparent as possible**. In most cases, you should be able to run `packageGraalvmNative` and get a working binary without writing a single line of reflection configuration. To achieve this, Potassium combines five complementary metadata sources that are resolved and merged automatically at build time.
 
 ## Level 1 — Per-library conditional metadata
 
-The Nucleus Gradle plugin ships **28 per-library metadata files** covering Compose UI, Skiko, ktor, kotlinx.serialization, SQLite, Coil, JNA, FileKit, and many others. Each file declares a `matchPackages` condition — the metadata is only included if the corresponding library is actually present on your runtime classpath.
+The Potassium Gradle plugin ships **28 per-library metadata files** covering Compose UI, Skiko, ktor, kotlinx.serialization, SQLite, Coil, JNA, FileKit, and many others. Each file declares a `matchPackages` condition — the metadata is only included if the corresponding library is actually present on your runtime classpath.
 
 This means libraries like ktor or SQLite JDBC **just work** in native image without any manual configuration.
 
 ## Level 2 — Oracle Reachability Metadata Repository
 
-Nucleus automatically downloads the [Oracle GraalVM Reachability Metadata Repository](https://github.com/oracle/graalvm-reachability-metadata) and resolves metadata for all dependencies on your runtime classpath. This covers libraries that are not yet covered by Nucleus's own L1 metadata — SLF4J, Logback, and many others. The resolved metadata directories are passed to `native-image` via `-H:ConfigurationFileDirectories=`.
+Potassium automatically downloads the [Oracle GraalVM Reachability Metadata Repository](https://github.com/oracle/graalvm-reachability-metadata) and resolves metadata for all dependencies on your runtime classpath. This covers libraries that are not yet covered by Potassium's own L1 metadata — SLF4J, Logback, and many others. The resolved metadata directories are passed to `native-image` via `-H:ConfigurationFileDirectories=`.
 
 This is enabled by default. To customize:
 
@@ -30,11 +30,11 @@ graalvm {
 
 ## Level 3 — Platform-specific metadata
 
-The Nucleus Gradle plugin ships pre-built platform-specific metadata for macOS, Windows, and Linux. These cover platform-specific AWT implementations (`sun.awt.windows.*`, `sun.lwawt.macosx.*`, `sun.awt.X11.*`), Java2D pipelines, font managers, and security providers. The plugin writes the correct platform metadata to the build directory at compile time — **no per-platform configuration needed in your build script**.
+The Potassium Gradle plugin ships pre-built platform-specific metadata for macOS, Windows, and Linux. These cover platform-specific AWT implementations (`sun.awt.windows.*`, `sun.lwawt.macosx.*`, `sun.awt.X11.*`), Java2D pipelines, font managers, and security providers. The plugin writes the correct platform metadata to the build directory at compile time — **no per-platform configuration needed in your build script**.
 
 ## Level 4 — Static bytecode analysis
 
-Nucleus includes a **static bytecode analyzer** that scans all compiled classes on your runtime classpath at build time and automatically detects reflection, JNI, and resource requirements — without running the application. The analyzer detects:
+Potassium includes a **static bytecode analyzer** that scans all compiled classes on your runtime classpath at build time and automatically detects reflection, JNI, and resource requirements — without running the application. The analyzer detects:
 
 - **Native methods** and their parameter/return types (JNI metadata)
 - **`Class.forName()`** and **`MethodHandles.Lookup.findClass()`** calls (reflection metadata)
@@ -69,7 +69,7 @@ The `graalvm-runtime` module ships a `reachability-metadata.json` inside its JAR
 
 ## How it all fits together
 
-When you run `packageGraalvmNative`, Nucleus automatically resolves all five metadata levels and passes them to `native-image`:
+When you run `packageGraalvmNative`, Potassium automatically resolves all five metadata levels and passes them to `native-image`:
 
 ```mermaid
 flowchart TB

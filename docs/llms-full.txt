@@ -1,15 +1,15 @@
-# Nucleus Gradle Plugin
+# Potassium Packager
 
-> Nucleus is a Gradle plugin for packaging and distributing Compose / JVM desktop applications on macOS, Windows, and Linux. It extends the official JetBrains Compose Desktop plugin and adds many installer formats (deb/rpm/AppImage/snap/flatpak, msi/exe/appx, dmg/pkg), code signing & notarization, electron-builder-based auto-update, and GraalVM Native Image builds. Plugin id: com.seanproctor.nucleus.
+> Potassium is a Gradle plugin for packaging and distributing Compose / JVM desktop applications on macOS, Windows, and Linux. It extends the official JetBrains Compose Desktop plugin and adds many installer formats (deb/rpm/AppImage/snap/flatpak, msi/exe/appx, dmg/pkg), code signing & notarization, electron-builder-based auto-update, and GraalVM Native Image builds. Plugin id: com.seanproctor.potassium.
 
-- Docs: https://github.com/sproctor/nucleus-plugin
-- GitHub: https://github.com/sproctor/nucleus-plugin
-- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/nucleus-gradle-plugin
+- Docs: https://github.com/sproctor/potassium-packager
+- GitHub: https://github.com/sproctor/potassium-packager
+- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/potassium-packager
 - License: MIT
 
-**Nucleus is a Gradle plugin for packaging and distributing Compose / JVM desktop applications** on macOS, Windows, and Linux.
+**Potassium is a Gradle plugin for packaging and distributing Compose / JVM desktop applications** on macOS, Windows, and Linux.
 
-It is a drop-in extension of the official JetBrains Compose Desktop plugin — keep your existing `compose.desktop` configuration and opt into the capabilities you need. Nucleus picks up where jpackage stops: more installer formats, real code signing and notarization, built-in auto-update, and GraalVM Native Image builds, all from a single Gradle DSL.
+It is a drop-in extension of the official JetBrains Compose Desktop plugin — keep your existing `compose.desktop` configuration and opt into the capabilities you need. Potassium picks up where jpackage stops: more installer formats, real code signing and notarization, built-in auto-update, and GraalVM Native Image builds, all from a single Gradle DSL.
 
 ## What it does
 
@@ -23,7 +23,7 @@ It is a drop-in extension of the official JetBrains Compose Desktop plugin — k
 
 ### Go further
 
-- **GraalVM Native Image** — compile your app into a standalone native binary. Nucleus resolves the reachability metadata transparently, so most apps build with zero manual reflection config.
+- **GraalVM Native Image** — compile your app into a standalone native binary. Potassium resolves the reachability metadata transparently, so most apps build with zero manual reflection config.
 - **AOT cache** — enable the JDK 25+ ahead-of-time cache for faster startup with a single flag.
 - **ProGuard release builds** — optimization and obfuscation for production.
 - **Trusted CA certificates** — import custom root CAs into the bundled JVM's `cacerts` at build time.
@@ -47,10 +47,10 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.nucleus") version "1.15.11"
+    id("com.seanproctor.potassium") version "1.15.11"
 }
 
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
 
     nativeDistributions {
@@ -66,15 +66,14 @@ nucleus.application {
 ./gradlew packageDistributionForCurrentOS  # Build installers for the current OS
 ```
 
-**DSL imports stay the same:** The Kotlin DSL types remain under `io.github.kdroidfilter.nucleus.*` (for example
-`import io.github.kdroidfilter.nucleus.desktop.application.dsl.TargetFormat`). Only the
-Maven coordinates and the plugin id use the `com.seanproctor` group.
+**Kotlin DSL imports:** The Kotlin DSL types live under `com.seanproctor.potassium.*` (for example
+`import com.seanproctor.potassium.desktop.application.dsl.TargetFormat`).
 ## Coordinates
 
-- **Plugin id:** `com.seanproctor.nucleus`
+- **Plugin id:** `com.seanproctor.potassium`
 - **Latest version:** `1.15.11`
 - **Published to:** Maven Central
-- **Repository:** [github.com/sproctor/nucleus-plugin](https://github.com/sproctor/nucleus-plugin)
+- **Repository:** [github.com/sproctor/potassium-packager](https://github.com/sproctor/potassium-packager)
 
 ## Requirements
 
@@ -93,7 +92,7 @@ Maven coordinates and the plugin id use the `com.seanproctor` group.
 
 ## License
 
-MIT — See [LICENSE](https://github.com/sproctor/nucleus-plugin/blob/main/LICENSE).
+MIT — See [LICENSE](https://github.com/sproctor/potassium-packager/blob/main/LICENSE).
 </content>
 
 ---
@@ -102,7 +101,7 @@ MIT — See [LICENSE](https://github.com/sproctor/nucleus-plugin/blob/main/LICEN
 
 ## Prerequisites
 
-Nucleus uses [electron-builder](https://www.electron.build/) under the hood to produce platform-specific installers (DMG, NSIS, DEB, RPM, AppImage, etc.). This requires **Node.js 18+** and **npm** installed on your build machine.
+Potassium uses [electron-builder](https://www.electron.build/) under the hood to produce platform-specific installers (DMG, NSIS, DEB, RPM, AppImage, etc.). This requires **Node.js 18+** and **npm** installed on your build machine.
 
 ```bash
 # Verify your installation
@@ -110,7 +109,7 @@ node --version   # v18.0.0 or later
 npm --version
 ```
 
-**CI/CD:** The `setup-nucleus` composite action installs Node.js automatically. See [CI/CD](ci-cd.md) for details.
+**CI/CD:** The `setup-potassium` composite action installs Node.js automatically. See [CI/CD](ci-cd.md) for details.
 ## Installation
 
 The plugin is published to Maven Central. Add Maven Central to your plugin repositories, then apply the plugin in your build script:
@@ -131,17 +130,16 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.nucleus") version "1.15.11"
+    id("com.seanproctor.potassium") version "1.15.11"
 }
 ```
 
-**DSL imports stay the same:** The Kotlin DSL types remain under `io.github.kdroidfilter.nucleus.*` (for example
-`import io.github.kdroidfilter.nucleus.desktop.application.dsl.TargetFormat`). Only the
-Maven coordinates and the plugin id use the `com.seanproctor` group.
+**Kotlin DSL imports:** The Kotlin DSL types live under `com.seanproctor.potassium.*` (for example
+`import com.seanproctor.potassium.desktop.application.dsl.TargetFormat`).
 ## Minimal Configuration
 
 ```kotlin
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
 
     nativeDistributions {
@@ -163,9 +161,9 @@ nucleus.application {
 
 #### Compose Hot Reload
 
-Nucleus is fully compatible with [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html). Since Nucleus extends the Compose plugin (not replaces it), Hot Reload works out of the box.
+Potassium is fully compatible with [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html). Since Potassium extends the Compose plugin (not replaces it), Hot Reload works out of the box.
 
-The `hotRun` task reads `mainClass` from the `compose.desktop.application` block. If you only set it in `nucleus.application`, add a minimal Compose block:
+The `hotRun` task reads `mainClass` from the `compose.desktop.application` block. If you only set it in `potassium.application`, add a minimal Compose block:
 
 ```kotlin
 compose.desktop.application {
@@ -318,12 +316,12 @@ val resourcesDir = File(System.getProperty("compose.application.resources.dir"))
 
 # Configuration
 
-All Nucleus configuration lives inside the `nucleus.application { }` block in your `build.gradle.kts`.
+All Potassium configuration lives inside the `potassium.application { }` block in your `build.gradle.kts`.
 
 ## Overview
 
 ```kotlin
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
     jvmArgs += listOf("-Xmx512m")
 
@@ -355,7 +353,7 @@ nucleus.application {
         // JDK modules
         modules("java.sql", "java.net.http")
 
-        // Nucleus features
+        // Potassium features
         cleanupNativeLibs = true
         enableAotCache = true
         splashImage = "splash.png"
@@ -436,7 +434,7 @@ Different platforms have different version requirements:
 | Linux DEB | `[EPOCH:]UPSTREAM[-REVISION]` | `1.2.3` |
 | Linux RPM | No dashes | `1.2.3` |
 
-## Nucleus-Specific Features
+## Potassium-Specific Features
 
 ### Native Library Cleanup
 
@@ -597,7 +595,7 @@ Release build tasks are suffixed with `Release`:
 ## Full DSL Tree
 
 ```
-nucleus.application {
+potassium.application {
     mainClass
     jvmArgs
     buildTypes {
@@ -632,7 +630,7 @@ nucleus.application {
 
 # macOS Targets
 
-Nucleus supports two macOS installer formats and universal (fat) binaries.
+Potassium supports two macOS installer formats and universal (fat) binaries.
 
 ## Formats
 
@@ -750,7 +748,7 @@ Each `content()` call adds an entry with an `(x, y)` position and a `DmgContentT
 | `DmgContentType.Dir` | A directory inside the DMG. |
 
 **Mapping from `create-dmg`:** If you are migrating from a `create-dmg` shell script, the `content()` DSL maps directly to the `--icon` and `--app-drop-link` flags:
-    | `create-dmg` flag | Nucleus equivalent |
+    | `create-dmg` flag | Potassium equivalent |
     |---|---|
     | `--icon "MyApp.app" 130 220` | `content(x = 130, y = 220, type = DmgContentType.File, name = "MyApp.app")` |
     | `--app-drop-link 410 220` | `content(x = 410, y = 220, type = DmgContentType.Link, path = "/Applications")` |
@@ -799,12 +797,12 @@ macOS 26 introduces a refreshed window chrome with **Liquid Glass**: larger traf
 
 ### Automatic SDK patching
 
-Nucleus **automatically patches** the app launcher's `LC_BUILD_VERSION` via `vtool` so that AppKit enables Liquid Glass. This works with **any JDK** — a JDK compiled with Xcode 26 is no longer required.
+Potassium **automatically patches** the app launcher's `LC_BUILD_VERSION` via `vtool` so that AppKit enables Liquid Glass. This works with **any JDK** — a JDK compiled with Xcode 26 is no longer required.
 
 The patching is controlled by the `macOsSdkVersion` DSL property (defaults to `"26.0"`):
 
 ```kotlin
-nucleus {
+potassium {
     nativeDistributions {
         macOS {
             macOsSdkVersion = "26.0"  // default — enables Liquid Glass
@@ -828,7 +826,7 @@ nucleus {
 - **Xcode Command Line Tools** must be installed (`vtool` and `codesign` must be available at `/usr/bin/`). If missing, a warning is logged and patching is skipped.
 - Only effective on macOS; ignored on other platforms.
 
-**How it works:** `vtool` modifies the `LC_BUILD_VERSION` load command in the Mach-O binary, setting the SDK version to 26.0. This is the same header that the linker writes when you compile with `-sdk_version 26.0`. The modification only affects metadata — no code is changed. For distributable builds, the launcher is patched before signing, so the code signature covers the patched binary. For the `run` task, a patched copy of the JVM is produced by the `nucleusPatchMacJvm` task into `build/nucleus/patched-jvm/` and reused across runs. JavaExec forks the patched binary directly, so IntelliJ's debugger attaches normally (breakpoints, stop button) with Liquid Glass active.
+**How it works:** `vtool` modifies the `LC_BUILD_VERSION` load command in the Mach-O binary, setting the SDK version to 26.0. This is the same header that the linker writes when you compile with `-sdk_version 26.0`. The modification only affects metadata — no code is changed. For distributable builds, the launcher is patched before signing, so the code signature covers the patched binary. For the `run` task, a patched copy of the JVM is produced by the `potassiumPatchMacJvm` task into `build/potassium/patched-jvm/` and reused across runs. JavaExec forks the patched binary directly, so IntelliJ's debugger attaches normally (breakpoints, stop button) with Liquid Glass active.
 ### GraalVM Native Image
 
 For applications compiled with GraalVM Native Image, the native binary is linked directly by the system toolchain. Select **Xcode 26** before building:
@@ -846,7 +844,7 @@ No custom JDK is needed at runtime since the output is a standalone native binar
 
 ## Universal Binaries
 
-Nucleus supports creating universal (fat) macOS binaries that run natively on both Apple Silicon and Intel. This requires building on both architectures and merging with `lipo`.
+Potassium supports creating universal (fat) macOS binaries that run natively on both Apple Silicon and Intel. This requires building on both architectures and merging with `lipo`.
 
 See [CI/CD](../ci-cd.md#universal-macos-binaries) for the GitHub Actions workflow.
 
@@ -1021,7 +1019,7 @@ fun content(
 
 # Windows Targets
 
-Nucleus supports five Windows installer formats and a portable mode.
+Potassium supports five Windows installer formats and a portable mode.
 
 ## Formats
 
@@ -1275,7 +1273,7 @@ File associations are propagated to NSIS, NSIS Web, MSI, and AppX formats.
 
 # Linux Targets
 
-Nucleus supports five Linux package formats.
+Potassium supports five Linux package formats.
 
 ## Formats
 
@@ -1499,10 +1497,10 @@ linux {
 
 Flatpak requires `flatpak` and `flatpak-builder` with the target runtime and SDK installed. If these tools are missing, the packaging task will skip gracefully with a clear message.
 
-**Using the `setup-nucleus` GitHub Action** (recommended):
+**Using the `setup-potassium` GitHub Action** (recommended):
 
 ```yaml
-- uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+- uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
   with:
     flatpak: 'true'
 ```
@@ -1592,7 +1590,7 @@ No manual `desktopEntries` override is needed for MimeType.
 
 # Sandboxing
 
-Nucleus automatically manages a **store build pipeline** for store formats. When your target formats include PKG, AppX, or Flatpak, the plugin splits the build into two parallel pipelines: one for direct-distribution formats (DMG, NSIS, DEB...) and one for store formats that require special handling (sandboxing on macOS/Linux, native library extraction for all).
+Potassium automatically manages a **store build pipeline** for store formats. When your target formats include PKG, AppX, or Flatpak, the plugin splits the build into two parallel pipelines: one for direct-distribution formats (DMG, NSIS, DEB...) and one for store formats that require special handling (sandboxing on macOS/Linux, native library extraction for all).
 
 ## Store Formats
 
@@ -1622,7 +1620,7 @@ Both pipelines run in the same `./gradlew packageDistributionForCurrentOS` invoc
 
 ## What the Sandboxed Pipeline Does
 
-When at least one store format is configured, Nucleus registers additional Gradle tasks that handle the constraints imposed by OS-level sandboxing:
+When at least one store format is configured, Potassium registers additional Gradle tasks that handle the constraints imposed by OS-level sandboxing:
 
 ### 1. Extract Native Libraries from JARs
 
@@ -1790,8 +1788,8 @@ See [Linux Targets](targets/linux.md#flatpak) for all Flatpak settings.
 The sandboxed pipeline runs transparently in CI. A single `./gradlew packageReleaseDistributionForCurrentOS` builds both sandboxed and non-sandboxed formats:
 
 ```yaml
-- name: Setup Nucleus
-  uses: ./.github/actions/setup-nucleus
+- name: Setup Potassium
+  uses: ./.github/actions/setup-potassium
   with:
     jbr-version: '25.0.2b329.66'
     packaging-tools: 'true'
@@ -1804,7 +1802,7 @@ The sandboxed pipeline runs transparently in CI. A single `./gradlew packageRele
   run: ./gradlew packageReleaseDistributionForCurrentOS --stacktrace --no-daemon
 ```
 
-The `setup-nucleus` action installs all dependencies needed for sandboxed builds:
+The `setup-potassium` action installs all dependencies needed for sandboxed builds:
 
 - **Linux:** Flatpak SDK/runtime, Snapcraft
 - **macOS:** JBR 25 (for entitlements signing via `codesign`)
@@ -1829,7 +1827,7 @@ These tasks are only registered when at least one store format is configured.
 
 # Code Signing
 
-Code signing ensures your application is trusted by the operating system and not flagged as malware. Nucleus supports signing for Windows and macOS.
+Code signing ensures your application is trusted by the operating system and not flagged as malware. Potassium supports signing for Windows and macOS.
 
 ## Windows
 
@@ -2051,7 +2049,7 @@ For GitHub Actions, import the certificate into a temporary keychain:
 
 When building universal (fat) macOS binaries, `lipo` invalidates all code signatures. Signing must happen **after** the universal merge, in the `universal-macos` CI job.
 
-Nucleus provides a `setup-macos-signing` composite action (`.github/actions/setup-macos-signing`) that creates a temporary keychain and imports certificates:
+Potassium provides a `setup-macos-signing` composite action (`.github/actions/setup-macos-signing`) that creates a temporary keychain and imports certificates:
 
 ```yaml
 - name: Setup macOS signing
@@ -2144,14 +2142,14 @@ Minimal `entitlements.plist` for a JVM app:
 
 # Auto Update
 
-Nucleus provides a complete auto-update solution compatible with the [electron-builder update format](https://www.electron.build/auto-update). The system has two parts:
+Potassium provides a complete auto-update solution compatible with the [electron-builder update format](https://www.electron.build/auto-update). The system has two parts:
 
 1. **Build-time**: The plugin generates update metadata files (`latest-*.yml`) alongside your installers
-2. **Runtime**: The `nucleus.updater-runtime` library checks for updates, downloads, and installs them
+2. **Runtime**: The `potassium.updater-runtime` library checks for updates, downloads, and installs them
 
 ## How It Works
 
-**Try it yourself:** Download an **older version** of the Nucleus demo app from the [GitHub Releases page](https://github.com/kdroidFilter/Nucleus/releases), install it, and launch it. The app will automatically detect that a newer version is available, download the update with a progress bar, and offer an "Install & Restart" button. This is the exact same flow your users will experience.
+**Try it yourself:** Download an **older version** of the Potassium demo app from the [GitHub Releases page](https://github.com/kdroidFilter/Nucleus/releases), install it, and launch it. The app will automatically detect that a newer version is available, download the update with a progress bar, and offer an "Install & Restart" button. This is the exact same flow your users will experience.
 ## Updatable Formats
 
 | Platform | Updatable Formats | Not updatable (Store-managed) |
@@ -2160,7 +2158,7 @@ Nucleus provides a complete auto-update solution compatible with the [electron-b
 | Windows | EXE/NSIS, NSIS Web, MSI | AppX/MSIX |
 | Linux | DEB, RPM, AppImage | Snap, Flatpak |
 
-PKG (macOS), AppX/MSIX (Windows), Snap, and Flatpak are not supported by the auto-updater because Nucleus assumes these formats are distributed through their respective app stores (Mac App Store, Microsoft Store, Snapcraft, Flathub), which handle updates natively.
+PKG (macOS), AppX/MSIX (Windows), Snap, and Flatpak are not supported by the auto-updater because Potassium assumes these formats are distributed through their respective app stores (Mac App Store, Microsoft Store, Snapcraft, Flathub), which handle updates natively.
 
 **macOS: ZIP is required alongside DMG:** On macOS, the auto-updater uses the **ZIP** format to perform the update (extract and replace the `.app` bundle silently). The DMG is used for initial installation only. You **must** include `TargetFormat.Zip` in your `targetFormats` configuration, otherwise macOS auto-update will not work:
     ```kotlin
@@ -2263,7 +2261,7 @@ releaseDate: '2025-06-15T10:30:00.000Z'
 
 ## Release Channels
 
-Nucleus supports three release channels. Different YML files are generated for each:
+Potassium supports three release channels. Different YML files are generated for each:
 
 | Channel | YML Files | Tag Pattern |
 |---------|-----------|-------------|
@@ -2344,18 +2342,18 @@ See [Publishing](publishing.md) for the full configuration reference.
 
 ```kotlin
 dependencies {
-    implementation("io.github.kdroidfilter:nucleus.updater-runtime:1.0.0")
+    implementation("io.github.kdroidfilter:potassium.updater-runtime:1.0.0")
 }
 ```
 
 ### Quick Start
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.updater.NucleusUpdater
-import io.github.kdroidfilter.nucleus.updater.UpdateResult
-import io.github.kdroidfilter.nucleus.updater.provider.GitHubProvider
+import com.seanproctor.potassium.updater.PotassiumUpdater
+import com.seanproctor.potassium.updater.UpdateResult
+import com.seanproctor.potassium.updater.provider.GitHubProvider
 
-val updater = NucleusUpdater {
+val updater = PotassiumUpdater {
     provider = GitHubProvider(owner = "myorg", repo = "myapp")
 }
 
@@ -2378,7 +2376,7 @@ when (val result = updater.checkForUpdates()) {
 ### Configuration
 
 ```kotlin
-NucleusUpdater {
+PotassiumUpdater {
     // Current app version (auto-detected from jpackage.app-version system property)
     currentVersion = "1.0.0"
 
@@ -2404,7 +2402,7 @@ NucleusUpdater {
 #### GitHub Releases
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.updater.provider.GitHubProvider
+import com.seanproctor.potassium.updater.provider.GitHubProvider
 
 provider = GitHubProvider(
     owner = "myorg",
@@ -2416,7 +2414,7 @@ provider = GitHubProvider(
 #### Generic HTTP Server
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.updater.provider.GenericProvider
+import com.seanproctor.potassium.updater.provider.GenericProvider
 
 provider = GenericProvider(
     baseUrl = "https://updates.example.com"
@@ -2433,7 +2431,7 @@ https://updates.example.com/MyApp-1.2.3-macos-arm64.dmg
 
 ### API Reference
 
-#### NucleusUpdater
+#### PotassiumUpdater
 
 | Method | Description |
 |--------|-------------|
@@ -2495,7 +2493,7 @@ data class UpdateEvent(
 @Composable
 fun UpdateBanner() {
     val updater = remember {
-        NucleusUpdater {
+        PotassiumUpdater {
             provider = GitHubProvider(owner = "myorg", repo = "myapp")
         }
     }
@@ -2582,19 +2580,19 @@ To fix this, pass a client pre-configured with the OS trust store (for example v
 
 ```kotlin
 dependencies {
-    implementation("io.github.kdroidfilter:nucleus.updater-runtime:<version>")
-    implementation("io.github.kdroidfilter:nucleus.native-http:<version>")
+    implementation("io.github.kdroidfilter:potassium.updater-runtime:<version>")
+    implementation("io.github.kdroidfilter:potassium.native-http:<version>")
 }
 ```
 
 **2. Inject the client in the updater config**
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.nativehttp.NativeHttpClient
-import io.github.kdroidfilter.nucleus.updater.NucleusUpdater
-import io.github.kdroidfilter.nucleus.updater.provider.GitHubProvider
+import com.seanproctor.potassium.nativehttp.NativeHttpClient
+import com.seanproctor.potassium.updater.PotassiumUpdater
+import com.seanproctor.potassium.updater.provider.GitHubProvider
 
-val updater = NucleusUpdater {
+val updater = PotassiumUpdater {
     provider = GitHubProvider(owner = "myorg", repo = "myapp")
     httpClient = NativeHttpClient.create()
 }
@@ -2605,11 +2603,11 @@ The injected client is used for **both** the metadata check and the file downloa
 You can also compose additional options via the builder extension:
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.nativehttp.NativeHttpClient.withNativeSsl
+import com.seanproctor.potassium.nativehttp.NativeHttpClient.withNativeSsl
 import java.net.http.HttpClient
 import java.time.Duration
 
-val updater = NucleusUpdater {
+val updater = PotassiumUpdater {
     provider = GitHubProvider(owner = "myorg", repo = "myapp")
     httpClient = HttpClient.newBuilder()
         .withNativeSsl()
@@ -2644,7 +2642,7 @@ This allows you to adapt the UI — for example, force a confirmation dialog for
 After an update is installed (via `installAndRestart()` or `installAndQuit()`), the updater persists a marker file. On the next launch, you can detect that the app was just updated:
 
 ```kotlin
-val updater = NucleusUpdater {
+val updater = PotassiumUpdater {
     provider = GitHubProvider(owner = "myorg", repo = "myapp")
 }
 
@@ -2666,7 +2664,7 @@ if (event != null) {
 
 ```kotlin
 @Composable
-fun PostUpdateBanner(updater: NucleusUpdater) {
+fun PostUpdateBanner(updater: PotassiumUpdater) {
     var updateEvent by remember { mutableStateOf(updater.consumeUpdateEvent()) }
 
     updateEvent?.let { event ->
@@ -2691,7 +2689,7 @@ fun PostUpdateBanner(updater: NucleusUpdater) {
 }
 ```
 
-The marker file is stored in the platform-specific app data directory (resolved from `NucleusApp.appId`):
+The marker file is stored in the platform-specific app data directory (resolved from `PotassiumApp.appId`):
 
 - **Linux**: `$XDG_DATA_HOME//` or `~/.local/share//`
 - **macOS**: `~/Library/Application Support//`
@@ -2707,7 +2705,7 @@ The marker file is stored in the platform-specific app data directory (resolved 
 
 # Publishing
 
-Nucleus can publish your installers and update metadata to **GitHub Releases**, **Amazon S3**, or a **generic HTTP server**.
+Potassium can publish your installers and update metadata to **GitHub Releases**, **Amazon S3**, or a **generic HTTP server**.
 
 ## Configuration
 
@@ -2765,7 +2763,7 @@ publish {
 
 ### Release Structure
 
-A GitHub Release created by Nucleus contains:
+A GitHub Release created by Potassium contains:
 
 ```
 v1.0.0 (Release)
@@ -2881,7 +2879,7 @@ Users on the `beta` channel receive both `latest` and `beta` updates. Users on t
 Configure the channel in the updater runtime:
 
 ```kotlin
-NucleusUpdater {
+PotassiumUpdater {
     provider = GitHubProvider(owner = "myorg", repo = "myapp")
     channel = "beta" // Subscribe to beta updates
 }
@@ -2953,7 +2951,7 @@ Corporate proxies, VPN gateways, or ISP-level filtering services often
 use a private root CA that is not trusted by the default JDK trust store. Without their
 certificate, any HTTPS connection your app makes will throw an `SSLHandshakeException`.
 
-Instead of asking users to patch their JVM manually, Nucleus lets you declare the
+Instead of asking users to patch their JVM manually, Potassium lets you declare the
 certificates once in your build script — they are imported automatically during packaging.
 
 ## Configuration
@@ -2971,7 +2969,7 @@ Both PEM (`-----BEGIN CERTIFICATE-----`) and DER (binary) formats are accepted.
 
 ## How It Works
 
-1. After the JLink runtime image is created, Nucleus copies it to a separate
+1. After the JLink runtime image is created, Potassium copies it to a separate
    `runtime-patched/` directory.
 2. For each certificate file, it runs:
    ```
@@ -3078,7 +3076,7 @@ GraalVM Native Image compilation **requires [BellSoft Liberica NIK 25](https://b
 
 ## When to avoid native image
 
-Some libraries and use cases make native image compilation **extremely difficult or impractical**. Nucleus can handle most standard Compose Desktop dependencies automatically, but the following categories will likely require extensive manual configuration — or may not work at all:
+Some libraries and use cases make native image compilation **extremely difficult or impractical**. Potassium can handle most standard Compose Desktop dependencies automatically, but the following categories will likely require extensive manual configuration — or may not work at all:
 
 **Libraries that are very hard to support:** 
     - **Heavy JNA users** — Libraries that rely extensively on JNA (Java Native Access) for dynamic function calls. JNA's runtime proxy generation is fundamentally at odds with native-image's closed-world assumption. Examples: some system tray libraries, platform bridge libraries.
@@ -3090,12 +3088,12 @@ Some libraries and use cases make native image compilation **extremely difficult
 
 If your application depends on libraries in these categories, **prefer AOT Cache (Leyden)** instead — it provides significant startup improvement with zero configuration overhead and full compatibility.
 
-For everything else — ktor, kotlinx.serialization, Coil, SQLite, Jewel, Compose Multiplatform resources, SLF4J, and most idiomatic Kotlin libraries — Nucleus handles native image transparently.
+For everything else — ktor, kotlinx.serialization, Coil, SQLite, Jewel, Compose Multiplatform resources, SLF4J, and most idiomatic Kotlin libraries — Potassium handles native image transparently.
 
 ## Next steps
 
 - [Configuration](configuration.md) — Gradle DSL and build arguments
-- [Automatic Metadata](automatic-metadata.md) — How Nucleus resolves reflection metadata transparently
+- [Automatic Metadata](automatic-metadata.md) — How Potassium resolves reflection metadata transparently
 - [Runtime Bootstrap](runtime-bootstrap.md) — `graalvm-runtime` module, initializer, font fixes, resource inclusion
 - [Tasks & CI/CD](tasks-ci.md) — Gradle tasks, output locations, CI workflows, debugging
 
@@ -3106,7 +3104,7 @@ For everything else — ktor, kotlinx.serialization, Coil, SQLite, Jewel, Compos
 ## Gradle DSL
 
 ```kotlin
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
 
     graalvm {
@@ -3141,7 +3139,7 @@ nucleus.application {
 }
 ```
 
-**About `nativeImageConfigBaseDir`:** Nucleus ships all generic and platform-specific reflection metadata automatically. The `nativeImageConfigBaseDir` is only needed if you have app-specific entries that the automatic metadata doesn't cover — which is rare.
+**About `nativeImageConfigBaseDir`:** Potassium ships all generic and platform-specific reflection metadata automatically. The `nativeImageConfigBaseDir` is only needed if you have app-specific entries that the automatic metadata doesn't cover — which is rare.
 ## DSL Reference
 
 | Property | Type | Default | Description |
@@ -3186,17 +3184,17 @@ All GraalVM tasks use the default (non-ProGuard) build type. Use `-Os` in `build
 
 # Automatic Metadata Resolution
 
-The goal of Nucleus is to make GraalVM native-image compilation **as transparent as possible**. In most cases, you should be able to run `packageGraalvmNative` and get a working binary without writing a single line of reflection configuration. To achieve this, Nucleus combines five complementary metadata sources that are resolved and merged automatically at build time.
+The goal of Potassium is to make GraalVM native-image compilation **as transparent as possible**. In most cases, you should be able to run `packageGraalvmNative` and get a working binary without writing a single line of reflection configuration. To achieve this, Potassium combines five complementary metadata sources that are resolved and merged automatically at build time.
 
 ## Level 1 — Per-library conditional metadata
 
-The Nucleus Gradle plugin ships **28 per-library metadata files** covering Compose UI, Skiko, ktor, kotlinx.serialization, SQLite, Coil, JNA, FileKit, and many others. Each file declares a `matchPackages` condition — the metadata is only included if the corresponding library is actually present on your runtime classpath.
+The Potassium Gradle plugin ships **28 per-library metadata files** covering Compose UI, Skiko, ktor, kotlinx.serialization, SQLite, Coil, JNA, FileKit, and many others. Each file declares a `matchPackages` condition — the metadata is only included if the corresponding library is actually present on your runtime classpath.
 
 This means libraries like ktor or SQLite JDBC **just work** in native image without any manual configuration.
 
 ## Level 2 — Oracle Reachability Metadata Repository
 
-Nucleus automatically downloads the [Oracle GraalVM Reachability Metadata Repository](https://github.com/oracle/graalvm-reachability-metadata) and resolves metadata for all dependencies on your runtime classpath. This covers libraries that are not yet covered by Nucleus's own L1 metadata — SLF4J, Logback, and many others. The resolved metadata directories are passed to `native-image` via `-H:ConfigurationFileDirectories=`.
+Potassium automatically downloads the [Oracle GraalVM Reachability Metadata Repository](https://github.com/oracle/graalvm-reachability-metadata) and resolves metadata for all dependencies on your runtime classpath. This covers libraries that are not yet covered by Potassium's own L1 metadata — SLF4J, Logback, and many others. The resolved metadata directories are passed to `native-image` via `-H:ConfigurationFileDirectories=`.
 
 This is enabled by default. To customize:
 
@@ -3216,11 +3214,11 @@ graalvm {
 
 ## Level 3 — Platform-specific metadata
 
-The Nucleus Gradle plugin ships pre-built platform-specific metadata for macOS, Windows, and Linux. These cover platform-specific AWT implementations (`sun.awt.windows.*`, `sun.lwawt.macosx.*`, `sun.awt.X11.*`), Java2D pipelines, font managers, and security providers. The plugin writes the correct platform metadata to the build directory at compile time — **no per-platform configuration needed in your build script**.
+The Potassium Gradle plugin ships pre-built platform-specific metadata for macOS, Windows, and Linux. These cover platform-specific AWT implementations (`sun.awt.windows.*`, `sun.lwawt.macosx.*`, `sun.awt.X11.*`), Java2D pipelines, font managers, and security providers. The plugin writes the correct platform metadata to the build directory at compile time — **no per-platform configuration needed in your build script**.
 
 ## Level 4 — Static bytecode analysis
 
-Nucleus includes a **static bytecode analyzer** that scans all compiled classes on your runtime classpath at build time and automatically detects reflection, JNI, and resource requirements — without running the application. The analyzer detects:
+Potassium includes a **static bytecode analyzer** that scans all compiled classes on your runtime classpath at build time and automatically detects reflection, JNI, and resource requirements — without running the application. The analyzer detects:
 
 - **Native methods** and their parameter/return types (JNI metadata)
 - **`Class.forName()`** and **`MethodHandles.Lookup.findClass()`** calls (reflection metadata)
@@ -3237,7 +3235,7 @@ The `graalvm-runtime` module ships a `reachability-metadata.json` inside its JAR
 
 ## How it all fits together
 
-When you run `packageGraalvmNative`, Nucleus automatically resolves all five metadata levels and passes them to `native-image`:
+When you run `packageGraalvmNative`, Potassium automatically resolves all five metadata levels and passes them to `native-image`:
 
 All of this happens transparently — no manual steps required. The result is that **most applications compile and run as native images without any manual reflection configuration**.
 
@@ -3273,14 +3271,14 @@ The `graalvm-runtime` module provides everything needed to bootstrap a Compose D
 
 ```kotlin
 dependencies {
-    implementation("io.github.kdroidfilter:nucleus.graalvm-runtime:<version>")
+    implementation("io.github.kdroidfilter:potassium.graalvm-runtime:<version>")
 }
 ```
 
 Then call `GraalVmInitializer.initialize()` as the **first line** of your `main()` function, before any AWT or Compose usage:
 
 ```kotlin
-import io.github.kdroidfilter.nucleus.graalvm.GraalVmInitializer
+import com.seanproctor.potassium.graalvm.GraalVmInitializer
 
 fun main() {
     GraalVmInitializer.initialize()
@@ -3328,7 +3326,7 @@ The `graalvm-runtime` module solves this automatically. It ships a `native-image
 |---------|----------------|
 | `.*\.(svg\|ttf\|otf)` | All SVG icons and font files on the classpath — Jewel, IntelliJ Platform icons, Compose resources, your own icons |
 | `composeResources/.*` | All Compose Multiplatform resources (images, strings, fonts loaded via `Res.*`) |
-| `nucleus/native/.*` | All Nucleus JNI native libraries (`.dll`, `.dylib`, `.so`) |
+| `potassium/native/.*` | All Potassium JNI native libraries (`.dll`, `.dylib`, `.so`) |
 | `META-INF/services/.*` | All `ServiceLoader` descriptors (ktor, coil, SLF4J, etc.) |
 
 This means:
@@ -3415,7 +3413,7 @@ The `packageGraalvm<Format>` tasks produce installers in:
 
 ## CI/CD
 
-Native image compilation must happen **on each target platform**. Use `setup-nucleus` with `graalvm: 'true'`:
+Native image compilation must happen **on each target platform**. Use `setup-potassium` with `graalvm: 'true'`:
 
 ```yaml
 name: Build GraalVM Native Image
@@ -3449,8 +3447,8 @@ jobs:
 
       # Download pre-built JNI native libraries here...
 
-      - name: Setup Nucleus (GraalVM)
-        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+      - name: Setup Potassium (GraalVM)
+        uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
         with:
           graalvm: 'true'
           setup-gradle: 'true'
@@ -3490,7 +3488,7 @@ Run your native binary from the terminal. Reflection failures produce clear erro
 
 ### Cleaning up accumulated metadata
 
-Over time, manual `reachability-metadata.json` entries may become redundant as Nucleus adds coverage for more libraries. Run the cleanup task periodically:
+Over time, manual `reachability-metadata.json` entries may become redundant as Potassium adds coverage for more libraries. Run the cleanup task periodically:
 
 ```bash
 ./gradlew cleanupGraalvmMetadata
@@ -3510,25 +3508,25 @@ Even though the automatic metadata covers the vast majority of cases, running `r
 
 ### Use the Jewel sample as reference
 
-The [`jewel-sample`](https://github.com/kdroidFilter/Nucleus/tree/main/jewel-sample) in the Nucleus repository demonstrates a more complex native-image setup with the Jewel UI library. It is an excellent reference for advanced use cases.
+The [`jewel-sample`](https://github.com/kdroidFilter/Nucleus/tree/main/jewel-sample) in the Potassium repository demonstrates a more complex native-image setup with the Jewel UI library. It is an excellent reference for advanced use cases.
 
 ## Further Reading
 
 - [GraalVM Native Image documentation](https://www.graalvm.org/latest/reference-manual/native-image/)
 - [BellSoft Liberica NIK](https://bell-sw.com/liberica-native-image-kit/)
 - [Oracle GraalVM Reachability Metadata Repository](https://github.com/oracle/graalvm-reachability-metadata)
-- [Nucleus example app](https://github.com/kdroidFilter/Nucleus/tree/main/example) — minimal Compose Desktop + native-image setup
-- [Nucleus Jewel sample](https://github.com/kdroidFilter/Nucleus/tree/main/jewel-sample) — advanced setup with reflection-heavy dependencies
+- [Potassium example app](https://github.com/kdroidFilter/Nucleus/tree/main/example) — minimal Compose Desktop + native-image setup
+- [Potassium Jewel sample](https://github.com/kdroidFilter/Nucleus/tree/main/jewel-sample) — advanced setup with reflection-heavy dependencies
 
 ---
 
 # Nucleus Native Access
 
-Every now and then, no runtime library covers your exact native API need. Nucleus handles the common cases with JNI — but when you need something specific (a platform API, a custom algorithm, a C library), the usual path involves writing JNI glue in C, building a `.so`/`.dylib`/`.dll`, bundling it, and wiring it up from Kotlin. That's a lot of friction for what should be a simple call.
+Every now and then, no runtime library covers your exact native API need. Potassium handles the common cases with JNI — but when you need something specific (a platform API, a custom algorithm, a C library), the usual path involves writing JNI glue in C, building a `.so`/`.dylib`/`.dll`, bundling it, and wiring it up from Kotlin. That's a lot of friction for what should be a simple call.
 
 **Nucleus Native Access** removes that friction. Write your native logic in **Kotlin/Native**, and the plugin generates the FFM bridge automatically. No C, no build scripts, no manual JNI plumbing — just Kotlin on both sides.
 
-**FFM, not JNI:** Nucleus's built-in runtime libraries (decorated windows, dark mode, notifications…) use **JNI** for broad compatibility. Nucleus Native Access uses the **Foreign Function & Memory (FFM) API** (JEP 454, stable since JDK 22). Both are valid approaches, but FFM lets you write the native side in pure Kotlin rather than C.
+**FFM, not JNI:** Potassium's built-in runtime libraries (decorated windows, dark mode, notifications…) use **JNI** for broad compatibility. Nucleus Native Access uses the **Foreign Function & Memory (FFM) API** (JEP 454, stable since JDK 22). Both are valid approaches, but FFM lets you write the native side in pure Kotlin rather than C.
 ## How It Works
 
 The plugin:
@@ -3543,7 +3541,7 @@ The generated JVM proxies have **the exact same API** as your native classes —
 
 ## Setup
 
-**Separate versioning:** Nucleus Native Access is versioned independently from Nucleus. Check the latest version on the [NucleusNativeAccess repository](https://github.com/kdroidFilter/NucleusNativeAccess).
+**Separate versioning:** Nucleus Native Access is versioned independently from Potassium. Check the latest version on the [NucleusNativeAccess repository](https://github.com/kdroidFilter/NucleusNativeAccess).
 Add the plugin to your Kotlin Multiplatform module:
 
 ```kotlin
@@ -3577,7 +3575,7 @@ The Compose compiler plugin doesn't support arbitrary Kotlin/Native targets (e.g
 my-app/
 ├── native/              ← Kotlin/Native + nucleusnativeaccess (no Compose)
 │   └── build.gradle.kts
-├── app/                 ← Compose Desktop + Nucleus, depends on :native
+├── app/                 ← Compose Desktop + Potassium, depends on :native
 │   └── build.gradle.kts
 └── settings.gradle.kts
 ```
@@ -3609,7 +3607,7 @@ plugins {
     kotlin("multiplatform")
     id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.seanproctor.nucleus") version "1.15.11"
+    id("com.seanproctor.potassium") version "1.15.11"
 }
 
 kotlin {
@@ -3626,7 +3624,7 @@ kotlin {
     }
 }
 
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
     jvmArgs += listOf("--enable-native-access=ALL-UNNAMED")
 }
@@ -3640,7 +3638,7 @@ Nucleus Native Access includes full GraalVM metadata generation:
 - `resource-config.json` for bundled native libraries
 - `reachability-metadata.json` for FFM descriptors
 
-No manual configuration needed — the generated metadata is picked up automatically by the [Nucleus GraalVM plugin](../graalvm/index.md).
+No manual configuration needed — the generated metadata is picked up automatically by the [Potassium GraalVM plugin](../graalvm/index.md).
 
 ## Repository
 
@@ -3900,13 +3898,13 @@ Cancellation is bidirectional: cancelling the JVM `Job` cancels the native corou
 
 # CI/CD
 
-Nucleus provides reusable composite actions and ready-to-use GitHub Actions workflows for building, packaging, and publishing desktop applications across all platforms.
+Potassium provides reusable composite actions and ready-to-use GitHub Actions workflows for building, packaging, and publishing desktop applications across all platforms.
 
-**Use Nucleus actions in your own project:** 
-    All composite actions can be referenced directly from the Nucleus repository — no need to copy them into your project:
+**Use Potassium actions in your own project:** 
+    All composite actions can be referenced directly from the Potassium repository — no need to copy them into your project:
 
     ```yaml
-    - uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+    - uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
     ```
 
     Replace `@main` with a specific tag (e.g. `@v1.0.0`) to pin a stable version.
@@ -3915,14 +3913,14 @@ Nucleus provides reusable composite actions and ready-to-use GitHub Actions work
 
 A typical release pipeline has four stages:
 
-## `setup-nucleus` Action
+## `setup-potassium` Action
 
-The `setup-nucleus` composite action (`.github/actions/setup-nucleus`) sets up the complete build environment: JetBrains Runtime 25, packaging tools, Gradle, and Node.js — all cross-platform.
+The `setup-potassium` composite action (`.github/actions/setup-potassium`) sets up the complete build environment: JetBrains Runtime 25, packaging tools, Gradle, and Node.js — all cross-platform.
 
 ### Usage
 
 ```yaml
-- uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+- uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
   with:
     jbr-version: '25.0.2b329.66'
     packaging-tools: 'true'
@@ -3959,7 +3957,7 @@ The `setup-nucleus` composite action (`.github/actions/setup-nucleus`) sets up t
 When `graalvm: 'true'` is set, the action installs **BellSoft Liberica NIK** instead of JBR, plus platform-specific toolchains:
 
 ```yaml
-- uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+- uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
   with:
     graalvm: 'true'
     setup-gradle: 'true'
@@ -4051,8 +4049,8 @@ jobs:
           tag="$(git describe --tags --abbrev=0)"
           echo "RELEASE_VERSION=$tag" >> "$GITHUB_ENV"
 
-      - name: Setup Nucleus
-        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+      - name: Setup Potassium
+        uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
         with:
           jbr-version: '25.0.2b329.66'
           packaging-tools: 'true'
@@ -4105,7 +4103,7 @@ matrix:
       jbr-download-url: 'https://example.com/jbr-25-macos-x64-custom.tar.gz'
 
 steps:
-  - uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+  - uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
     with:
       jbr-version: '25.0.2b329.66'
       jbr-download-url: ${{ matrix.jbr-download-url || '' }}
@@ -4121,7 +4119,7 @@ val releaseVersion = System.getenv("RELEASE_VERSION")
     ?.takeIf { it.isNotBlank() }
     ?: "1.0.0"
 
-nucleus.application {
+potassium.application {
     nativeDistributions {
         packageVersion = releaseVersion
     }
@@ -4130,7 +4128,7 @@ nucleus.application {
 
 ## Universal macOS Binaries
 
-Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then optionally sign and notarize. Nucleus includes reusable composite actions (`setup-macos-signing` and `build-macos-universal`):
+Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then optionally sign and notarize. Potassium includes reusable composite actions (`setup-macos-signing` and `build-macos-universal`):
 
 ```yaml
   universal-macos:
@@ -4233,7 +4231,7 @@ Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then opti
 
 ## Windows MSIX Bundle
 
-Combine amd64 and arm64 `.appx` files into a single `.msixbundle`. Nucleus includes a reusable composite action (`build-windows-appxbundle`):
+Combine amd64 and arm64 `.appx` files into a single `.msixbundle`. Potassium includes a reusable composite action (`build-windows-appxbundle`):
 
 ```yaml
   bundle-windows:
@@ -4271,7 +4269,7 @@ Combine amd64 and arm64 `.appx` files into a single `.msixbundle`. Nucleus inclu
 
 ## Publish to GitHub Releases
 
-After all builds complete, create a GitHub Release with all artifacts and update YML files. Nucleus includes composite actions for both (`generate-update-yml` and `publish-release`):
+After all builds complete, create a GitHub Release with all artifacts and update YML files. Potassium includes composite actions for both (`generate-update-yml` and `publish-release`):
 
 ```yaml
   publish:
@@ -4347,11 +4345,11 @@ After all builds complete, create a GitHub Release with all artifacts and update
 
 ## Composite Actions Reference
 
-Nucleus provides reusable composite actions that you can reference directly in your workflows using `kdroidFilter/Nucleus/.github/actions/@main`:
+Potassium provides reusable composite actions that you can reference directly in your workflows using `kdroidFilter/Nucleus/.github/actions/@main`:
 
 | Action | Usage | Description |
 |--------|-------|-------------|
-| `setup-nucleus` | `kdroidFilter/Nucleus/.github/actions/setup-nucleus@main` | Setup JBR 25, packaging tools, Gradle, Node.js |
+| `setup-potassium` | `kdroidFilter/Nucleus/.github/actions/setup-potassium@main` | Setup JBR 25, packaging tools, Gradle, Node.js |
 | `setup-macos-signing` | `kdroidFilter/Nucleus/.github/actions/setup-macos-signing@main` | Create temporary keychain and import signing certificates |
 | `build-macos-universal` | `kdroidFilter/Nucleus/.github/actions/build-macos-universal@main` | Merge arm64 + x64 into universal binary via `lipo`, sign, and package |
 | `build-windows-appxbundle` | `kdroidFilter/Nucleus/.github/actions/build-windows-appxbundle@main` | Combine amd64 + arm64 `.appx` into `.msixbundle` |
@@ -4360,7 +4358,7 @@ Nucleus provides reusable composite actions that you can reference directly in y
 
 ## GraalVM Native Image Release
 
-Build and publish GraalVM native packages (DEB, DMG, NSIS) on tag push. Uses `setup-nucleus` with `graalvm: 'true'` and the `packageGraalvm<Format>` tasks:
+Build and publish GraalVM native packages (DEB, DMG, NSIS) on tag push. Uses `setup-potassium` with `graalvm: 'true'` and the `packageGraalvm<Format>` tasks:
 
 ```yaml
 name: Release GraalVM Native Image
@@ -4400,8 +4398,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Nucleus (GraalVM)
-        uses: kdroidFilter/Nucleus/.github/actions/setup-nucleus@main
+      - name: Setup Potassium (GraalVM)
+        uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
         with:
           graalvm: 'true'
           setup-gradle: 'true'
@@ -4441,41 +4439,41 @@ These tasks first compile the native image via `packageGraalvmNative`, then pack
 
 ## Tips
 
-- **JBR 25 required**: Use `setup-nucleus` for all packaging builds — it installs JBR 25 automatically
+- **JBR 25 required**: Use `setup-potassium` for all packaging builds — it installs JBR 25 automatically
 - **Pin a version**: Use a tag (e.g. `@v1.0.0`) instead of `@main` for reproducible builds
 - **Concurrency**: Use `concurrency` to prevent parallel releases
 - **fail-fast: false**: Continue building other platforms if one fails
 - **Timeout**: Set generous timeouts (120min) for Flatpak/Snap builds
-- **Caching**: `setup-nucleus` enables Gradle caching automatically via `gradle/actions/setup-gradle@v4`
-- **No checkout needed**: When using actions from `kdroidFilter/Nucleus`, GitHub fetches them automatically — no need to checkout the Nucleus repository
+- **Caching**: `setup-potassium` enables Gradle caching automatically via `gradle/actions/setup-gradle@v4`
+- **No checkout needed**: When using actions from `kdroidFilter/Nucleus`, GitHub fetches them automatically — no need to checkout the Potassium repository
 - **workflow_dispatch**: Add it as a trigger to allow re-running a release manually
 
 ---
 
 # Packaging
 
-**About this comparison:** This comparison was generated with the assistance of [Claude Code](https://claude.ai/claude-code) (Anthropic's AI coding agent). Every factual claim includes a source link to official documentation, GitHub repositories, or vendor pages. Nucleus-specific claims are verified against the project source code.
+**About this comparison:** This comparison was generated with the assistance of [Claude Code](https://claude.ai/claude-code) (Anthropic's AI coding agent). Every factual claim includes a source link to official documentation, GitHub repositories, or vendor pages. Potassium-specific claims are verified against the project source code.
     Last updated: March 2026.
 
 ---
 
 ## Executive Summary
 
-This page evaluates **Nucleus** against **10 competing JVM packaging tools** across 13 feature dimensions.
+This page evaluates **Potassium** against **10 competing JVM packaging tools** across 13 feature dimensions.
 
 **Key findings:**
 
-- **Nucleus offers the broadest package format coverage of any JVM tool** (16 distributable formats), surpassing Conveyor (6), install4j (7), jpackage (6), and Compose Multiplatform (6).
-- **Nucleus is the only JVM packaging tool** combining auto-update runtime, AOT caching, GraalVM Native Image packaging, store distribution pipeline, native UI components (decorated windows with JBR and JNI backends, dark mode detection, Linux HiDPI), deep link/single instance management, and native OS SSL integration in one toolkit.
-- **Nucleus is the first JVM packaging tool with integrated GraalVM Native Image support** — compile Compose Desktop apps into standalone native binaries with ~0.5s cold boot, ~100–150 MB memory usage, and smaller bundle sizes (no bundled JRE). Full packaging pipeline (DMG, NSIS, DEB) for native images.
-- **Nucleus has the most comprehensive CI/CD solution** for JVM desktop apps, with 6 composite GitHub Actions covering matrix builds, universal macOS binaries, MSIX bundles, GraalVM native image builds, and release publishing.
-- **Tradeoffs**: Nucleus requires platform-specific CI runners (no cross-compilation), is Gradle-only, and is a younger project with a smaller community than established tools.
+- **Potassium offers the broadest package format coverage of any JVM tool** (16 distributable formats), surpassing Conveyor (6), install4j (7), jpackage (6), and Compose Multiplatform (6).
+- **Potassium is the only JVM packaging tool** combining auto-update runtime, AOT caching, GraalVM Native Image packaging, store distribution pipeline, native UI components (decorated windows with JBR and JNI backends, dark mode detection, Linux HiDPI), deep link/single instance management, and native OS SSL integration in one toolkit.
+- **Potassium is the first JVM packaging tool with integrated GraalVM Native Image support** — compile Compose Desktop apps into standalone native binaries with ~0.5s cold boot, ~100–150 MB memory usage, and smaller bundle sizes (no bundled JRE). Full packaging pipeline (DMG, NSIS, DEB) for native images.
+- **Potassium has the most comprehensive CI/CD solution** for JVM desktop apps, with 6 composite GitHub Actions covering matrix builds, universal macOS binaries, MSIX bundles, GraalVM native image builds, and release publishing.
+- **Tradeoffs**: Potassium requires platform-specific CI runners (no cross-compilation), is Gradle-only, and is a younger project with a smaller community than established tools.
 
 ### Rankings
 
 | Tier | Tool | Score | License |
 |------|------|:-----:|---------|
-| **S** | **Nucleus** | **90** | MIT (free) |
+| **S** | **Potassium** | **90** | MIT (free) |
 | **B** | [install4j](https://www.ej-technologies.com/products/install4j/overview.html) | 65 | Proprietary ($2,199+/dev) |
 | **B-** | [Conveyor](https://conveyor.hydraulic.dev/) | 62 | Proprietary ($45/mo) |
 | **C** | [jDeploy](https://www.jdeploy.com/) | 49 | Apache 2 (free) |
@@ -4514,7 +4512,7 @@ Scoring: each of 13 dimensions rated 0–10, total = raw sum / 130 × 100. See [
 
 | Tool | Win x64 | Win ARM64 | macOS x64 | macOS ARM64 | macOS Universal | Linux x64 | Linux ARM64 | Score |
 |------|:-------:|:---------:|:---------:|:-----------:|:---------------:|:---------:|:-----------:|:-----:|
-| **Nucleus** | ✅ | ✅ | ✅ | ✅ | ✅ (CI action) | ✅ | ✅ | **10** |
+| **Potassium** | ✅ | ✅ | ✅ | ✅ | ✅ (CI action) | ✅ | ✅ | **10** |
 | Conveyor | ✅ | ✅ | ✅ | ✅ | ❌¹ | ✅ | ⚠️² | **8** |
 | install4j | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **10** |
 | jpackage | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | **8** |
@@ -4527,7 +4525,7 @@ Scoring: each of 13 dimensions rated 0–10, total = raw sum / 130 × 100. See [
 ² Conveyor has `app.linux.aarch64` config keys ([docs](https://conveyor.hydraulic.dev/21.1/configs/linux/)), but Linux ARM64 is listed as planned in the FAQ ([FAQ](https://conveyor.hydraulic.dev/21.1/faq/output-formats/)).
 
 ??? info "Sources"
-    - **Nucleus**: macOS universal binary via [`build-macos-universal`](https://github.com/kdroidFilter/Nucleus/tree/main/.github/actions/build-macos-universal) CI action using `lipo`
+    - **Potassium**: macOS universal binary via [`build-macos-universal`](https://github.com/kdroidFilter/Nucleus/tree/main/.github/actions/build-macos-universal) CI action using `lipo`
     - **Conveyor**: [Package formats](https://conveyor.hydraulic.dev/21.1/package-formats/), [macOS config](https://conveyor.hydraulic.dev/21.1/configs/mac/), [Linux config](https://conveyor.hydraulic.dev/21.1/configs/linux/)
     - **install4j**: [Features page](https://www.ej-technologies.com/install4j/features) — "compile installers for all platforms on any of these platforms"
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — must build on target OS
@@ -4540,7 +4538,7 @@ Scoring: each of 13 dimensions rated 0–10, total = raw sum / 130 × 100. See [
 
 | Tool | DMG | PKG | NSIS | MSI | MSIX/AppX | Portable | DEB | RPM | AppImage | Snap | Flatpak | Archives | Total |
 |------|:---:|:---:|:----:|:---:|:---------:|:--------:|:---:|:---:|:--------:|:----:|:-------:|:--------:|:-----:|
-| **Nucleus** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ZIP, TAR, 7Z | **16** |
+| **Potassium** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ZIP, TAR, 7Z | **16** |
 | Conveyor | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ZIP, TAR + EXE¹ | **6** |
 | install4j | ✅ | ❌ | ❌ | ✅² | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | TAR, shell | **7** |
 | jpackage | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | **6** |
@@ -4550,7 +4548,7 @@ Scoring: each of 13 dimensions rated 0–10, total = raw sum / 130 × 100. See [
 
 | Score | Rating |
 |-------|--------|
-| **Nucleus**: 16 formats | **10** |
+| **Potassium**: 16 formats | **10** |
 | JavaPackager: 8 | 5 |
 | install4j: 7 | 5 |
 | Conveyor: 6 | 4 |
@@ -4563,7 +4561,7 @@ Scoring: each of 13 dimensions rated 0–10, total = raw sum / 130 × 100. See [
 ³ jDeploy DMG requires a separate GitHub Action + macOS runner ([jdeploy-action-dmg](https://github.com/shannah/jdeploy-action-dmg)).
 
 ??? info "Sources"
-    - **Nucleus**: [`TargetFormat.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/dsl/TargetFormat.kt) — 17 enum values (16 distributable + `RawAppImage` intermediate)
+    - **Potassium**: [`TargetFormat.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/TargetFormat.kt) — 17 enum values (16 distributable + `RawAppImage` intermediate)
     - **Conveyor**: [Package formats](https://conveyor.hydraulic.dev/21.1/package-formats/), [Output formats FAQ](https://conveyor.hydraulic.dev/21.1/faq/output-formats/) — MSIX, EXE, ZIP (Windows); signed .app in ZIP (macOS); DEB, tar.gz (Linux). No DMG, PKG, RPM, NSIS, AppImage, Snap, Flatpak.
     - **install4j**: [Media files](https://www.ej-technologies.com/resources/install4j/help/doc/concepts/mediaFiles.html) — EXE, MSI wrapper, DMG, .app, RPM, DEB, tar.gz, shell installer. No PKG, NSIS, AppX.
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — `--type`: app-image, dmg, pkg, exe, msi, deb, rpm
@@ -4571,7 +4569,7 @@ Scoring: each of 13 dimensions rated 0–10, total = raw sum / 130 × 100. See [
     - **Compose MP**: [Native distributions](https://kotlinlang.org/docs/multiplatform/compose-native-distribution.html) — wraps jpackage formats
     - **JavaPackager**: [GitHub README](https://github.com/fvarrui/JavaPackager) — EXE (Inno Setup/WinRun4J), MSI (WiX), DMG, PKG, DEB, RPM, AppImage, ZIP
 
-Nucleus leads by leveraging electron-builder as its packaging backend: jpackage creates the app-image, then electron-builder's `--prepackaged` mode produces all 16 distributable formats. This hybrid architecture is unique in the JVM ecosystem.
+Potassium leads by leveraging electron-builder as its packaging backend: jpackage creates the app-image, then electron-builder's `--prepackaged` mode produces all 16 distributable formats. This hybrid architecture is unique in the JVM ecosystem.
 
 ---
 
@@ -4579,7 +4577,7 @@ Nucleus leads by leveraging electron-builder as its packaging backend: jpackage 
 
 | Tool | Runtime Library | Updater Backend | Channels | Delta Updates | Verification | Score |
 |------|:---------------:|:---------------:|:--------:|:-------------:|:------------:|:-----:|
-| **Nucleus** | ✅ `NucleusUpdater` | GitHub / Generic URL | 3 (latest/beta/alpha) | ❌ | SHA-512 | **9** |
+| **Potassium** | ✅ `PotassiumUpdater` | GitHub / Generic URL | 3 (latest/beta/alpha) | ❌ | SHA-512 | **9** |
 | Conveyor | ✅ (OS-native) | Sparkle 2 / MSIX / apt | ✅ | ✅ (Win+Mac) | ✅ | **10** |
 | install4j | ✅ (updater API) | Custom | ✅ | ❌ | ✅ | **9** |
 | jDeploy | ✅ (built-in) | npm / GitHub Releases | ❌ | ❌ | ❌ | **6** |
@@ -4587,12 +4585,12 @@ Nucleus leads by leveraging electron-builder as its packaging backend: jpackage 
 | Compose MP | ❌ | — | — | — | — | **0** |
 
 ??? info "Sources"
-    - **Nucleus**: `NucleusUpdater.kt` — `GitHubProvider` and `GenericProvider`; SHA-512 verification; 9 self-updatable format types (EXE, NSIS, MSI, DMG, ZIP, AppImage, DEB, RPM, NsisWeb)
+    - **Potassium**: `PotassiumUpdater.kt` — `GitHubProvider` and `GenericProvider`; SHA-512 verification; 9 self-updatable format types (EXE, NSIS, MSI, DMG, ZIP, AppImage, DEB, RPM, NsisWeb)
     - **Conveyor**: [Update modes](https://conveyor.hydraulic.dev/21.1/configs/update-modes/) — Sparkle 2 on macOS (delta patches for 5 previous versions), MSIX native on Windows (64 KB chunk delta), apt on Linux. [Understanding updates](https://conveyor.hydraulic.dev/21.1/understanding-updates/)
     - **install4j**: [Features](https://www.ej-technologies.com/install4j/features) — built-in auto-update with configurable strategies
     - **jDeploy**: [Substack](https://jdeploy.substack.com/p/automated-deployment-and-updates) — auto-detects new versions on launch
 
-Conveyor's delta update system is a genuine differentiator: a single-line change in an Electron app results in ~31 KB (macOS) or ~115 KB (Windows) updates vs ~100 MB full downloads ([source](https://conveyor.hydraulic.dev/21.1/understanding-updates/)). Nucleus uses full-file downloads but compensates with a rich runtime API (progress tracking, channel management, restart-on-update).
+Conveyor's delta update system is a genuine differentiator: a single-line change in an Electron app results in ~31 KB (macOS) or ~115 KB (Windows) updates vs ~100 MB full downloads ([source](https://conveyor.hydraulic.dev/21.1/understanding-updates/)). Potassium uses full-file downloads but compensates with a rich runtime API (progress tracking, channel management, restart-on-update).
 
 ---
 
@@ -4600,7 +4598,7 @@ Conveyor's delta update system is a genuine differentiator: a single-line change
 
 | Tool | macOS Signing | macOS Notarization | Windows PFX | Azure Artifact Signing | Other Cloud HSMs | Score |
 |------|:------------:|:------------------:|:-----------:|:----------------------:|:----------------:|:-----:|
-| **Nucleus** | ✅ | ✅ | ✅ |           ✅            | ❌ | **10** |
+| **Potassium** | ✅ | ✅ | ✅ |           ✅            | ❌ | **10** |
 | Conveyor | ✅ | ✅ | ✅ (+ self-sign + SSL certs) |           ✅            | ✅ (6 providers) | **10** |
 | install4j | ✅ | ✅ | ✅ |           ❌            | ❌ | **8** |
 | jDeploy | ✅¹ | ✅¹ | ✅¹ |           ❌            | ❌ | **7** |
@@ -4611,14 +4609,14 @@ Conveyor's delta update system is a genuine differentiator: a single-line change
 ¹ jDeploy pre-signs and notarizes installers using its own certificate; optional custom signing via GitHub Action ([FAQ](https://www.jdeploy.com/docs/faq/)).
 
 ??? info "Sources"
-    - **Nucleus**: [`MacOSSigningSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/dsl/MacOSSigningSettings.kt), [`WindowsSigningSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/dsl/WindowsSigningSettings.kt) — Azure Artifact Signing via `azureTenantId`, `azureEndpoint`, `azureCertificateProfileName`
+    - **Potassium**: [`MacOSSigningSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/MacOSSigningSettings.kt), [`WindowsSigningSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/WindowsSigningSettings.kt) — Azure Artifact Signing via `azureTenantId`, `azureEndpoint`, `azureCertificateProfileName`
     - **Conveyor**: [Keys and certificates](https://conveyor.hydraulic.dev/21.1/configs/keys-and-certificates/) — macOS notarization (App Store Connect API keys), Windows self-signing, Azure Artifact Signing, Azure Key Vault, AWS KMS, SSL.com eSigner, DigiCert ONE, Google Cloud KMS, HSMs (SafeNet, YubiKey)
     - **install4j**: [Features](https://www.ej-technologies.com/install4j/features) — cross-platform signing and notarization
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — `--mac-sign`, `--mac-signing-key-user-name`, `--mac-app-store`
     - **Compose MP**: [Native distributions](https://kotlinlang.org/docs/multiplatform/compose-native-distribution.html) — macOS signing and notarization DSL
     - **JavaPackager**: [v1.7.4 release](https://github.com/fvarrui/JavaPackager/releases/tag/v1.7.4) — Jsign 5.0 for Windows signing
 
-Conveyor has the broadest signing provider support (6 cloud HSM services). Nucleus focuses on the two most common paths (PFX + Azure Artifact Signing) with CI-ready composite actions for secret management.
+Conveyor has the broadest signing provider support (6 cloud HSM services). Potassium focuses on the two most common paths (PFX + Azure Artifact Signing) with CI-ready composite actions for secret management.
 
 ---
 
@@ -4626,19 +4624,19 @@ Conveyor has the broadest signing provider support (6 cloud HSM services). Nucle
 
 | Tool | Pre-built Actions | Matrix Builds | Universal Binary | MSIX Bundle | Release Publishing | Score |
 |------|:-----------------:|:-------------:|:----------------:|:-----------:|:------------------:|:-----:|
-| **Nucleus** | ✅ (6 actions) | ✅ (6 runners) | ✅ | ✅ | ✅ | **10** |
+| **Potassium** | ✅ (6 actions) | ✅ (6 runners) | ✅ | ✅ | ✅ | **10** |
 | Conveyor | ⚠️ (examples) | ❌ (single machine) | ❌ | ❌ | ✅ (GH/SSH/S3) | **6** |
 | install4j | ❌ (CLI only) | ❌ | ❌ | ❌ | ❌ | **3** |
 | jDeploy | ✅ (GitHub Action) | ❌ | ❌ | ❌ | ✅ (auto) | **5** |
 | Compose MP | ❌ | ❌ | ❌ | ❌ | ❌ | **1** |
 
 ??? info "Sources"
-    - **Nucleus**: 6 composite actions in [`.github/actions/`](https://github.com/kdroidFilter/Nucleus/tree/main/.github/actions) — `setup-nucleus` (JBR or GraalVM Liberica NIK + tools), `setup-macos-signing` (keychain + P12), `build-macos-universal` (lipo merge + re-sign), `build-windows-appxbundle` (MakeAppx + SignTool), `generate-update-yml` (SHA-512 metadata), `publish-release` (gh release create). Since v1.3.0, `setup-nucleus` supports a `graalvm` option to install BellSoft Liberica NIK instead of JBR, enabling GraalVM Native Image builds in CI.
+    - **Potassium**: 6 composite actions in [`.github/actions/`](https://github.com/kdroidFilter/Nucleus/tree/main/.github/actions) — `setup-potassium` (JBR or GraalVM Liberica NIK + tools), `setup-macos-signing` (keychain + P12), `build-macos-universal` (lipo merge + re-sign), `build-windows-appxbundle` (MakeAppx + SignTool), `generate-update-yml` (SHA-512 metadata), `publish-release` (gh release create). Since v1.3.0, `setup-potassium` supports a `graalvm` option to install BellSoft Liberica NIK instead of JBR, enabling GraalVM Native Image builds in CI.
     - **Conveyor**: [CI tutorial](https://conveyor.hydraulic.dev/21.1/tutorial/hare/ci/) — example workflows for GitHub Actions (build, deploy-to-gh, deploy-to-ssh). Conveyor runs on a single machine since it cross-compiles.
     - **install4j**: [What's new](https://www.ej-technologies.com/install4j/whatsnew12) — CLI mode for CI, no pre-built actions
     - **jDeploy**: [GitHub](https://github.com/shannah/jdeploy) — `jdeploy-action` for automated builds on tag push
 
-Nucleus's CI pipeline is its strongest JVM differentiator. No other JVM tool provides ready-to-use GitHub Actions for the complete build → sign → bundle → publish workflow. Conveyor avoids matrix builds entirely by cross-compiling from a single machine — a fundamentally different (and simpler) approach.
+Potassium's CI pipeline is its strongest JVM differentiator. No other JVM tool provides ready-to-use GitHub Actions for the complete build → sign → bundle → publish workflow. Conveyor avoids matrix builds entirely by cross-compiling from a single machine — a fundamentally different (and simpler) approach.
 
 ---
 
@@ -4646,7 +4644,7 @@ Nucleus's CI pipeline is its strongest JVM differentiator. No other JVM tool pro
 
 | Tool | Gradle | Maven | CLI | Other | Score |
 |------|:------:|:-----:|:---:|:-----:|:-----:|
-| **Nucleus** | ✅ (plugin) | ❌ | ❌ | — | **6** |
+| **Potassium** | ✅ (plugin) | ❌ | ❌ | — | **6** |
 | Conveyor | ✅ (plugin) | ✅ (via CLI) | ✅ | HOCON config | **9** |
 | install4j | ✅ | ✅ | ✅ (IDE + CLI) | Ant | **10** |
 | jDeploy | ❌ | ✅ | ✅ | npm | **8** |
@@ -4656,13 +4654,13 @@ Nucleus's CI pipeline is its strongest JVM differentiator. No other JVM tool pro
 | jpackage | ❌ | ❌ | ✅ (JDK built-in) | — | **4** |
 
 ??? info "Sources"
-    - **Nucleus**: Gradle plugin (`io.github.kdroidfilter.nucleus`), no Maven or CLI support
+    - **Potassium**: Gradle plugin (`com.seanproctor.potassium`), no Maven or CLI support
     - **Conveyor**: [Gradle/Maven integration](https://conveyor.hydraulic.dev/21.1/configs/maven-gradle/) — open-source Gradle plugin (Gradle 7+); Maven via `mvn dependency:build-classpath` CLI integration; standalone `conveyor` CLI
     - **install4j**: [Features](https://www.ej-technologies.com/install4j/features) — visual IDE + CLI + Gradle + Maven + Ant plugins
     - **jDeploy**: [GitHub](https://github.com/shannah/jdeploy) — CLI tool, Maven integration, npm package
     - **JavaPackager**: [GitHub](https://github.com/fvarrui/JavaPackager) — Gradle + Maven plugins
 
-Nucleus is Gradle-only, which suits its Compose Desktop audience but limits adoption by Maven or CLI-only users. Conveyor and install4j offer the most flexibility.
+Potassium is Gradle-only, which suits its Compose Desktop audience but limits adoption by Maven or CLI-only users. Conveyor and install4j offer the most flexibility.
 
 ---
 
@@ -4670,7 +4668,7 @@ Nucleus is Gradle-only, which suits its Compose Desktop audience but limits adop
 
 | Tool | JLink | ProGuard | AOT Cache (Leyden) | GraalVM Native Image | Custom JVM | CA Cert Patching | Score |
 |------|:-----:|:--------:|:-------------------:|:--------------------:|:----------:|:----------------:|:-----:|
-| **Nucleus** | ✅ | ✅ | ✅ (JDK 25+) | ✅ (alpha) | ✅ (JBR / Liberica NIK) | ✅ (declarative DSL) | **10** |
+| **Potassium** | ✅ | ✅ | ✅ (JDK 25+) | ✅ (alpha) | ✅ (JBR / Liberica NIK) | ✅ (declarative DSL) | **10** |
 | Conveyor | ✅ (auto) | ❌ | ❌ | ⚠️ (workaround¹) | ✅ (6 vendors) | ✅ (`app.jvm.additional-ca-certs`) | **6** |
 | install4j | ✅ | ❌ | ❌ | ❌ | ✅ | ❌² | **5** |
 | jpackage | ✅ | ❌ | ❌ | ❌ | ✅ | ⚠️³ | **4** |
@@ -4684,14 +4682,14 @@ Nucleus is Gradle-only, which suits its Compose Desktop audience but limits adop
 ⁵ badass-jlink exposes no cert DSL, but its task hook (`tasks.named("jlink").doLast { … }`) gives access to the staged runtime image before jpackage consumes it — the cleanest manual workaround available.
 
 ??? info "Sources"
-    - **Nucleus**: [`AbstractGenerateAotCacheTask.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/tasks/AbstractGenerateAotCacheTask.kt) — Project Leyden via `-XX:AOTCacheOutput` (JDK 25+); [`ProguardSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/dsl/ProguardSettings.kt) — ProGuard 7.7.0 default; [`AbstractJLinkTask.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/tasks/AbstractJLinkTask.kt) — jlink with strip-debug, compression; [`AbstractPatchCaCertificatesTask.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/tasks/AbstractPatchCaCertificatesTask.kt) — copies JLink runtime, runs keytool to import PEM/DER certificates into `lib/security/cacerts`; `graalvm-runtime` — GraalVM Native Image bootstrap with `GraalVmInitializer.initialize()`, platform-specific reachability metadata, font substitution, and Skiko native library extraction. Requires BellSoft Liberica NIK 25 (full). Packaging via `packageGraalvmDmg`, `packageGraalvmNsis`, `packageGraalvmDeb` tasks.
+    - **Potassium**: [`AbstractGenerateAotCacheTask.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/tasks/AbstractGenerateAotCacheTask.kt) — Project Leyden via `-XX:AOTCacheOutput` (JDK 25+); [`ProguardSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/ProguardSettings.kt) — ProGuard 7.7.0 default; [`AbstractJLinkTask.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/tasks/AbstractJLinkTask.kt) — jlink with strip-debug, compression; [`AbstractPatchCaCertificatesTask.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/tasks/AbstractPatchCaCertificatesTask.kt) — copies JLink runtime, runs keytool to import PEM/DER certificates into `lib/security/cacerts`; `graalvm-runtime` — GraalVM Native Image bootstrap with `GraalVmInitializer.initialize()`, platform-specific reachability metadata, font substitution, and Skiko native library extraction. Requires BellSoft Liberica NIK 25 (full). Packaging via `packageGraalvmDmg`, `packageGraalvmNsis`, `packageGraalvmDeb` tasks.
     - **Conveyor**: [JVM config](https://conveyor.hydraulic.dev/21.1/configs/jvm/) — automatic jlink; `app.jvm.additional-ca-certs` key imports extra certificates into the bundled JDK's `cacerts`; [JDK stdlib](https://conveyor.hydraulic.dev/21.1/stdlib/jdks/) — 6 JDK vendors (Corretto, Zulu, Temurin, JBR, Microsoft, OpenJDK)
     - **install4j**: [JRE bundles](https://www.ej-technologies.com/resources/install4j/help/doc/concepts/jreBundles.html), [createbundle CLI](https://www.ej-technologies.com/resources/install4j/help/doc/cli/createBundle.html) — no cert patching DSL; manual via pre-patched JRE bundle
     - **jpackage**: [Override resources](https://docs.oracle.com/en/java/javase/23/jpackage/override-jpackage-resources.html) — `--resource-dir` limited to packaging templates; cert patching requires `--runtime-image` with a pre-patched jlink output
     - **Compose MP**: [Native distributions](https://kotlinlang.org/docs/multiplatform/compose-native-distribution.html) — ProGuard + jlink; no CA cert DSL; `jpackageResources` internal and cleared on each build ([open PR #2331](https://github.com/JetBrains/compose-multiplatform/pull/2331) for `--resource-dir` exposure, not merged)
     - **Badass-jlink**: [User guide](https://github.com/beryx/badass-jlink-plugin/blob/master/doc/user_guide.adoc) — task hooks on `jlink` task allow `doLast` keytool invocation against staged image
 
-Only **Nucleus** and **Conveyor** provide declarative, first-class CA cert patching: a single DSL property that automatically patches the bundled JVM's `cacerts` without any manual keytool scripts. Nucleus is the only JVM packaging tool with integrated Project Leyden AOT cache support, providing dramatically faster cold startup without requiring GraalVM. As of v1.3.0, Nucleus also offers **alpha GraalVM Native Image support** — compiling Compose Desktop apps into standalone native binaries with ~0.5s cold boot, ~100–150 MB memory usage, and no bundled JRE. This provides three startup tiers: standard JVM (~3–5s), AOT cache via Leyden (~1.5s), and native image (~0.5s).
+Only **Potassium** and **Conveyor** provide declarative, first-class CA cert patching: a single DSL property that automatically patches the bundled JVM's `cacerts` without any manual keytool scripts. Potassium is the only JVM packaging tool with integrated Project Leyden AOT cache support, providing dramatically faster cold startup without requiring GraalVM. As of v1.3.0, Potassium also offers **alpha GraalVM Native Image support** — compiling Compose Desktop apps into standalone native binaries with ~0.5s cold boot, ~100–150 MB memory usage, and no bundled JRE. This provides three startup tiers: standard JVM (~3–5s), AOT cache via Leyden (~1.5s), and native image (~0.5s).
 
 ---
 
@@ -4702,7 +4700,7 @@ Only **Nucleus** and **Conveyor** provide declarative, first-class CA cert patch
 | Conveyor | ✅ (any OS → all platforms) | **10** |
 | install4j | ✅ (any OS → all platforms) | **10** |
 | jDeploy | ✅ (any OS → all platforms) | **10** |
-| **Nucleus** | ❌ (per-OS runners required) | **3** |
+| **Potassium** | ❌ (per-OS runners required) | **3** |
 | jpackage | ❌ | **0** |
 | Compose MP | ❌ | **0** |
 | Badass plugins | ❌ | **0** |
@@ -4711,9 +4709,9 @@ Only **Nucleus** and **Conveyor** provide declarative, first-class CA cert patch
     - **Conveyor**: [Homepage](https://conveyor.hydraulic.dev/21.1/) — "build packages from any OS, sign and notarize Mac apps from Linux"
     - **install4j**: [Homepage](https://www.ej-technologies.com/install4j) — "compile installers for all platforms on any of these platforms"
     - **jDeploy**: [FAQ](https://www.jdeploy.com/docs/faq/) — "build native installers for Mac, Windows, and Linux on any platform"
-    - **Nucleus**: [`TargetFormat.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/dsl/TargetFormat.kt) line 48 — `isCompatibleWithCurrentOS` check; packaging tasks disabled for non-matching OS
+    - **Potassium**: [`TargetFormat.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/TargetFormat.kt) line 48 — `isCompatibleWithCurrentOS` check; packaging tasks disabled for non-matching OS
 
-This is Nucleus's weakest dimension. However, Nucleus mitigates it with its 6-runner CI matrix — the pipeline handles cross-platform builds automatically.
+This is Potassium's weakest dimension. However, Potassium mitigates it with its 6-runner CI matrix — the pipeline handles cross-platform builds automatically.
 
 ---
 
@@ -4721,7 +4719,7 @@ This is Nucleus's weakest dimension. However, Nucleus mitigates it with its 6-ru
 
 | Tool | Windows Custom UI | DMG Layout | License Dialog | Components | Scripts | Score |
 |------|:-----------------:|:----------:|:--------------:|:----------:|:-------:|:-----:|
-| **Nucleus** | ✅ (full NSIS DSL) | ✅ (extensive) | ✅ | ✅ | ✅ | **9** |
+| **Potassium** | ✅ (full NSIS DSL) | ✅ (extensive) | ✅ | ✅ | ✅ | **9** |
 | install4j | ✅ (GUI designer) | ✅ | ✅ | ✅ | ✅ | **10** |
 | Conveyor | ❌ (MSIX only) | ❌ | ❌ | ❌ | ❌ | **1** |
 | jpackage | Partial | Minimal | ❌ | ❌ | ❌ | **3** |
@@ -4729,7 +4727,7 @@ This is Nucleus's weakest dimension. However, Nucleus mitigates it with its 6-ru
 | JavaPackager | ✅ (Inno Setup) | ✅ | ✅ | ❌ | ❌ | **4** |
 
 ??? info "Sources"
-    - **Nucleus**: [`NsisSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/dsl/NsisSettings.kt) — 16 properties: `oneClick`, `allowElevation`, `perMachine`, `allowToChangeInstallationDirectory`, `createDesktopShortcut`, `createStartMenuShortcut`, `runAfterFinish`, `installerIcon`, `license`, `includeScript`, `multiLanguageInstaller`, `installerHeader`, `installerSidebar`, etc. [`DmgSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/dsl/DmgSettings.kt) — `background`, `backgroundColor`, `badgeIcon`, `icon`, `format` (6 DMG formats: UDRW, UDRO, UDCO, UDZO, UDBZ, ULFO), `window`, `contents`
+    - **Potassium**: [`NsisSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/NsisSettings.kt) — 16 properties: `oneClick`, `allowElevation`, `perMachine`, `allowToChangeInstallationDirectory`, `createDesktopShortcut`, `createStartMenuShortcut`, `runAfterFinish`, `installerIcon`, `license`, `includeScript`, `multiLanguageInstaller`, `installerHeader`, `installerSidebar`, etc. [`DmgSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/DmgSettings.kt) — `background`, `backgroundColor`, `badgeIcon`, `icon`, `format` (6 DMG formats: UDRW, UDRO, UDCO, UDZO, UDBZ, ULFO), `window`, `contents`
     - **install4j**: [Features](https://www.ej-technologies.com/install4j/features) — visual IDE with 80+ configurable actions
     - **Conveyor**: [Package formats](https://conveyor.hydraulic.dev/21.1/package-formats/) — MSIX is a fixed format with no installer UI customization
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — `--resource-dir` for template overrides
@@ -4744,18 +4742,18 @@ This is Nucleus's weakest dimension. However, Nucleus mitigates it with its 6-ru
 - **Snap Store**: Strict confinement by default. Classic (unsandboxed) requires manual approval ([Snapcraft docs](https://snapcraft.io/docs/snap-confinement)).
 | Tool | Mac App Store | Microsoft Store | Flathub | Snap Store | Score |
 |------|:------------:|:---------------:|:-------:|:----------:|:-----:|
-| **Nucleus** | ✅ (PKG + sandbox pipeline) | ✅ (AppX/MSIX) | ✅ (Flatpak) | ✅ (Snap) | **10** |
+| **Potassium** | ✅ (PKG + sandbox pipeline) | ✅ (AppX/MSIX) | ✅ (Flatpak) | ✅ (Snap) | **10** |
 | Conveyor | ❌ | ✅ (MSIX) | ❌ | ❌ | **3** |
 | install4j | ❌ | ❌ | ❌ | ❌ | **0** |
 | jpackage | ⚠️ (`--mac-app-store`) | ❌ | ❌ | ❌ | **1** |
 | Compose MP | ❌ | ❌ | ❌ | ❌ | **0** |
 
 ??? info "Sources"
-    - **Nucleus**: [`TargetFormat.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/dsl/TargetFormat.kt) — `isStoreFormat` = Pkg, AppX, Flatpak; [`PlatformSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/dsl/PlatformSettings.kt) — `appStore`, `entitlementsFile`, `provisioningProfile` for MAS; [`AppXSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/dsl/AppXSettings.kt) — `identityName`, `publisher`, `capabilities`; [`FlatpakSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/io/github/kdroidfilter/nucleus/desktop/application/dsl/FlatpakSettings.kt) — `runtime`, `finishArgs`, `license`
+    - **Potassium**: [`TargetFormat.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/TargetFormat.kt) — `isStoreFormat` = Pkg, AppX, Flatpak; [`PlatformSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/PlatformSettings.kt) — `appStore`, `entitlementsFile`, `provisioningProfile` for MAS; [`AppXSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/AppXSettings.kt) — `identityName`, `publisher`, `capabilities`; [`FlatpakSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/FlatpakSettings.kt) — `runtime`, `finishArgs`, `license`
     - **Conveyor**: [Windows config](https://conveyor.hydraulic.dev/21.1/configs/windows/) — Microsoft Store supported via `conveyor make ms-store-release`; [Output formats FAQ](https://conveyor.hydraulic.dev/21.1/faq/output-formats/) — Mac App Store listed as "not supported yet"
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — `--mac-app-store` flag exists but limited
 
-For JVM apps, Nucleus is unique in handling the Mac App Store sandbox automatically: it extracts native libraries from JARs, strips duplicates, injects JVM arguments for redirected library loading, and signs extracted native libraries individually.
+For JVM apps, Potassium is unique in handling the Mac App Store sandbox automatically: it extracts native libraries from JARs, strips duplicates, injects JVM arguments for redirected library loading, and signs extracted native libraries individually.
 
 ---
 
@@ -4763,7 +4761,7 @@ For JVM apps, Nucleus is unique in handling the Mac App Store sandbox automatica
 
 | Tool | Dark Mode | Decorated Windows | Single Instance | Deep Links | File Associations | Executable Type | Native SSL | Linux HiDPI | GraalVM Runtime | Score |
 |------|:---------:|:-----------------:|:---------------:|:----------:|:-----------------:|:---------------:|:----------:|:-----------:|:---------------:|:-----:|
-| **Nucleus** | ✅ (JNI, reactive) | ✅ (JBR + JNI backends) | ✅ (file lock) | ✅ (protocols) | ✅ (DSL) | ✅ (17 types) | ✅ (JNI, OS trust store) | ✅ (GDK_SCALE) | ✅ (bootstrap) | **10** |
+| **Potassium** | ✅ (JNI, reactive) | ✅ (JBR + JNI backends) | ✅ (file lock) | ✅ (protocols) | ✅ (DSL) | ✅ (17 types) | ✅ (JNI, OS trust store) | ✅ (GDK_SCALE) | ✅ (bootstrap) | **10** |
 | Conveyor | ❌ | ❌ | ❌ | ⚠️ (OS registration) | ⚠️ (OS registration) | ❌ | ❌ | ❌ | ❌ | **2** |
 | install4j | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | **3** |
 | jpackage | ❌ | ❌ | ❌ | ❌ | ✅ (`--file-associations`) | ❌ | ❌ | ❌ | ❌ | **1** |
@@ -4771,19 +4769,19 @@ For JVM apps, Nucleus is unique in handling the Mac App Store sandbox automatica
 | All others | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | **0** |
 
 ??? info "Sources"
-    - **Nucleus dark mode**: `IsSystemInDarkMode.kt` — JNI (not JNA) with native libraries per platform: macOS via `NSDistributedNotificationCenter`, Windows via registry `AppsUseLightTheme` + `RegNotifyChangeKeyValue`, Linux via D-Bus `org.freedesktop.portal.Settings`. Real-time reactive Compose state.
-    - **Nucleus decorated windows**: Split into three modules since v1.3.0 — `decorated-window-core` (shared types/layout), `decorated-window-jbr` (JBR CustomTitleBar API on macOS/Windows), `decorated-window-jni` (JNI-based, works with any JVM including GraalVM Native Image). Custom undecorated window with GNOME (24px arcs) and KDE (10px) native controls on Linux. Jewel variant in `decorated-window-jewel`, Material 2 in `decorated-window-material2`, Material 3 in `decorated-window-material3`.
-    - **Nucleus Linux HiDPI**: `linux-hidpi` — native GDK_SCALE detection for proper HiDPI scaling on Linux, required for native image builds.
-    - **Nucleus GraalVM runtime**: `graalvm-runtime` — centralizes native-image bootstrap (`GraalVmInitializer.initialize()`), font substitution, Skiko library extraction, and platform-specific reachability metadata.
-    - **Nucleus single instance**: `SingleInstanceManager.kt` — `FileChannel.tryLock()` + `WatchService` for inter-process communication
-    - **Nucleus deep links**: `DeepLinkHandler.kt` — macOS via `Desktop.setOpenURIHandler` (Apple Events); Windows/Linux via CLI argument parsing
-    - **Nucleus executable type**: `ExecutableRuntime.kt` — 17 `ExecutableType` enum values (EXE, MSI, NSIS, NSIS_WEB, PORTABLE, APPX, DMG, PKG, DEB, RPM, SNAP, FLATPAK, APPIMAGE, ZIP, TAR, SEVEN_Z, DEV)
-    - **Nucleus native-ssl**: `NativeTrustManager.kt` — JNI-based `X509TrustManager` merging OS certificates with JVM defaults: macOS via Security.framework (`SecTrustCopyAnchorCertificates` + `SecTrustSettingsCopyCertificates`), Windows via Crypt32 (`ROOT`/`CA` stores across 5 locations including Group Policy), Linux via PEM bundles (8 discovery paths). Companion modules: `native-http-okhttp` (OkHttp 4) and `native-http-ktor` (Ktor engine).
+    - **Potassium dark mode**: `IsSystemInDarkMode.kt` — JNI (not JNA) with native libraries per platform: macOS via `NSDistributedNotificationCenter`, Windows via registry `AppsUseLightTheme` + `RegNotifyChangeKeyValue`, Linux via D-Bus `org.freedesktop.portal.Settings`. Real-time reactive Compose state.
+    - **Potassium decorated windows**: Split into three modules since v1.3.0 — `decorated-window-core` (shared types/layout), `decorated-window-jbr` (JBR CustomTitleBar API on macOS/Windows), `decorated-window-jni` (JNI-based, works with any JVM including GraalVM Native Image). Custom undecorated window with GNOME (24px arcs) and KDE (10px) native controls on Linux. Jewel variant in `decorated-window-jewel`, Material 2 in `decorated-window-material2`, Material 3 in `decorated-window-material3`.
+    - **Potassium Linux HiDPI**: `linux-hidpi` — native GDK_SCALE detection for proper HiDPI scaling on Linux, required for native image builds.
+    - **Potassium GraalVM runtime**: `graalvm-runtime` — centralizes native-image bootstrap (`GraalVmInitializer.initialize()`), font substitution, Skiko library extraction, and platform-specific reachability metadata.
+    - **Potassium single instance**: `SingleInstanceManager.kt` — `FileChannel.tryLock()` + `WatchService` for inter-process communication
+    - **Potassium deep links**: `DeepLinkHandler.kt` — macOS via `Desktop.setOpenURIHandler` (Apple Events); Windows/Linux via CLI argument parsing
+    - **Potassium executable type**: `ExecutableRuntime.kt` — 17 `ExecutableType` enum values (EXE, MSI, NSIS, NSIS_WEB, PORTABLE, APPX, DMG, PKG, DEB, RPM, SNAP, FLATPAK, APPIMAGE, ZIP, TAR, SEVEN_Z, DEV)
+    - **Potassium native-ssl**: `NativeTrustManager.kt` — JNI-based `X509TrustManager` merging OS certificates with JVM defaults: macOS via Security.framework (`SecTrustCopyAnchorCertificates` + `SecTrustSettingsCopyCertificates`), Windows via Crypt32 (`ROOT`/`CA` stores across 5 locations including Group Policy), Linux via PEM bundles (8 discovery paths). Companion modules: `native-http-okhttp` (OkHttp 4) and `native-http-ktor` (Ktor engine).
     - **Conveyor**: [OS integration](https://conveyor.hydraulic.dev/21.1/configs/os-integration/) — `app.url-schemes` registers URL handlers, `app.file-associations` registers file types at OS level (generates AppxManifest.xml, Info.plist, .desktop files). No runtime library — app code must handle open requests itself.
     - **install4j**: [Features](https://www.ej-technologies.com/install4j/features) — single instance lock, file associations
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — `--file-associations` flag with properties files
 
-Nucleus is unique in the JVM space by bundling runtime libraries that address common desktop app needs. No other JVM packaging tool provides reactive dark mode detection, decorated windows, or deep link handling as a library. Since v1.3.0, the decorated window system offers two backends: JBR (for JetBrains Runtime) and JNI (for any JVM, including GraalVM Native Image), making it the only JVM window decoration solution that works across all JVM distributions. The `linux-hidpi` module and `graalvm-runtime` bootstrap module are also unique to Nucleus. File associations are more widely supported (jpackage, install4j, Conveyor all register at OS level), but only Nucleus combines registration with a runtime deep link handler.
+Potassium is unique in the JVM space by bundling runtime libraries that address common desktop app needs. No other JVM packaging tool provides reactive dark mode detection, decorated windows, or deep link handling as a library. Since v1.3.0, the decorated window system offers two backends: JBR (for JetBrains Runtime) and JNI (for any JVM, including GraalVM Native Image), making it the only JVM window decoration solution that works across all JVM distributions. The `linux-hidpi` module and `graalvm-runtime` bootstrap module are also unique to Potassium. File associations are more widely supported (jpackage, install4j, Conveyor all register at OS level), but only Potassium combines registration with a runtime deep link handler.
 
 The `native-ssl` module is unique in the JVM packaging space: it replaces the JSSE default trust manager at runtime with one that reads directly from the OS certificate store, so corporate-issued CAs, enterprise Group Policy certificates, and filtering proxy roots are trusted automatically — without any JVM cacerts manipulation. The companion `native-http-okhttp` and `native-http-ktor` modules provide ready-to-use HTTP clients pre-configured with this trust manager.
 
@@ -4793,14 +4791,14 @@ The `native-ssl` module is unique in the JVM packaging space: it replaces the JS
 
 | Tool | Getting Started | DSL / Config Reference | CI/CD Guide | Migration Guide | API Docs | Examples | Score |
 |------|:---------------:|:----------------------:|:-----------:|:---------------:|:--------:|:--------:|:-----:|
-| **Nucleus** | ✅ | ✅ (comprehensive) | ✅ (detailed) | ✅ (from Compose MP) | ✅ | ✅ (demo app) | **9** |
+| **Potassium** | ✅ | ✅ (comprehensive) | ✅ (detailed) | ✅ (from Compose MP) | ✅ | ✅ (demo app) | **9** |
 | Conveyor | ✅ | ✅ (120+ settings) | ✅ | ✅ | ✅ | ✅ | **9** |
 | install4j | ✅ | ✅ (extensive) | ✅ | ❌ | ✅ | ✅ | **9** |
 | jpackage | ✅ (JEP + man page) | ❌ | ❌ | ❌ | ❌ | Minimal | **3** |
 | Compose MP | ✅ | Partial | ❌ | ❌ | ❌ | ✅ | **5** |
 
 ??? info "Sources"
-    - **Nucleus**: [docs site](https://kdroidfilter.github.io/Nucleus/) — Getting Started, Configuration, per-platform guides, CI/CD, Runtime APIs, Migration, demo app in `example/`
+    - **Potassium**: [docs site](https://kdroidfilter.github.io/Potassium/) — Getting Started, Configuration, per-platform guides, CI/CD, Runtime APIs, Migration, demo app in `example/`
     - **Conveyor**: [docs site](https://conveyor.hydraulic.dev/21.1/) — tutorials, 120+ config keys, CI guide, comparisons page, multiple sample projects
     - **install4j**: [help center](https://www.ej-technologies.com/resources/install4j/help/doc/) — extensive searchable docs
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — CLI reference only
@@ -4812,7 +4810,7 @@ The `native-ssl` module is unique in the JVM packaging space: it replaces the JS
 
 | Tool | Age | Community | Release Cadence | Price | Comm. Score | Price Score |
 |------|:---:|:---------:|:---------------:|:-----:|:-----------:|:-----------:|
-| **Nucleus** | 2025 | Small (growing) | Active | MIT (free) | **4** | **10** |
+| **Potassium** | 2025 | Small (growing) | Active | MIT (free) | **4** | **10** |
 | Conveyor | ~2022 | Small-Medium | Active | Free (OSS) / $45/mo | **6** | **6** |
 | install4j | ~2001 | Large (enterprise) | Active (Dec 2025) | $2,199+/dev | **10** | **3** |
 | jpackage | JDK 14+ | N/A (JDK built-in) | JDK releases | Free | **9** | **10** |
@@ -4840,7 +4838,7 @@ Each dimension rated 0–10. Total = sum / 130 × 100 (rounded).
 
 | Tool | Fmt | Upd | Sign | CI | Plat | Store | Opt | Inst | RT | Docs | Comm | Price | Build | **Total** |
 |------|:---:|:---:|:----:|:--:|:----:|:-----:|:---:|:----:|:--:|:----:|:----:|:-----:|:-----:|:---------:|
-| **Nucleus** | 10 | 9 | 10 | 10 | 10 | 10 | 10 | 9 | 10 | 9 | 4 | 10 | 6 | **90** |
+| **Potassium** | 10 | 9 | 10 | 10 | 10 | 10 | 10 | 9 | 10 | 9 | 4 | 10 | 6 | **90** |
 | **install4j** | 5 | 9 | 8 | 3 | 10 | 0 | 5 | 10 | 3 | 9 | 10 | 3 | 10 | **65**¹ |
 | **Conveyor** | 4 | 10 | 10 | 6 | 8 | 3 | 6 | 1 | 2 | 9 | 6 | 6 | 9 | **62**² |
 | **jDeploy** | 3 | 6 | 7 | 5 | 8 | 0 | 4 | 2 | 0 | 6 | 5 | 10 | 8 | **49** |
@@ -4909,7 +4907,7 @@ The installer is pre-signed and notarized by jDeploy itself, so developers don't
 
 JetBrains' official Gradle plugin for Compose Desktop apps. v1.10.1 released February 2026 ([releases](https://github.com/JetBrains/compose-multiplatform/releases)). Wraps jpackage for packaging: supports DMG, PKG, MSI, EXE, DEB, RPM ([native distributions](https://kotlinlang.org/docs/multiplatform/compose-native-distribution.html)). macOS code signing and notarization via DSL. ProGuard integration.
 
-No auto-update, no cross-compilation, no NSIS/AppImage/Snap/Flatpak/AppX, minimal installer customization, no runtime libraries. **Nucleus was designed as its successor/superset.**
+No auto-update, no cross-compilation, no NSIS/AppImage/Snap/Flatpak/AppX, minimal installer customization, no runtime libraries. **Potassium was designed as its successor/superset.**
 
 v1.10.0 highlights: Unified `@Preview` annotation, Navigation 3 on non-Android targets, stable Compose Hot Reload ([JetBrains blog](https://blog.jetbrains.com/kotlin/2026/01/compose-multiplatform-1-10-0/)).
 
@@ -4935,7 +4933,7 @@ Bundles JRE with application into a directory structure. Game-focused (libGDX/LW
 
 ## Strengths & Weaknesses
 
-### Nucleus's Strengths
+### Potassium's Strengths
 
 1. **Unmatched format coverage** — 16 formats, more than any other JVM tool
 2. **Only JVM tool with integrated runtime libraries** — dark mode, decorated windows (JBR + JNI backends), single instance, deep links, executable type detection, Linux HiDPI scaling
@@ -4949,7 +4947,7 @@ Bundles JRE with application into a directory structure. Game-focused (libGDX/LW
 10. **Build-time CA cert patching** — import custom PEM/DER certificates into the bundled JVM's `cacerts` at packaging time (Conveyor also offers this via `app.jvm.additional-ca-certs`)
 11. **Decorated windows on any JVM** — JNI backend (v1.3.0+) removes JBR dependency, enabling native window decorations with GraalVM, standard OpenJDK, and any other JVM distribution
 
-### Nucleus's Weaknesses
+### Potassium's Weaknesses
 
 1. **No cross-compilation** — requires per-OS CI runners (mitigated by CI actions)
 2. **Gradle-only** — no Maven or CLI support
@@ -4967,7 +4965,7 @@ Bundles JRE with application into a directory structure. Game-focused (libGDX/LW
 | **Custom installer UI** | install4j | Visual IDE, 80+ actions | [Features](https://www.ej-technologies.com/install4j/features) |
 | **Simplest setup** | jDeploy | Zero-config CLI, cross-compiles | [jDeploy](https://www.jdeploy.com/) |
 | **Enterprise deployment** | install4j | 20+ years maturity | [ej-technologies](https://www.ej-technologies.com/install4j) |
-| **Maven-only project** | install4j or JavaPackager | Nucleus is Gradle-only | — |
+| **Maven-only project** | install4j or JavaPackager | Potassium is Gradle-only | — |
 | **Delta updates critical** | Conveyor | MSIX + Sparkle delta | [Updates](https://conveyor.hydraulic.dev/21.1/understanding-updates/) |
 | **Maximum signing providers** | Conveyor | 6 cloud HSM services | [Keys](https://conveyor.hydraulic.dev/21.1/configs/keys-and-certificates/) |
 
@@ -4975,18 +4973,18 @@ Bundles JRE with application into a directory structure. Game-focused (libGDX/LW
 
 ## Methodology
 
-1. **Codebase analysis** — Nucleus plugin source, runtime libraries, CI workflows, and composite actions analyzed by [Claude Code](https://claude.ai/claude-code) with direct source file references
+1. **Codebase analysis** — Potassium plugin source, runtime libraries, CI workflows, and composite actions analyzed by [Claude Code](https://claude.ai/claude-code) with direct source file references
 2. **Web research** — AI agents visited official documentation pages for all 11 tools, collecting version numbers, feature lists, pricing, and platform support
 3. **Source verification** — Every claim includes a link to the official source (documentation page, GitHub repository, or vendor site)
 4. **Scoring** — Each tool rated 0–10 across 13 dimensions; total = raw sum / 130 × 100
 
-**Disclaimer:** While every effort was made to verify accuracy with source links, tool capabilities evolve. Always check the linked documentation for the latest information. Conveyor data verified against v21.1 docs (February 2026). Nucleus data verified against v1.3.x source code (March 2026).
+**Disclaimer:** While every effort was made to verify accuracy with source links, tool capabilities evolve. Always check the linked documentation for the latest information. Conveyor data verified against v21.1 docs (February 2026). Potassium data verified against v1.3.x source code (March 2026).
 
 ---
 
 # Migration from org.jetbrains.compose
 
-Nucleus is a drop-in extension of the official JetBrains Compose Desktop plugin. All existing configuration is preserved — Nucleus only adds new capabilities.
+Potassium is a drop-in extension of the official JetBrains Compose Desktop plugin. All existing configuration is preserved — Potassium only adds new capabilities.
 
 ## Step 1: Add the Plugin
 
@@ -4995,11 +4993,11 @@ Nucleus is a drop-in extension of the official JetBrains Compose Desktop plugin.
      id("org.jetbrains.kotlin.jvm") version "2.3.10"
      id("org.jetbrains.kotlin.plugin.compose") version "2.3.10"
      id("org.jetbrains.compose") version "1.10.1"
-+    id("com.seanproctor.nucleus") version "1.15.11"
++    id("com.seanproctor.potassium") version "1.15.11"
  }
 ```
 
-> The official `org.jetbrains.compose` plugin remains — Nucleus extends it, not replaces it.
+> The official `org.jetbrains.compose` plugin remains — Potassium extends it, not replaces it.
 
 The plugin is published to Maven Central, so make sure `mavenCentral()` is in your `pluginManagement.repositories`:
 
@@ -5015,22 +5013,22 @@ pluginManagement {
 
 ## Step 2: Update Imports
 
-Replace the JetBrains Compose DSL imports with the Nucleus equivalents:
+Replace the JetBrains Compose DSL imports with the Potassium equivalents:
 
 ```diff
 -import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-+import io.github.kdroidfilter.nucleus.desktop.application.dsl.TargetFormat
++import com.seanproctor.potassium.desktop.application.dsl.TargetFormat
 ```
 
 This applies to all DSL types used in your `build.gradle.kts` (e.g. `TargetFormat`, `CompressionLevel`, `SigningAlgorithm`, etc.).
 
-## Step 3: Use the Nucleus DSL
+## Step 3: Use the Potassium DSL
 
-Replace the `compose.desktop.application` block with `nucleus.application` for packaging and distribution:
+Replace the `compose.desktop.application` block with `potassium.application` for packaging and distribution:
 
 ```diff
 -compose.desktop.application {
-+nucleus.application {
++potassium.application {
      mainClass = "com.example.MainKt"
 
      nativeDistributions {
@@ -5054,7 +5052,7 @@ Replace the `compose.desktop.application` block with `nucleus.application` for p
  }
 ```
 
-**Using Compose Hot Reload?:** Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `nucleus.application`. If you use [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html), either keep a minimal Compose block alongside Nucleus:
+**Using Compose Hot Reload?:** Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `potassium.application`. If you use [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html), either keep a minimal Compose block alongside Potassium:
     ```kotlin
     compose.desktop.application {
         mainClass = "com.example.MainKt"
@@ -5067,12 +5065,12 @@ Replace the `compose.desktop.application` block with `nucleus.application` for p
     ./gradlew hotRun -PmainClass=com.example.MainKt
     ```
 
-## Step 4: Add Nucleus Features (Optional)
+## Step 4: Add Potassium Features (Optional)
 
 Enable the features you need. All are opt-in:
 
 ```kotlin
-nucleus.application {
+potassium.application {
     mainClass = "com.example.MainKt"
 
     nativeDistributions {
@@ -5080,7 +5078,7 @@ nucleus.application {
         packageName = "MyApp"
         packageVersion = "1.0.0"
 
-        // --- New Nucleus features ---
+        // --- New Potassium features ---
         cleanupNativeLibs = true
         enableAotCache = true
         splashImage = "splash.png"
@@ -5126,10 +5124,10 @@ nucleus.application {
 
 ## What Changes
 
-| Feature | Before (compose) | After (nucleus)                                                                                                                       |
+| Feature | Before (compose) | After (potassium)                                                                                                                       |
 |---------|-------------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| DSL entry point | `compose.desktop.application` | `nucleus.application`                                                                                                                 |
-| DSL imports | `org.jetbrains.compose.desktop.application.dsl.*` | `io.github.kdroidfilter.nucleus.desktop.application.dsl.*`                                                                            |
+| DSL entry point | `compose.desktop.application` | `potassium.application`                                                                                                                 |
+| DSL imports | `org.jetbrains.compose.desktop.application.dsl.*` | `com.seanproctor.potassium.desktop.application.dsl.*`                                                                            |
 | Target formats | DMG, PKG, MSI, EXE, DEB, RPM | + NSIS, AppX, Portable, AppImage, Snap, Flatpak, archives                                                                             |
 | Native lib cleanup | Manual | `cleanupNativeLibs = true`                                                                                                            |
 | AOT cache | Not available | `enableAotCache = true`                                                                                                               |
@@ -5150,7 +5148,7 @@ nucleus.application {
 
 ### `homepage` is Required for Linux DEB
 
-Unlike Compose Desktop (which uses jpackage), Nucleus uses electron-builder for packaging. Electron-builder **requires** the `homepage` property when building DEB packages. Without it, the build will fail with:
+Unlike Compose Desktop (which uses jpackage), Potassium uses electron-builder for packaging. Electron-builder **requires** the `homepage` property when building DEB packages. Without it, the build will fail with:
 
 ```
 Please specify project homepage, see https://electron.build/configuration
@@ -5177,7 +5175,7 @@ Everything from the official plugin works unchanged:
 - All existing Gradle tasks (`run`, `packageDmg`, `packageDeb`, etc.)
 - `compose.desktop.currentOs` dependency
 - Source set configuration
-- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Nucleus extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so set it there too or pass `-PmainClass=...` (see [Step 3](#step-3-use-the-nucleus-dsl))
+- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Potassium extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so set it there too or pass `-PmainClass=...` (see [Step 3](#step-3-use-the-potassium-dsl))
 
 ---
 

@@ -47,7 +47,7 @@ GraalVM Native Image compilation **requires [BellSoft Liberica NIK 25](https://b
 
 ## When to avoid native image
 
-Some libraries and use cases make native image compilation **extremely difficult or impractical**. Nucleus can handle most standard Compose Desktop dependencies automatically, but the following categories will likely require extensive manual configuration — or may not work at all:
+Some libraries and use cases make native image compilation **extremely difficult or impractical**. Potassium can handle most standard Compose Desktop dependencies automatically, but the following categories will likely require extensive manual configuration — or may not work at all:
 
 !!! danger "Libraries that are very hard to support"
 
@@ -60,11 +60,11 @@ Some libraries and use cases make native image compilation **extremely difficult
 
 If your application depends on libraries in these categories, **prefer AOT Cache (Leyden)** instead — it provides significant startup improvement with zero configuration overhead and full compatibility.
 
-For everything else — ktor, kotlinx.serialization, Coil, SQLite, Jewel, Compose Multiplatform resources, SLF4J, and most idiomatic Kotlin libraries — Nucleus handles native image transparently.
+For everything else — ktor, kotlinx.serialization, Coil, SQLite, Jewel, Compose Multiplatform resources, SLF4J, and most idiomatic Kotlin libraries — Potassium handles native image transparently.
 
 ## Next steps
 
 - [Configuration](configuration.md) — Gradle DSL and build arguments
-- [Automatic Metadata](automatic-metadata.md) — How Nucleus resolves reflection metadata transparently
+- [Automatic Metadata](automatic-metadata.md) — How Potassium resolves reflection metadata transparently
 - [Runtime Bootstrap](runtime-bootstrap.md) — `graalvm-runtime` module, initializer, font fixes, resource inclusion
 - [Tasks & CI/CD](tasks-ci.md) — Gradle tasks, output locations, CI workflows, debugging
