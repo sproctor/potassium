@@ -8,10 +8,7 @@ package com.seanproctor.potassium.tasks
 import com.seanproctor.potassium.dsl.CompressionLevel
 import com.seanproctor.potassium.dsl.JvmApplicationDistributions
 import com.seanproctor.potassium.dsl.MacOSSigningSettings
-import com.seanproctor.potassium.dsl.ReleaseChannel
 import com.seanproctor.potassium.dsl.TargetFormat
-import com.seanproctor.potassium.internal.UpdateYmlPublish
-import com.seanproctor.potassium.internal.UpdateYmlGenerator
 import com.seanproctor.potassium.internal.MacSigner
 import com.seanproctor.potassium.internal.MacSignerImpl
 import com.seanproctor.potassium.internal.NoCertificateSigner
@@ -88,6 +85,8 @@ abstract class AbstractElectronBuilderPackageTask
         @get:Input val targetFormats: List<TargetFormat>,
     ) : AbstractPotassiumTask() {
         companion object {
+            /** Environment variable that overrides the publish mode (matches electron-builder's `--publish`). */
+            private const val PUBLISH_MODE_ENV = "POTASSIUM_PUBLISH_MODE"
             private const val APPX_STORE_LOGO_SIZE = 50
             private const val APPX_SQUARE44_LOGO_SIZE = 44
             private const val APPX_SQUARE150_LOGO_SIZE = 150
@@ -298,7 +297,6 @@ abstract class AbstractElectronBuilderPackageTask
             cleanupBuildTemporaries(outputDir)
             configFile.delete()
             exportPackagingMetadata(outputDir, dist)
-            generateUpdateYmlIfNeeded(outputDir, dist, formats)
             logger.lifecycle(
                 "potassium builder packages [${formats.joinToString { it.name }}] " +
                     "written to ${outputDir.canonicalPath}",
@@ -323,67 +321,21 @@ abstract class AbstractElectronBuilderPackageTask
                 }
             }
 
-        private fun generateUpdateYmlIfNeeded(
-            outputDir: File,
-            dist: JvmApplicationDistributions,
-            targetFormats: List<TargetFormat>,
-        ) {
-            // electron-builder natively writes the per-channel manifest for AppImage/NSIS/DMG/DEB/RPM,
-            // but only while its own auto-update publishing is enabled. For S3 we force
-            // `publishAutoUpdate: false` (so the per-format manifests don't clobber each other on the
-            // shared S3 key — they are merged by AbstractMergeUpdateYmlTask), which also stops
-            // electron-builder from writing the manifest at all. So when publishing to S3 the plugin
-            // must generate the manifest for every auto-updatable format, not just MSI/Portable; the
-            // generator is a no-op when a manifest already exists, so this is safe either way.
-            val shouldGenerate =
-                targetFormats.any { it.needsPluginUpdateYml } ||
-                    (dist.publish.s3.enabled && targetFormats.any { it.producesUpdateManifest })
-            if (!shouldGenerate) return
-            // Auto-update manifests are keyed to the app's release version — the full
-            // SemVer including any -beta.N — which is what the running app reports
-            // (appVersion = nativeDistributions.packageVersion). NSIS/MSI strip the
-            // pre-release suffix for the installer version (exePackageVersion /
-            // msiPackageVersion), but the update channel and the manifest version must
-            // keep it, otherwise the strict installer version (e.g. 2.3.5) drops beta
-            // builds onto the `latest` channel and the version no longer matches the
-            // running app's appVersion. Fall back to the task's packageVersion when no
-            // distribution-level version is set.
-            val manifestVersion = dist.packageVersion ?: packageVersion.orNull ?: "0.0.0"
-            val channel = resolveUpdateChannel(dist, manifestVersion)
-            // The manifest name is keyed on the OS only, so every format in this batch shares it;
-            // generateIfMissing scans the whole output dir and lists every artifact, producing one
-            // multi-artifact manifest for the platform.
-            val ymlFilename = targetFormats.first().updateYmlFilename(channel)
-            UpdateYmlGenerator.generateIfMissing(outputDir, ymlFilename, manifestVersion, logger)
-        }
-
-        private fun resolveUpdateChannel(
-            dist: JvmApplicationDistributions,
-            manifestVersion: String?,
-        ): ReleaseChannel {
-            val publish = dist.publish
-            return when {
-                publish.github.enabled -> publish.github.channel
-                publish.generic.enabled -> publish.generic.channel
-                // S3 has no channel setting; mirror electron-builder and derive it from the version's
-                // pre-release tag so the manifest filename matches the channel the updater subscribes to.
-                publish.s3.enabled -> UpdateYmlPublish.channelFromVersion(manifestVersion)
-                else -> ReleaseChannel.Latest
-            }
-        }
-
         private fun resolvePublishFlag(): String {
             val publish = distributions?.publish
             val anyProviderEnabled =
                 publish != null && (publish.github.enabled || publish.s3.enabled || publish.generic.enabled)
             // Priority: env var > Gradle property > DSL default (never when no provider enabled).
+            val envValue = System.getenv(PUBLISH_MODE_ENV)
+            val propValue = publishMode.orNull
+            val dslValue = publish?.publishMode?.id ?: "never"
             val flag =
-                UpdateYmlPublish.resolvePublishFlag(
-                    anyProviderEnabled = anyProviderEnabled,
-                    envValue = System.getenv(UpdateYmlPublish.PUBLISH_MODE_ENV),
-                    propValue = publishMode.orNull,
-                    dslValue = publish?.publishMode?.id ?: "never",
-                )
+                when {
+                    !anyProviderEnabled -> "never"
+                    !envValue.isNullOrBlank() -> envValue
+                    !propValue.isNullOrBlank() -> propValue
+                    else -> dslValue
+                }
             logger.info("Resolved electron-builder publish mode: $flag")
             return flag
         }

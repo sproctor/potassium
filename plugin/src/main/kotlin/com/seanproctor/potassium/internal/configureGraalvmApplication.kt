@@ -1486,7 +1486,7 @@ private fun JvmApplicationContext.configureGraalvmElectronBuilderPackaging(
             )
 
             packageName.set(packageNameProvider)
-            packageVersion.set(packageVersionFor(ebFormats.first()))
+            packageVersion.set(resolvedPackageVersion())
 
             // Only wire platform-specific icons/entitlements for the current OS
             // to avoid validation errors from missing cross-platform files.

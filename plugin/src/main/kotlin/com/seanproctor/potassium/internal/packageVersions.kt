@@ -1,84 +1,47 @@
-﻿/*
+/*
  * Copyright 2020-2021 JetBrains s.r.o. and respective authors and developers.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE.txt file.
  */
 
 package com.seanproctor.potassium.internal
 
-import com.seanproctor.potassium.dsl.JvmApplicationDistributions
-import com.seanproctor.potassium.dsl.TargetFormat
 import com.seanproctor.potassium.internal.utils.OS
+import com.seanproctor.potassium.internal.utils.currentOS
 import org.gradle.api.provider.Provider
 
-internal fun JvmApplicationContext.packageVersionFor(targetFormat: TargetFormat): Provider<String> =
+/**
+ * The single application version: the configured `packageVersion`, falling back to the Gradle
+ * project version, then "1.0.0". It is passed verbatim to electron-builder, which applies its own
+ * per-target sanitization (NSIS/MSI strip the pre-release suffix, DEB/RPM convert `-` to `~`, etc.).
+ */
+internal fun JvmApplicationContext.resolvedPackageVersion(): Provider<String> =
     project.provider {
-        app.nativeDistributions.packageVersionFor(targetFormat)
+        app.nativeDistributions.packageVersion
             ?: project.version.toString().takeIf { it != "unspecified" }
             ?: "1.0.0"
     }
 
 /**
- * Version used when jpackage builds the app-image (`--app-version`).
- *
- * jpackage is the only [com.seanproctor.potassium.dsl.PackagingBackend.JPACKAGE]
- * step ([TargetFormat.JpackageImage]) and enforces strict platform version rules — notably Windows
- * rejects SemVer pre-release/build metadata such as `2.3.5-beta.7`. All real installer formats run
- * through electron-builder and keep the full SemVer via [packageVersionFor].
+ * Version for jpackage's `--app-version` on the current OS. jpackage validates the version per
+ * platform, so we apply the same rules electron-builder uses (see [formatVersionForJpackage]).
  */
-internal fun JvmApplicationContext.jpackageVersionFor(targetFormat: TargetFormat): Provider<String> =
-    packageVersionFor(targetFormat).map { it.toJpackageVersion() }
+internal fun JvmApplicationContext.jpackageVersion(): Provider<String> =
+    resolvedPackageVersion().map { formatVersionForJpackage(it, currentOS) }
 
-// jpackage rejects SemVer pre-release/build metadata; keep only the MAJOR.MINOR.PATCH core.
-private fun String.toJpackageVersion(): String =
-    substringBefore('-').substringBefore('+')
-
-@Suppress("CyclomaticComplexMethod") // Exhaustive when on TargetFormat enum
-private fun JvmApplicationDistributions.packageVersionFor(targetFormat: TargetFormat): String? {
-    val formatSpecificVersion: String? =
-        when (targetFormat) {
-            TargetFormat.JpackageImage -> null
-            TargetFormat.Deb -> linux.debPackageVersion
-            TargetFormat.Rpm -> linux.rpmPackageVersion
-            TargetFormat.Dmg -> macOS.dmgPackageVersion
-            TargetFormat.Pkg -> macOS.pkgPackageVersion
-            TargetFormat.Exe -> windows.exePackageVersion
-            TargetFormat.Msi -> windows.msiPackageVersion
-            TargetFormat.Nsis, TargetFormat.NsisWeb, TargetFormat.Portable,
-            TargetFormat.AppX,
-            -> windows.exePackageVersion
-            TargetFormat.AppImage, TargetFormat.Snap, TargetFormat.Flatpak -> linux.debPackageVersion
-            TargetFormat.Zip, TargetFormat.Tar, TargetFormat.SevenZ -> null
-        }
-    val osSpecificVersion: String? =
-        when (targetFormat.targetOS) {
-            OS.Linux -> linux.packageVersion
-            OS.MacOS -> macOS.packageVersion
-            OS.Windows -> windows.packageVersion
-        }
-    return formatSpecificVersion
-        ?: osSpecificVersion
-        ?: packageVersion
-}
-
-internal fun JvmApplicationContext.packageBuildVersionFor(targetFormat: TargetFormat): Provider<String> =
-    project.provider {
-        app.nativeDistributions.packageBuildVersionFor(targetFormat)
-            // fallback to normal version
-            ?: app.nativeDistributions.packageVersionFor(targetFormat)
-            ?: project.version.toString().takeIf { it != "unspecified" }
-            ?: "1.0.0"
+/**
+ * Formats a version for jpackage/native packaging on the given OS, mirroring electron-builder's
+ * per-platform handling:
+ * - Windows / macOS: drop the SemVer pre-release/build suffix, keeping the numeric `MAJOR.MINOR.PATCH`
+ *   core. Windows installers and macOS `CFBundleShortVersionString` require numeric versions; this
+ *   matches electron-builder's `getVersionInWeirdWindowsForm`.
+ * - Linux: replace `-` with `~` (electron-builder's DEB/RPM sanitization) — a valid pre-release
+ *   separator that sorts before the final release.
+ */
+internal fun formatVersionForJpackage(
+    version: String,
+    os: OS,
+): String =
+    when (os) {
+        OS.Windows, OS.MacOS -> version.substringBefore('-').substringBefore('+')
+        OS.Linux -> version.replace('-', '~')
     }
-
-private fun JvmApplicationDistributions.packageBuildVersionFor(targetFormat: TargetFormat): String? {
-    if (targetFormat.targetOS != OS.MacOS) return null
-
-    val formatSpecificVersion: String? =
-        when (targetFormat) {
-            TargetFormat.Dmg -> macOS.dmgPackageBuildVersion
-            TargetFormat.Pkg -> macOS.pkgPackageBuildVersion
-            else -> null
-        }
-    val osSpecificVersion: String? = macOS.packageBuildVersion
-    return formatSpecificVersion
-        ?: osSpecificVersion
-}

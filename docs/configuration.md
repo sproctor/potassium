@@ -112,16 +112,21 @@ linux { targetFormats(*LinuxTargetFormat.entries.toTypedArray()) }
 | `appResourcesRootDir` | `DirectoryProperty` | — | Root directory for bundled resources |
 | `outputBaseDir` | `DirectoryProperty` | `build/potassium/binaries` | Output directory for built packages |
 
-### Version Formats
+### Version
 
-Different platforms have different version requirements:
+Set a single `packageVersion` (SemVer — it may include a pre-release suffix such as `1.2.3-beta.1`).
+There are no per-OS or per-format version overrides: each platform has different version rules, so
+Potassium and electron-builder format the one version per target automatically.
 
-| Platform | Format | Example |
-|----------|--------|---------|
-| macOS | `MAJOR.MINOR.PATCH` | `1.2.3` |
-| Windows | `MAJOR.MINOR.BUILD` | `1.2.3` |
-| Linux DEB | `[EPOCH:]UPSTREAM[-REVISION]` | `1.2.3` |
-| Linux RPM | No dashes | `1.2.3` |
+| Target | Handling | `1.2.3-beta.1` → |
+|--------|----------|------------------|
+| Windows (NSIS/MSI) | pre-release suffix stripped to numeric `MAJOR.MINOR.PATCH` | `1.2.3` |
+| macOS (DMG/PKG) | pre-release suffix stripped for the app version | `1.2.3` |
+| Linux (DEB/RPM) | `-` replaced with `~` (sorts before the final release) | `1.2.3~beta.1` |
+| AppImage | full version preserved | `1.2.3-beta.1` |
+
+The pre-release identifier (`beta`, `alpha`, …) also selects the auto-update channel — see
+[Auto-Update](auto-update.md).
 
 ## Potassium-Specific Features
 

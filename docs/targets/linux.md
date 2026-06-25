@@ -54,9 +54,6 @@ linux {
 
     // Dependencies injected into the .deb control file
     debDepends = listOf("libfuse2", "libgtk-3-0", "libasound2")
-
-    // Version override for DEB
-    debPackageVersion = "1.0.0"
 }
 ```
 
@@ -66,9 +63,6 @@ linux {
 linux {
     // Dependencies injected into the RPM spec
     rpmRequires = listOf("gtk3", "libX11", "alsa-lib")
-
-    // Version override for RPM (no dashes allowed)
-    rpmPackageVersion = "1.0.0"
 
     // RPM license tag
     rpmLicenseType = "MIT"
@@ -280,8 +274,6 @@ No manual `desktopEntries` override is needed for MimeType.
 | `debMaintainer` | `String?` | `null` | DEB maintainer email |
 | `menuGroup` | `String?` | `null` | Menu group |
 | `rpmLicenseType` | `String?` | `null` | RPM license tag |
-| `debPackageVersion` | `String?` | `null` | DEB version override |
-| `rpmPackageVersion` | `String?` | `null` | RPM version override |
 | `debDepends` | `List<String>` | `[]` | Extra DEB dependencies |
 | `rpmRequires` | `List<String>` | `[]` | Extra RPM dependencies |
 

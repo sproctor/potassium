@@ -427,16 +427,21 @@ linux { targetFormats(*LinuxTargetFormat.entries.toTypedArray()) }
 | `appResourcesRootDir` | `DirectoryProperty` | — | Root directory for bundled resources |
 | `outputBaseDir` | `DirectoryProperty` | `build/potassium/binaries` | Output directory for built packages |
 
-### Version Formats
+### Version
 
-Different platforms have different version requirements:
+Set a single `packageVersion` (SemVer — it may include a pre-release suffix such as `1.2.3-beta.1`).
+There are no per-OS or per-format version overrides: each platform has different version rules, so
+Potassium and electron-builder format the one version per target automatically.
 
-| Platform | Format | Example |
-|----------|--------|---------|
-| macOS | `MAJOR.MINOR.PATCH` | `1.2.3` |
-| Windows | `MAJOR.MINOR.BUILD` | `1.2.3` |
-| Linux DEB | `[EPOCH:]UPSTREAM[-REVISION]` | `1.2.3` |
-| Linux RPM | No dashes | `1.2.3` |
+| Target | Handling | `1.2.3-beta.1` → |
+|--------|----------|------------------|
+| Windows (NSIS/MSI) | pre-release suffix stripped to numeric `MAJOR.MINOR.PATCH` | `1.2.3` |
+| macOS (DMG/PKG) | pre-release suffix stripped for the app version | `1.2.3` |
+| Linux (DEB/RPM) | `-` replaced with `~` (sorts before the final release) | `1.2.3~beta.1` |
+| AppImage | full version preserved | `1.2.3-beta.1` |
+
+The pre-release identifier (`beta`, `alpha`, …) also selects the auto-update channel — see
+[Auto-Update](auto-update.md).
 
 ## Potassium-Specific Features
 
@@ -927,12 +932,6 @@ macOS {
 | `minimumSystemVersion` | `String?` | `null` | Minimum macOS version |
 | `layeredIconDir` | `DirectoryProperty` | — | `.icon` directory for macOS 26+ |
 | `packageName` | `String?` | `null` | Override package name |
-| `packageVersion` | `String?` | `null` | Override version |
-| `packageBuildVersion` | `String?` | `null` | CFBundleVersion |
-| `dmgPackageVersion` | `String?` | `null` | DMG-specific version |
-| `dmgPackageBuildVersion` | `String?` | `null` | DMG-specific build version |
-| `pkgPackageVersion` | `String?` | `null` | PKG-specific version |
-| `pkgPackageBuildVersion` | `String?` | `null` | PKG-specific build version |
 | `entitlementsFile` | `RegularFileProperty` | — | Entitlements plist |
 | `runtimeEntitlementsFile` | `RegularFileProperty` | — | Runtime entitlements plist |
 | `provisioningProfile` | `RegularFileProperty` | — | Provisioning profile |
@@ -1329,9 +1328,6 @@ linux {
 
     // Dependencies injected into the .deb control file
     debDepends = listOf("libfuse2", "libgtk-3-0", "libasound2")
-
-    // Version override for DEB
-    debPackageVersion = "1.0.0"
 }
 ```
 
@@ -1341,9 +1337,6 @@ linux {
 linux {
     // Dependencies injected into the RPM spec
     rpmRequires = listOf("gtk3", "libX11", "alsa-lib")
-
-    // Version override for RPM (no dashes allowed)
-    rpmPackageVersion = "1.0.0"
 
     // RPM license tag
     rpmLicenseType = "MIT"
@@ -1553,8 +1546,6 @@ No manual `desktopEntries` override is needed for MimeType.
 | `debMaintainer` | `String?` | `null` | DEB maintainer email |
 | `menuGroup` | `String?` | `null` | Menu group |
 | `rpmLicenseType` | `String?` | `null` | RPM license tag |
-| `debPackageVersion` | `String?` | `null` | DEB version override |
-| `rpmPackageVersion` | `String?` | `null` | RPM version override |
 | `debDepends` | `List<String>` | `[]` | Extra DEB dependencies |
 | `rpmRequires` | `List<String>` | `[]` | Extra RPM dependencies |
 
@@ -2141,7 +2132,7 @@ Minimal `entitlements.plist` for a JVM app:
 
 Potassium provides a complete auto-update solution compatible with the [electron-builder update format](https://www.electron.build/auto-update). The system has two parts:
 
-1. **Build-time**: The plugin generates update metadata files (`latest-*.yml`) alongside your installers
+1. **Build-time**: electron-builder writes a single update metadata file (`latest-<os>.yml`) alongside your installers, and uploads it together with the installers to whichever provider you configure (GitHub, S3, or generic)
 2. **Runtime**: The `potassium.updater-runtime` library checks for updates, downloads, and installs them
 
 ## How It Works
@@ -2186,7 +2177,7 @@ See the [example release workflow](https://github.com/kdroidFilter/Nucleus/blob/
 
 ### Building locally
 
-The plugin already generates a `latest-*.yml` file alongside the installers when you run `packageDistributionForCurrentOS`. If you build on a single machine, the YML is ready to use for that platform.
+Each platform is packaged in a single electron-builder invocation, so electron-builder writes one `latest-<os>.yml` (covering all of that platform's installers) alongside them when you run `packageDistributionForCurrentOS`, and — for github, s3, and generic alike — uploads it as part of publishing. If you build on a single machine, the YML is ready to use for that platform.
 
 However, for a real multi-platform release, you need to build on each platform (macOS, Windows, Linux) and then **merge** the per-platform YML files into final ones that reference all architectures. The CI does this automatically with the `generate-update-yml` action. To do it locally:
 
@@ -2704,6 +2695,8 @@ The marker file is stored in the platform-specific app data directory (resolved 
 
 Potassium can publish your installers and update metadata to **GitHub Releases**, **Amazon S3**, or a **generic HTTP server**.
 
+**One provider at a time:** Exactly one publish provider may be enabled. Enabling more than one of `github`, `s3`, or
+`generic` fails the build (electron-builder writes a single shared update manifest per build).
 ## Configuration
 
 ```kotlin
@@ -2712,6 +2705,7 @@ potassium {
         // Publish mode
         publishMode = PublishMode.Auto // Never, Auto, Always
 
+        // Enable exactly one of the following providers.
         github {
             enabled = true
             owner = "myorg"
@@ -2723,7 +2717,7 @@ potassium {
 
         // Or S3
         s3 {
-            enabled = true
+            enabled = false
             bucket = "my-updates-bucket"
             region = "us-east-1"
             path = "releases"
@@ -2732,7 +2726,7 @@ potassium {
 
         // Or generic HTTP server
         generic {
-            enabled = true
+            enabled = false
             url = "https://updates.example.com/releases/"
             channel = ReleaseChannel.Latest
             useMultipleRangeRequest = true

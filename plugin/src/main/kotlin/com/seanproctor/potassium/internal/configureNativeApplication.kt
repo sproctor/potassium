@@ -131,13 +131,13 @@ private fun AbstractNativeMacApplicationPackageTask.configureNativePackageTask(
         },
     )
 
-    // todo: dmg package version
     packageVersion.set(
         project.provider {
-            app.distributions.macOS.packageVersion
-                ?: app.distributions.packageVersion
-                ?: project.version.toString().takeIf { it != "unspecified" }
-                ?: "1.0.0"
+            val raw =
+                app.distributions.packageVersion
+                    ?: project.version.toString().takeIf { it != "unspecified" }
+                    ?: "1.0.0"
+            formatVersionForJpackage(raw, OS.MacOS)
         },
     )
 

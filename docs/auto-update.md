@@ -2,7 +2,7 @@
 
 Potassium provides a complete auto-update solution compatible with the [electron-builder update format](https://www.electron.build/auto-update). The system has two parts:
 
-1. **Build-time**: The plugin generates update metadata files (`latest-*.yml`) alongside your installers
+1. **Build-time**: electron-builder writes a single update metadata file (`latest-<os>.yml`) alongside your installers, and uploads it together with the installers to whichever provider you configure (GitHub, S3, or generic)
 2. **Runtime**: The `potassium.updater-runtime` library checks for updates, downloads, and installs them
 
 ## How It Works
@@ -66,7 +66,7 @@ See the [example release workflow](https://github.com/kdroidFilter/Nucleus/blob/
 
 ### Building locally
 
-The plugin already generates a `latest-*.yml` file alongside the installers when you run `packageDistributionForCurrentOS`. If you build on a single machine, the YML is ready to use for that platform.
+Each platform is packaged in a single electron-builder invocation, so electron-builder writes one `latest-<os>.yml` (covering all of that platform's installers) alongside them when you run `packageDistributionForCurrentOS`, and — for github, s3, and generic alike — uploads it as part of publishing. If you build on a single machine, the YML is ready to use for that platform.
 
 However, for a real multi-platform release, you need to build on each platform (macOS, Windows, Linux) and then **merge** the per-platform YML files into final ones that reference all architectures. The CI does this automatically with the `generate-update-yml` action. To do it locally:
 

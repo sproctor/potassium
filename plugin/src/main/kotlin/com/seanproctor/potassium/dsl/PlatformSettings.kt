@@ -17,7 +17,6 @@ abstract class AbstractPlatformSettings {
     internal abstract val objects: ObjectFactory
 
     val iconFile: RegularFileProperty = objects.fileProperty()
-    var packageVersion: String? = null
 
     internal val fileAssociations: MutableSet<FileAssociation> = mutableSetOf()
 
@@ -35,9 +34,6 @@ abstract class AbstractPlatformSettings {
 abstract class AbstractMacOSPlatformSettings : AbstractPlatformSettings() {
     var packageName: String? = null
 
-    var packageBuildVersion: String? = null
-    var dmgPackageVersion: String? = null
-    var dmgPackageBuildVersion: String? = null
     var appCategory: String? = null
     var minimumSystemVersion: String? = null
     var installationPath: String? = null
@@ -99,8 +95,6 @@ abstract class JvmMacOSPlatformSettings : AbstractMacOSPlatformSettings() {
     var appStore: Boolean = false
     val entitlementsFile: RegularFileProperty = objects.fileProperty()
     val runtimeEntitlementsFile: RegularFileProperty = objects.fileProperty()
-    var pkgPackageVersion: String? = null
-    var pkgPackageBuildVersion: String? = null
 
     val provisioningProfile: RegularFileProperty = objects.fileProperty()
     val runtimeProvisioningProfile: RegularFileProperty = objects.fileProperty()
@@ -172,8 +166,6 @@ abstract class LinuxPlatformSettings : AbstractPlatformSettings() {
     var debMaintainer: String? = null
     var menuGroup: String? = null
     var rpmLicenseType: String? = null
-    var debPackageVersion: String? = null
-    var rpmPackageVersion: String? = null
 
     /** Additional Debian dependencies for .deb packages. */
     var debDepends: List<String> = emptyList()
@@ -217,8 +209,6 @@ abstract class WindowsPlatformSettings : AbstractPlatformSettings() {
         get() = field || menuGroup != null
     var menuGroup: String? = null
     var upgradeUuid: String? = null
-    var msiPackageVersion: String? = null
-    var exePackageVersion: String? = null
 
     val nsis: NsisSettings = objects.newInstance(NsisSettings::class.java)
 

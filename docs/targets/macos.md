@@ -305,12 +305,6 @@ macOS {
 | `minimumSystemVersion` | `String?` | `null` | Minimum macOS version |
 | `layeredIconDir` | `DirectoryProperty` | — | `.icon` directory for macOS 26+ |
 | `packageName` | `String?` | `null` | Override package name |
-| `packageVersion` | `String?` | `null` | Override version |
-| `packageBuildVersion` | `String?` | `null` | CFBundleVersion |
-| `dmgPackageVersion` | `String?` | `null` | DMG-specific version |
-| `dmgPackageBuildVersion` | `String?` | `null` | DMG-specific build version |
-| `pkgPackageVersion` | `String?` | `null` | PKG-specific version |
-| `pkgPackageBuildVersion` | `String?` | `null` | PKG-specific build version |
 | `entitlementsFile` | `RegularFileProperty` | — | Entitlements plist |
 | `runtimeEntitlementsFile` | `RegularFileProperty` | — | Runtime entitlements plist |
 | `provisioningProfile` | `RegularFileProperty` | — | Provisioning profile |

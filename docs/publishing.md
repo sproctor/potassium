@@ -2,6 +2,10 @@
 
 Potassium can publish your installers and update metadata to **GitHub Releases**, **Amazon S3**, or a **generic HTTP server**.
 
+!!! note "One provider at a time"
+    Exactly one publish provider may be enabled. Enabling more than one of `github`, `s3`, or
+    `generic` fails the build (electron-builder writes a single shared update manifest per build).
+
 ## Configuration
 
 ```kotlin
@@ -10,6 +14,7 @@ potassium {
         // Publish mode
         publishMode = PublishMode.Auto // Never, Auto, Always
 
+        // Enable exactly one of the following providers.
         github {
             enabled = true
             owner = "myorg"
@@ -21,7 +26,7 @@ potassium {
 
         // Or S3
         s3 {
-            enabled = true
+            enabled = false
             bucket = "my-updates-bucket"
             region = "us-east-1"
             path = "releases"
@@ -30,7 +35,7 @@ potassium {
 
         // Or generic HTTP server
         generic {
-            enabled = true
+            enabled = false
             url = "https://updates.example.com/releases/"
             channel = ReleaseChannel.Latest
             useMultipleRangeRequest = true

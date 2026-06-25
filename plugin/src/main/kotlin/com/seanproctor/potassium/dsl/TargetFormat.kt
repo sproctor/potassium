@@ -59,43 +59,6 @@ enum class TargetFormat(
     val isStoreFormat: Boolean
         get() = this in setOf(Pkg, AppX, Flatpak)
 
-    /**
-     * Whether this format supports auto-update but electron-builder does not generate latest-*.yml for it.
-     * electron-builder natively generates yml for: NSIS, NSIS-Web, DMG, AppImage, DEB, RPM.
-     * This property is true only for formats that need the plugin to generate it: MSI and Portable.
-     */
-    val needsPluginUpdateYml: Boolean
-        get() = this == Msi || this == Portable
-
-    /**
-     * Whether this format publishes a per-channel auto-update manifest (`<channel><osSuffix>.yml`),
-     * generated either by electron-builder (NSIS, NSIS-Web, DMG, ZIP-on-macOS, AppImage, DEB, RPM)
-     * or by the plugin ([needsPluginUpdateYml]: MSI, Portable).
-     *
-     * Because the manifest name is keyed only on the OS (see [updateYmlFilename]), configuring two or
-     * more of these for the same OS makes their separate electron-builder runs publish to the same
-     * key — so the manifests must be merged before publishing (see `AbstractMergeUpdateYmlTask`).
-     */
-    internal val producesUpdateManifest: Boolean
-        get() =
-            when (this) {
-                Exe, Nsis, NsisWeb, Msi, Portable, Dmg, AppImage, Deb, Rpm -> true
-                // electron-builder treats ZIP as auto-updatable only on macOS (Squirrel.Mac).
-                Zip -> targetOS == OS.MacOS
-                else -> false
-            }
-
-    /** Returns the auto-update YML filename for this format and channel. */
-    fun updateYmlFilename(channel: ReleaseChannel): String {
-        val prefix = channel.id
-        val suffix = when (targetOS) {
-            OS.Windows -> ""
-            OS.MacOS -> "-mac"
-            OS.Linux -> "-linux"
-        }
-        return "$prefix$suffix.yml"
-    }
-
     internal fun isCompatibleWith(os: OS): Boolean = os == targetOS
 
     val outputDirName: String

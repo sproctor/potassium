@@ -9,14 +9,14 @@ package com.seanproctor.potassium.internal
 
 import com.seanproctor.potassium.dsl.PackagingBackend
 import com.seanproctor.potassium.dsl.TargetFormat
-import com.seanproctor.potassium.internal.validation.validatePackageVersions
+import com.seanproctor.potassium.internal.validation.validatePackageVersion
+import com.seanproctor.potassium.internal.validation.validatePublishProviders
 import com.seanproctor.potassium.tasks.AbstractCheckNativeDistributionRuntime
 import com.seanproctor.potassium.tasks.AbstractElectronBuilderPackageTask
 import com.seanproctor.potassium.tasks.AbstractExtractNativeLibsTask
 import com.seanproctor.potassium.tasks.AbstractGenerateAotCacheTask
 import com.seanproctor.potassium.tasks.AbstractJLinkTask
 import com.seanproctor.potassium.tasks.AbstractJPackageTask
-import com.seanproctor.potassium.tasks.AbstractMergeUpdateYmlTask
 import com.seanproctor.potassium.tasks.AbstractNotarizationTask
 import com.seanproctor.potassium.tasks.AbstractPatchCaCertificatesTask
 import com.seanproctor.potassium.tasks.AbstractPatchMacJvmTask
@@ -73,7 +73,8 @@ internal fun JvmApplicationContext.configureJvmApplication() {
         registerCleanNativeLibsTransform(project)
     }
 
-    validatePackageVersions()
+    validatePackageVersion()
+    validatePublishProviders()
     val commonTasks = configureCommonJvmDesktopTasks()
     configurePackagingTasks(commonTasks)
     copy(buildType = app.buildTypes.release).configurePackagingTasks(commonTasks)
@@ -453,12 +454,6 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
     val packageFormats = listOfNotNull(nonStorePackageTask) + storePackageFormats
     val allNotarizeTasks = nonStoreNotarizeTasks + storeNotarizeTasks
 
-    // The single per-platform non-store invocation writes one multi-artifact `<channel><osSuffix>.yml`.
-    // For S3 it is configured with `publishAutoUpdate: false`, so the plugin owns that key and uploads
-    // the manifest via this task.
-    val mergeUpdateYml: TaskProvider<AbstractMergeUpdateYmlTask>? =
-        registerUpdateYmlMergeIfNeeded(currentOsNonStoreFormats, nonStorePackageTask)
-
     val notarizeForCurrentOS =
         if (allNotarizeTasks.isNotEmpty()) {
             tasks.register<DefaultTask>(
@@ -478,7 +473,6 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
         ) {
             dependsOn(packageFormats)
             notarizeForCurrentOS?.let { dependsOn(it) }
-            mergeUpdateYml?.let { dependsOn(it) }
         }
 
     if (buildType === app.buildTypes.default) {
@@ -567,46 +561,6 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
         tasks.register<JavaExec>(taskNameAction = "run") {
             configureRunTask(this, commonTasks.prepareAppResources, runProguard, patchMacJvmTask)
         }
-}
-
-/**
- * Registers a task that merges the per-format auto-update manifests of the current OS and uploads
- * the union to S3. electron-builder is always told `publishAutoUpdate: false` for S3 (in the
- * config generator), so the plugin owns the single `<channel><osSuffix>.yml` key that every format
- * (and arch) shares — for one format it publishes that manifest verbatim, for several their union.
- *
- * Returns null when S3 is not enabled, or when no auto-updatable format
- * (see [TargetFormat.producesUpdateManifest]) is compatible with the current OS — in which case
- * there is no manifest to publish.
- */
-private fun JvmApplicationContext.registerUpdateYmlMergeIfNeeded(
-    nonStoreFormats: List<TargetFormat>,
-    nonStorePackageTask: TaskProvider<AbstractElectronBuilderPackageTask>?,
-): TaskProvider<AbstractMergeUpdateYmlTask>? {
-    val s3 = app.nativeDistributions.publish.s3
-    if (!s3.enabled) return null
-    if (nonStorePackageTask == null) return null
-    if (nonStoreFormats.none { it.isCompatibleWithCurrentOS && it.producesUpdateManifest }) return null
-
-    return tasks.register<AbstractMergeUpdateYmlTask>(
-        taskNameAction = "merge",
-        taskNameObject = "updateYml",
-    ) {
-        dependsOn(nonStorePackageTask)
-        perFormatOutputDirs.from(nonStorePackageTask.flatMap { it.destinationDir })
-        s3Enabled.set(true)
-        // S3 settings are plain DSL `var`s; read them in this (deferred) configure block, where they
-        // are final, and only set the optional properties when present.
-        s3.bucket?.let { s3Bucket.set(it) }
-        s3.region?.let { s3Region.set(it) }
-        s3.path?.let { s3Path.set(it) }
-        s3.acl?.let { s3Acl.set(it) }
-        publishMode.set(PotassiumProperties.electronBuilderPublishMode(project.providers))
-        dslPublishMode.set(app.nativeDistributions.publish.publishMode.id)
-        destinationDir.set(
-            app.nativeDistributions.outputBaseDir.map { it.dir("$appDirName/merged-update-yml") },
-        )
-    }
 }
 
 private fun JvmApplicationContext.configureProguardTask(
@@ -698,7 +652,7 @@ private fun JvmApplicationContext.configurePackageTask(
         packageTask.packageCopyright.set(executables.copyright)
         packageTask.packageVendor.set(executables.vendor)
         // jpackage app-image: use the jpackage-safe version.
-        packageTask.packageVersion.set(jpackageVersionFor(packageTask.targetFormat))
+        packageTask.packageVersion.set(jpackageVersion())
     }
 
     val dirSuffix = if (sandboxed) "-sandboxed" else ""
@@ -807,9 +761,9 @@ private fun JvmApplicationContext.configureElectronBuilderPackageTask(
             )
         },
     )
-    // One invocation builds all of the platform's formats, so a single version applies. Format-
-    // specific version overrides (e.g. windows.msiPackageVersion) cannot be honored when batched.
-    packageTask.packageVersion.set(packageVersionFor(packageTask.targetFormats.first()))
+    // electron-builder receives the full version and applies its own per-target sanitization
+    // (NSIS/MSI strip the pre-release suffix, DEB/RPM convert `-` to `~`, etc.).
+    packageTask.packageVersion.set(resolvedPackageVersion())
     packageTask.linuxIconFile.set(
         app.nativeDistributions.linux.iconFile
             .orElse(unpackDefaultResources.get { linuxIcon }),
@@ -949,7 +903,7 @@ internal fun JvmApplicationContext.configurePlatformSettings(
                 packageTask.macRuntimeEntitlementsFile.set(
                     mac.runtimeEntitlementsFile.orElse(defaultRuntimeEntitlements),
                 )
-                packageTask.packageBuildVersion.set(packageBuildVersionFor(packageTask.targetFormat))
+                packageTask.packageBuildVersion.set(jpackageVersion())
                 packageTask.nonValidatedMacBundleID.set(mac.bundleID)
                 packageTask.macProvisioningProfile.set(mac.provisioningProfile)
                 packageTask.macRuntimeProvisioningProfile.set(mac.runtimeProvisioningProfile)
@@ -1108,7 +1062,7 @@ private fun JvmApplicationContext.configurePackageUberJarForCurrentOS(
     jar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     jar.archiveAppendix.set(targetTarget.id)
     jar.archiveBaseName.set(packageNameProvider)
-    jar.archiveVersion.set(packageVersionFor(TargetFormat.JpackageImage))
+    jar.archiveVersion.set(resolvedPackageVersion())
     jar.archiveClassifier.set(buildType.classifier)
     jar.destinationDirectory.set(
         jar.project.layout.buildDirectory
