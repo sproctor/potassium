@@ -1,10 +1,7 @@
 package com.seanproctor.potassium.updater.provider
 
-import com.seanproctor.potassium.updater.runtime.Platform
 import com.seanproctor.potassium.updater.exception.NetworkException
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import com.seanproctor.potassium.updater.runtime.Platform
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -16,18 +13,15 @@ public class GitHubProvider(
     public val token: String? = null,
 ) : UpdateProvider {
     /**
-     * Base URL for the GitHub REST API. Exposed as `internal` so tests in this module
-     * can redirect API traffic to a local server; not part of the public API.
+     * Base URL for GitHub. Exposed as `internal` so tests in this module can redirect feed and
+     * download traffic to a local server; not part of the public API.
      */
-    internal var apiBaseUrl: String = "https://api.github.com"
+    internal var baseUrl: String = "https://github.com"
 
     override fun getUpdateMetadataUrl(
         channel: String,
         platform: Platform,
-    ): String {
-        val fileName = metadataFileName(channel, platform)
-        return "https://github.com/$owner/$repo/releases/latest/download/$fileName"
-    }
+    ): String = "$baseUrl/$owner/$repo/releases/latest/download/${metadataFileName(channel, platform)}"
 
     override fun resolveMetadataUrl(
         channel: String,
@@ -35,24 +29,24 @@ public class GitHubProvider(
         httpClient: HttpClient,
     ): String {
         val fileName = metadataFileName(channel, platform)
+        // Stable uses GitHub's `releases/latest` redirect (the latest non-prerelease), like
+        // electron-updater's /releases/latest — no feed lookup needed.
         if (channel.equals(LATEST_CHANNEL, ignoreCase = true)) {
-            return "https://github.com/$owner/$repo/releases/latest/download/$fileName"
+            return "$baseUrl/$owner/$repo/releases/latest/download/$fileName"
         }
-        val tag = findLatestPrereleaseTag(channel, httpClient)
-        return "https://github.com/$owner/$repo/releases/download/$tag/$fileName"
+        // Pre-release channels: discover the newest matching tag from the public releases Atom
+        // feed, exactly like electron-updater — no REST API, so no rate limit.
+        val tag = findTagForChannel(channel, httpClient)
+        return "$baseUrl/$owner/$repo/releases/download/$tag/$fileName"
     }
 
     override fun getDownloadUrl(
         fileName: String,
         version: String,
-    ): String = "https://github.com/$owner/$repo/releases/download/v$version/$fileName"
+    ): String = "$baseUrl/$owner/$repo/releases/download/v$version/$fileName"
 
     override fun authHeaders(): Map<String, String> =
-        if (token != null) {
-            mapOf("Authorization" to "token $token")
-        } else {
-            emptyMap()
-        }
+        if (token != null) mapOf("Authorization" to "token $token") else emptyMap()
 
     private fun metadataFileName(
         channel: String,
@@ -62,52 +56,42 @@ public class GitHubProvider(
         return if (suffix.isEmpty()) "$channel.yml" else "$channel-$suffix.yml"
     }
 
-    private fun findLatestPrereleaseTag(
+    /**
+     * Finds the newest release tag for [channel] by parsing GitHub's releases Atom feed
+     * (`/<owner>/<repo>/releases.atom`). Entries are newest-first; a tag's channel is its first
+     * semver pre-release identifier (`2.3.5-beta.8` → `beta`), matching electron-updater. The
+     * feed is public, so this avoids the REST API rate limit.
+     */
+    private fun findTagForChannel(
         channel: String,
         httpClient: HttpClient,
     ): String {
         val builder =
             HttpRequest
                 .newBuilder()
-                .uri(URI.create("$apiBaseUrl/repos/$owner/$repo/releases?per_page=$PER_PAGE"))
-                .header("Accept", "application/vnd.github+json")
-                .header("X-GitHub-Api-Version", "2026-03-10")
+                .uri(URI.create("$baseUrl/$owner/$repo/releases.atom"))
+                .header("Accept", "application/atom+xml, application/xml, text/xml, */*")
         if (token != null) builder.header("Authorization", "Bearer $token")
-        val request = builder.GET().build()
 
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        val status = response.statusCode()
-        if (status != HTTP_OK) {
-            val rateLimited =
-                status == HTTP_FORBIDDEN &&
-                    response.headers().firstValue("X-RateLimit-Remaining").orElse(null) == "0"
-            val detail =
-                if (rateLimited) {
-                    "rate limit exceeded — configure a token to raise the limit"
-                } else {
-                    "HTTP $status"
-                }
-            throw NetworkException("GitHub API failed while listing releases for $owner/$repo: $detail")
+        val response = httpClient.send(builder.GET().build(), HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() != HTTP_OK) {
+            throw NetworkException("GitHub releases feed failed for $owner/$repo: HTTP ${response.statusCode()}")
         }
 
-        val releases = json.decodeFromString<List<GitHubRelease>>(response.body())
-        val match =
-            releases.firstOrNull { release ->
-                release.prerelease && tagMatchesChannel(release.tagName, channel)
-            } ?: throw NoSuchElementException(
-                "No release found for channel '$channel' within the most recent $PER_PAGE releases. " +
-                    "Publish a fresh release on this channel.",
+        // Atom entry links look like `.../releases/tag/<tag>`; findAll preserves feed (newest-first) order.
+        val tags = TAG_HREF_REGEX.findAll(response.body()).map { it.groupValues[1] }.toList()
+        if (tags.isEmpty()) {
+            throw NoSuchElementException("No published versions for $owner/$repo on GitHub.")
+        }
+        return tags.firstOrNull { tagChannel(it).equals(channel, ignoreCase = true) }
+            ?: throw NoSuchElementException(
+                "No release found for channel '$channel' in the GitHub releases feed for $owner/$repo. " +
+                    "Publish a release on this channel.",
             )
-        return match.tagName
     }
 
-    private fun tagMatchesChannel(
-        tag: String,
-        channel: String,
-    ): Boolean {
-        val suffix = tag.substringAfter('-', missingDelimiterValue = "")
-        return suffix.startsWith(channel, ignoreCase = true)
-    }
+    /** The channel of a tag — its first semver pre-release identifier, or "" for a stable tag. */
+    private fun tagChannel(tag: String): String = tag.substringAfter('-', missingDelimiterValue = "").substringBefore('.')
 
     private fun platformSuffix(platform: Platform): String =
         when (platform) {
@@ -117,17 +101,9 @@ public class GitHubProvider(
             Platform.Unknown -> ""
         }
 
-    @Serializable
-    internal data class GitHubRelease(
-        @SerialName("tag_name") val tagName: String,
-        val prerelease: Boolean,
-    )
-
     private companion object {
         const val LATEST_CHANNEL = "latest"
-        const val PER_PAGE = 100
         const val HTTP_OK = 200
-        const val HTTP_FORBIDDEN = 403
-        val json = Json { ignoreUnknownKeys = true }
+        val TAG_HREF_REGEX = Regex("""/releases/tag/([^"]+)""")
     }
 }
