@@ -1,6 +1,5 @@
 package com.seanproctor.potassium.updater.internal
 
-import com.seanproctor.potassium.updater.runtime.PotassiumApp
 import java.io.File
 
 /**
@@ -8,7 +7,7 @@ import java.io.File
  * can detect that the application was just updated.
  *
  * The marker is stored in the platform-specific application data directory
- * resolved from [PotassiumApp.appId]:
+ * resolved from the application id (system property `potassium.app.id`, with a fallback):
  * - Linux:   `$XDG_DATA_HOME/<appId>/` or `~/.local/share/<appId>/`
  * - macOS:   `~/Library/Application Support/<appId>/`
  * - Windows: `%APPDATA%/<appId>/`
@@ -17,6 +16,7 @@ internal object UpdateMarker {
     private const val MARKER_FILE_NAME = "nucleus-update-event"
     private const val KEY_PREVIOUS_VERSION = "previousVersion"
     private const val KEY_NEW_VERSION = "newVersion"
+    private const val DEFAULT_APP_ID = "potassium-app"
 
     fun write(
         previousVersion: String,
@@ -54,8 +54,13 @@ internal object UpdateMarker {
 
     private fun markerFile(): File = File(resolveDataDir(), MARKER_FILE_NAME)
 
+    private fun appId(): String =
+        System.getProperty("potassium.app.id")?.takeIf { it.isNotBlank() }
+            ?: System.getProperty("app.id")?.takeIf { it.isNotBlank() }
+            ?: DEFAULT_APP_ID
+
     private fun resolveDataDir(): File {
-        val appId = PotassiumApp.appId
+        val appId = appId()
         val os = System.getProperty("os.name", "").lowercase()
         val home = System.getProperty("user.home")
 

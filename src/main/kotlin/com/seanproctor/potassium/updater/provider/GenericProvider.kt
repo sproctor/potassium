@@ -2,8 +2,8 @@ package com.seanproctor.potassium.updater.provider
 
 import com.seanproctor.potassium.updater.runtime.Platform
 
-class GenericProvider(
-    val baseUrl: String,
+public class GenericProvider(
+    public val baseUrl: String,
 ) : UpdateProvider {
     private val normalizedBaseUrl = baseUrl.trimEnd('/')
 

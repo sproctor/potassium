@@ -1,6 +1,6 @@
 package com.seanproctor.potassium.updater.internal
 
-import com.seanproctor.potassium.updater.runtime.InstallType
+import com.seanproctor.potassium.updater.InstallType
 import com.seanproctor.potassium.updater.runtime.Platform
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -13,7 +13,6 @@ class InstallTypeDetectorTest {
         private val properties: Map<String, String> = emptyMap(),
         private val files: Map<String, String> = emptyMap(),
         private val executable: String? = null,
-        private val legacy: InstallType = InstallType.DEV,
     ) : InstallEnvironment {
         override fun getenv(name: String): String? = envVars[name]
 
@@ -24,19 +23,14 @@ class InstallTypeDetectorTest {
         override fun readText(path: String): String? = files[path]
 
         override fun executablePath(): String? = executable
-
-        override fun legacyType(): InstallType = legacy
     }
 
     private fun detect(env: InstallEnvironment) = InstallTypeDetector(env).detect()
 
-    private fun formatId(env: InstallEnvironment) = InstallTypeDetector(env).detectFormatId()
-
     @Test
-    fun `linux APPIMAGE env wins over the legacy marker`() {
-        val env = FakeEnv(Platform.Linux, envVars = mapOf("APPIMAGE" to "/x/App.AppImage"), legacy = InstallType.DEB)
+    fun `linux APPIMAGE env detects AppImage`() {
+        val env = FakeEnv(Platform.Linux, envVars = mapOf("APPIMAGE" to "/x/App.AppImage"))
         assertEquals(InstallType.APPIMAGE, detect(env))
-        assertEquals("appimage", formatId(env))
     }
 
     @Test
@@ -59,7 +53,6 @@ class InstallTypeDetectorTest {
                 files = mapOf("/opt/app/resources/package-type" to "deb\n"),
             )
         assertEquals(InstallType.DEB, detect(env))
-        assertEquals("deb", formatId(env))
     }
 
     @Test
@@ -74,48 +67,45 @@ class InstallTypeDetectorTest {
     }
 
     @Test
-    fun `linux falls back to the legacy marker when no runtime signal`() {
+    fun `linux undetermined is null`() {
+        val env = FakeEnv(Platform.Linux, properties = mapOf("java.home" to "/opt/app/lib/runtime"))
+        assertNull(detect(env))
+    }
+
+    @Test
+    fun `linux unrecognized package-type is null`() {
         val env =
             FakeEnv(
                 Platform.Linux,
                 properties = mapOf("java.home" to "/opt/app/lib/runtime"),
-                legacy = InstallType.DEB,
+                files = mapOf("/opt/app/resources/package-type" to "pacman"),
             )
-        assertEquals(InstallType.DEB, detect(env))
-        assertEquals("deb", formatId(env))
+        assertNull(detect(env))
     }
 
     @Test
-    fun `linux undetectable yields dev and a null format for platform fallback`() {
-        val env = FakeEnv(Platform.Linux, legacy = InstallType.DEV)
-        assertEquals(InstallType.DEV, detect(env))
-        assertNull(formatId(env))
+    fun `macos always resolves to zip`() {
+        assertEquals(InstallType.ZIP, detect(FakeEnv(Platform.MacOS)))
     }
 
     @Test
-    fun `macos always resolves to zip with a null format`() {
-        val env = FakeEnv(Platform.MacOS, legacy = InstallType.DMG)
-        assertEquals(InstallType.ZIP, detect(env))
-        assertNull(formatId(env))
+    fun `windows defaults to nsis`() {
+        assertEquals(InstallType.NSIS, detect(FakeEnv(Platform.Windows)))
     }
 
     @Test
-    fun `windows defaults to the legacy marker`() {
-        val env = FakeEnv(Platform.Windows, legacy = InstallType.NSIS)
-        assertEquals(InstallType.NSIS, detect(env))
-        assertEquals("nsis", formatId(env))
-    }
-
-    @Test
-    fun `windows package-type msi overrides the legacy marker`() {
+    fun `windows package-type msi overrides the default`() {
         val env =
             FakeEnv(
                 Platform.Windows,
                 properties = mapOf("java.home" to "C:/Program Files/App/runtime"),
                 files = mapOf("C:/Program Files/App/resources/package-type" to "msi"),
-                legacy = InstallType.NSIS,
             )
         assertEquals(InstallType.MSI, detect(env))
-        assertEquals("msi", formatId(env))
+    }
+
+    @Test
+    fun `unknown platform is null`() {
+        assertNull(detect(FakeEnv(Platform.Unknown)))
     }
 }

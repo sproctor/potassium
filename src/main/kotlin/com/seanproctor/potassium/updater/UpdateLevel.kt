@@ -1,6 +1,6 @@
 package com.seanproctor.potassium.updater
 
-enum class UpdateLevel {
+public enum class UpdateLevel {
     MAJOR,
     MINOR,
     PATCH,

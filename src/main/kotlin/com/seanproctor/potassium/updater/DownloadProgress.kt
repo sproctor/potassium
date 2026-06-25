@@ -2,7 +2,7 @@ package com.seanproctor.potassium.updater
 
 import java.io.File
 
-data class DownloadProgress(
+public data class DownloadProgress(
     val bytesDownloaded: Long,
     val totalBytes: Long,
     val percent: Double,

@@ -1,19 +1,10 @@
 package com.seanproctor.potassium.updater
 
-import com.seanproctor.potassium.updater.runtime.PotassiumRuntime
-import com.seanproctor.potassium.updater.runtime.InstallType
-import com.seanproctor.potassium.updater.runtime.Platform
 import com.seanproctor.potassium.updater.exception.ChecksumException
 import com.seanproctor.potassium.updater.exception.NetworkException
 import com.seanproctor.potassium.updater.exception.NoMatchingFileException
 import com.seanproctor.potassium.updater.exception.UpdateException
-import com.seanproctor.potassium.updater.internal.ChecksumVerifier
-import com.seanproctor.potassium.updater.internal.FileSelector
-import com.seanproctor.potassium.updater.internal.InstallTypeDetector
-import com.seanproctor.potassium.updater.internal.PlatformInfo
-import com.seanproctor.potassium.updater.internal.PlatformInstaller
-import com.seanproctor.potassium.updater.internal.UpdateMarker
-import com.seanproctor.potassium.updater.internal.YamlParser
+import com.seanproctor.potassium.updater.internal.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -26,10 +17,10 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import kotlin.coroutines.cancellation.CancellationException
 
-class PotassiumUpdater(
+public class PotassiumUpdater(
     private val config: UpdaterConfig,
 ) {
-    val currentVersion: String get() = config.currentVersion
+    public val currentVersion: String get() = config.currentVersion
 
     private var pendingUpdateVersion: String? = null
 
@@ -42,12 +33,12 @@ class PotassiumUpdater(
 
     private val installTypeDetector = InstallTypeDetector()
 
-    fun isUpdateSupported(): Boolean {
-        val type = resolveExecutableType()
+    public fun isUpdateSupported(): Boolean {
+        val type = resolveExecutableType() ?: return false
         return type in SELF_UPDATABLE_TYPES
     }
 
-    suspend fun checkForUpdates(): UpdateResult {
+    public suspend fun checkForUpdates(): UpdateResult {
         if (config.isDevMode()) return UpdateResult.NotAvailable
         if (!isUpdateSupported()) return UpdateResult.NotAvailable
         return withContext(Dispatchers.IO) {
@@ -65,7 +56,7 @@ class PotassiumUpdater(
         }
     }
 
-    fun downloadUpdate(info: UpdateInfo): Flow<DownloadProgress> =
+    public fun downloadUpdate(info: UpdateInfo): Flow<DownloadProgress> =
         flow {
             pendingUpdateVersion = info.version
             val targetFile = info.currentFile
@@ -133,13 +124,13 @@ class PotassiumUpdater(
             }
         }.flowOn(Dispatchers.IO)
 
-    fun installAndRestart(installerFile: File) {
+    public fun installAndRestart(installerFile: File) {
         writeUpdateMarker()
         val platform = PlatformInfo.currentPlatform()
         PlatformInstaller.install(installerFile, platform, restart = true)
     }
 
-    fun installAndQuit(installerFile: File) {
+    public fun installAndQuit(installerFile: File) {
         writeUpdateMarker()
         val platform = PlatformInfo.currentPlatform()
         PlatformInstaller.install(installerFile, platform, restart = false)
@@ -150,7 +141,7 @@ class PotassiumUpdater(
      * so that subsequent calls return `null`. Use this on startup to detect a
      * post-update launch (e.g. to show a "What's new" dialog or run migrations).
      */
-    fun consumeUpdateEvent(): UpdateEvent? {
+    public fun consumeUpdateEvent(): UpdateEvent? {
         val event = peekUpdateEvent() ?: return null
         UpdateMarker.delete()
         return event
@@ -160,7 +151,7 @@ class PotassiumUpdater(
      * Returns `true` if the application was launched after an update.
      * Does **not** consume the event — call [consumeUpdateEvent] to clear it.
      */
-    fun wasJustUpdated(): Boolean = UpdateMarker.exists()
+    public fun wasJustUpdated(): Boolean = UpdateMarker.exists()
 
     private fun peekUpdateEvent(): UpdateEvent? {
         val (previousVersion, newVersion) = UpdateMarker.read() ?: return null
@@ -212,11 +203,12 @@ class PotassiumUpdater(
             return UpdateResult.NotAvailable
         }
 
-        // Detect the install format at runtime (APPIMAGE/SNAP/FLATPAK env, electron-builder's
-        // resources/package-type), falling back to the legacy baked marker. macOS resolves to
-        // null so selection prefers the ZIP (silent install). Users can force a format via
-        // config.executableType.
-        val format = config.executableType ?: installTypeDetector.detectFormatId()
+        val executableType = resolveExecutableType()
+
+        // The install format is detected at runtime (APPIMAGE/SNAP/FLATPAK env, electron-builder's
+        // resources/package-type); macOS resolves to ZIP and Windows to NSIS. A null format lets
+        // FileSelector fall back to the platform default. Users can force one via config.executableType.
+        val format = executableType?.id
 
         val selectedFile =
             FileSelector.select(
@@ -261,11 +253,7 @@ class PotassiumUpdater(
         return UpdateResult.Available(updateInfo, level)
     }
 
-    private fun resolveExecutableType(): InstallType {
-        val explicit = config.executableType
-        if (explicit != null) return PotassiumRuntime.parseType(explicit)
-        return installTypeDetector.detect()
-    }
+    private fun resolveExecutableType(): InstallType? = config.executableType ?: installTypeDetector.detect()
 
     private fun applyAuthHeaders(builder: HttpRequest.Builder) {
         config.provider.authHeaders().forEach { (key, value) ->
@@ -273,7 +261,7 @@ class PotassiumUpdater(
         }
     }
 
-    companion object {
+    public companion object {
         private const val HTTP_OK = 200
         private const val PERCENT_MAX = 100.0
 

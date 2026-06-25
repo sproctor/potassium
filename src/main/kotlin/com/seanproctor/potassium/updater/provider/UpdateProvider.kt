@@ -3,18 +3,18 @@ package com.seanproctor.potassium.updater.provider
 import com.seanproctor.potassium.updater.runtime.Platform
 import java.net.http.HttpClient
 
-interface UpdateProvider {
-    fun getUpdateMetadataUrl(
+public interface UpdateProvider {
+    public fun getUpdateMetadataUrl(
         channel: String,
         platform: Platform,
     ): String
 
-    fun getDownloadUrl(
+    public fun getDownloadUrl(
         fileName: String,
         version: String,
     ): String
 
-    fun authHeaders(): Map<String, String> = emptyMap()
+    public fun authHeaders(): Map<String, String> = emptyMap()
 
     /**
      * Returns the URL of the metadata (YAML) file for the given [channel] and [platform],
@@ -42,7 +42,7 @@ interface UpdateProvider {
      * the conventional choice for "no release matches this channel". The updater surfaces
      * such failures as [com.seanproctor.potassium.updater.UpdateResult.Error].
      */
-    fun resolveMetadataUrl(
+    public fun resolveMetadataUrl(
         channel: String,
         platform: Platform,
         httpClient: HttpClient,
