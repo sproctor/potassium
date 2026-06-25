@@ -1,14 +1,14 @@
 # potassium-updater
 
-A standalone auto-update library for Compose/JVM desktop applications — the **updating** half
-of a focused fork of [Nucleus](https://github.com/kdroidFilter/Nucleus), under the
-`com.seanproctor` namespace. It is the counterpart to
-[`nucleus-plugin`](https://github.com/sproctor/nucleus-plugin) (the **packaging** half), and is
-independent of the upstream monorepo so it can move on its own.
+The auto-update library for Compose/JVM desktop applications — the **updating** half of
+[Potassium](https://github.com/sproctor/potassium), under the `com.seanproctor` namespace. It is
+the runtime counterpart to the [`potassium-packager`](../plugin) Gradle plugin in this repo (the
+**packaging** half): the plugin generates the `latest-*.yml` manifests, this library consumes them.
 
-It is a fork/extraction of the monorepo's `updater-runtime` module: the full updater, plus the
-new runtime install-type detection, with the handful of `core-runtime` classes it needs vendored
-in (so there is no dependency on the rest of Nucleus).
+Both halves are a focused fork of [Nucleus](https://github.com/kdroidFilter/Nucleus). This module
+is a fork/extraction of the monorepo's `updater-runtime`: the full updater, plus the runtime
+install-type detection, with the handful of `core-runtime` classes it needs vendored in (so it has
+no dependency on the rest of Nucleus).
 
 ## What it does
 
@@ -63,11 +63,13 @@ desktop-environment/Logger tools — is unrelated to updating and was left behin
 
 ## Build
 
+From the repo root:
+
 ```bash
-./gradlew test
+./gradlew :updater:test
 ```
 
-Kotlin 2.3.21 / JVM 17. 79 tests.
+Kotlin 2.3.21 / JVM 17.
 
 ## Status & attribution
 

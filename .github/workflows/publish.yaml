@@ -1,4 +1,4 @@
-name: Publish Plugin to Maven Central
+name: Publish to Maven Central
 
 on:
   push:
@@ -29,10 +29,13 @@ jobs:
       - name: Cache Gradle Caches
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Build & check plugin
-        run: ./gradlew :plugin:check :plugin:validatePlugins --continue
+      - name: Build & check
+        run: ./gradlew check validatePlugins --continue
 
-      - name: Publish plugin to Maven Central
+      # publishAndReleaseToMavenCentral publishes every module's publications in one go:
+      # the plugin (potassium-packager) + its plugin marker, and the updater library
+      # (potassium-updater).
+      - name: Publish to Maven Central
         run: ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache
         if: success()
         env:

@@ -35,7 +35,7 @@ potassium {
     description = "Potassium Packager Compose Multiplatform sample"
     vendor = "Potassium"
     // electron-builder requires a homepage when building Linux DEB/RPM packages.
-    homepage = "https://github.com/sproctor/potassium-packager"
+    homepage = "https://github.com/sproctor/potassium"
 
     // Formats are grouped per OS. Each platform's formats build in one electron-builder
     // invocation (packageMacOS / packageWindows / packageLinux); only the current OS runs.

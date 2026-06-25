@@ -5,7 +5,7 @@
 </p>
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.seanproctor/potassium-packager?label=Maven%20Central)](https://central.sonatype.com/artifact/com.seanproctor/potassium-packager)
-[![License: MIT](https://img.shields.io/github/license/sproctor/potassium-packager)](https://github.com/sproctor/potassium-packager/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/github/license/sproctor/potassium)](https://github.com/sproctor/potassium/blob/main/LICENSE)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0%2B-7F52FF?logo=kotlin&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)
 
@@ -77,7 +77,7 @@ potassium {
 - **Plugin id:** `com.seanproctor.potassium`
 - **Latest version:** `0.1.0`
 - **Published to:** Maven Central
-- **Repository:** [github.com/sproctor/potassium-packager](https://github.com/sproctor/potassium-packager)
+- **Repository:** [github.com/sproctor/potassium](https://github.com/sproctor/potassium)
 
 ## Requirements
 
@@ -96,5 +96,5 @@ potassium {
 
 ## License
 
-MIT — See [LICENSE](https://github.com/sproctor/potassium-packager/blob/main/LICENSE).
+MIT — See [LICENSE](https://github.com/sproctor/potassium/blob/main/LICENSE).
 </content>

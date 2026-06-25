@@ -1,30 +1,35 @@
-# Potassium Packager
+# Potassium
 
-A single Gradle plugin that packages and distributes Compose / JVM desktop applications on macOS, Windows, and Linux. It extends the official JetBrains Compose Desktop plugin and adds: many installer formats (deb/rpm/AppImage/snap/flatpak, msi/exe/appx, dmg/pkg + archives), code signing & notarization, electron-builder-based auto-update, and GraalVM native-image builds.
+A repo that packages, distributes, and auto-updates Compose / JVM desktop applications on macOS, Windows, and Linux. It ships two artifacts from one Gradle build:
 
-Published to **Maven Central** with plugin id **`com.seanproctor.potassium`**. Repo home: **https://github.com/sproctor/potassium-packager**.
+- **`potassium-packager`** (`plugin/`) — a Gradle plugin that extends the official JetBrains Compose Desktop plugin and adds: many installer formats (deb/rpm/AppImage/snap/flatpak, msi/exe/appx, dmg/pkg + archives), code signing & notarization, electron-builder-based auto-update, and GraalVM native-image builds.
+- **`potassium-updater`** (`updater/`) — a standalone runtime library that self-updates an installed app from the `latest-*.yml` manifests the plugin generates.
+
+Both publish to **Maven Central** under group `com.seanproctor` (plugin id **`com.seanproctor.potassium`**). Repo home: **https://github.com/sproctor/potassium**.
 
 > Note: both the Maven coordinates / plugin id and the Kotlin DSL import packages use `com.seanproctor.potassium.*`. (This is a fork of kdroidFilter's Nucleus; the kdroidFilter *runtime* libraries it ships ProGuard rules for — `io.github.kdroidfilter.nucleus.window`, `.darkmodedetector`, etc. — intentionally keep their original `io.github.kdroidfilter` coordinates.)
 
 ## Project Structure
 
-This repo is a single Gradle build whose root **is** the plugin build.
+This repo is one Gradle multi-project build (`:plugin` + `:updater`) plus a standalone `sample/` composite build.
 
-- `plugin/` — the Gradle plugin itself (source, DSL, packaging logic, bundled GraalVM metadata)
+- `plugin/` — the `potassium-packager` Gradle plugin (source, DSL, packaging logic, bundled GraalVM metadata)
+- `updater/` — the `potassium-updater` runtime library (a plain Kotlin/JVM library, `explicitApi()`, JVM 17)
+- `sample/` — a runnable Compose Multiplatform demo app; its own build that consumes the plugin via `includeBuild("..")` (not part of the root build)
 - `buildSrc/` — shared build logic / conventions for this repo's own build
 - `config/` — code-quality config (`config/detekt/detekt.yml`)
 - `gradle/` — Gradle wrapper and the version catalog (`gradle/libs.versions.toml`, the source of truth for dependency versions)
-- root `build.gradle.kts` / `settings.gradle.kts` — settings includes only `:plugin`
+- root `build.gradle.kts` / `settings.gradle.kts` — `allprojects {}` applies group/version/detekt/ktlint to every module; settings includes `:plugin` and `:updater`
 - `docs/` + `mkdocs.yml` — documentation site
 - `scripts/generate-llms-docs.py` — generates `docs/llms.txt` / `docs/llms-full.txt` from the docs
 
 ## Build & Run
 
 ```bash
-./gradlew :plugin:check                 # Compile + tests + detekt/ktlint
-./gradlew :plugin:validatePlugins       # Validate plugin task/property annotations
-./gradlew publishToMavenLocal           # Publish the plugin to ~/.m2 for local testing
-./gradlew publishAndReleaseToMavenCentral  # Publish + release to Maven Central
+./gradlew check                         # Compile + tests + detekt/ktlint for :plugin and :updater
+./gradlew validatePlugins               # Validate plugin task/property annotations
+./gradlew publishToMavenLocal           # Publish both artifacts to ~/.m2 for local testing
+./gradlew publishAndReleaseToMavenCentral  # Publish + release both artifacts to Maven Central
 ./gradlew reformatAll                   # (ktlint) format all code
 ```
 
@@ -44,7 +49,7 @@ This repo is a single Gradle build whose root **is** the plugin build.
 
 ## Publishing to Maven Central
 
-The plugin is published to `com.seanproctor` on Maven Central.
+Both artifacts (`potassium-packager` + its plugin marker, and `potassium-updater`) are published to `com.seanproctor` on Maven Central by the single root `publishAndReleaseToMavenCentral` task.
 
 **Prerequisites:**
 - Use **JDK 21** (`JAVA_HOME=/usr/lib/jvm/java-1.21.0-openjdk-amd64`) — the Kotlin DSL script compiler crashes on JDK 25

@@ -2,14 +2,18 @@
   <img src="art/header.png" alt="Potassium" />
 </p>
 
-# Potassium Packager
+# Potassium
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.seanproctor/potassium-packager?label=Maven%20Central)](https://central.sonatype.com/artifact/com.seanproctor/potassium-packager)
-[![License: MIT](https://img.shields.io/github/license/sproctor/potassium-packager)](https://github.com/sproctor/potassium-packager/blob/main/LICENSE)
+[![Packager](https://img.shields.io/maven-central/v/com.seanproctor/potassium-packager?label=potassium-packager)](https://central.sonatype.com/artifact/com.seanproctor/potassium-packager)
+[![Updater](https://img.shields.io/maven-central/v/com.seanproctor/potassium-updater?label=potassium-updater)](https://central.sonatype.com/artifact/com.seanproctor/potassium-updater)
+[![License: MIT](https://img.shields.io/github/license/sproctor/potassium)](https://github.com/sproctor/potassium/blob/main/LICENSE)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0%2B-7F52FF?logo=kotlin&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)
 
-**Potassium is a Gradle plugin for packaging and distributing Compose / JVM desktop applications** on macOS, Windows, and Linux. It is a drop-in extension of the official JetBrains Compose Desktop plugin: keep your existing `compose.desktop` configuration and add the capabilities you need.
+**Potassium packages, distributes, and auto-updates Compose / JVM desktop applications** on macOS, Windows, and Linux. It ships two artifacts from one repo:
+
+- **`potassium-packager`** ([`plugin/`](plugin/)) — a Gradle plugin that builds installers, signs/notarizes, and generates auto-update metadata. It is a drop-in extension of the official JetBrains Compose Desktop plugin: keep your existing `compose.desktop` configuration and add the capabilities you need.
+- **`potassium-updater`** ([`updater/`](updater/)) — a standalone runtime library that self-updates an installed app from the manifests the plugin produces.
 
 ## What it does
 
@@ -73,12 +77,29 @@ A good starting point is [Getting Started](docs/getting-started.md), followed by
 composite build that uses the plugin from source, so `cd sample && ./gradlew run` (or
 `packageDistributionForCurrentOS`) works against your local checkout. See [`sample/README.md`](sample/README.md).
 
+## Updater
+
+[`updater/`](updater/) is the `potassium-updater` runtime library — a small, dependency-light
+companion that self-updates an installed desktop app from the electron-builder-style
+`latest-*.yml` manifests the plugin generates. It detects how the app was installed at runtime,
+picks the matching artifact, verifies its SHA-512, and runs the platform-appropriate installer.
+Add it to your app's runtime classpath:
+
+```kotlin
+dependencies {
+    implementation("com.seanproctor:potassium-updater:0.1.0")
+}
+```
+
+See [`updater/README.md`](updater/README.md) and the [Auto Update](docs/auto-update.md) guide.
+
 ## Coordinates
 
-- **Plugin id:** `com.seanproctor.potassium`
+- **Plugin id:** `com.seanproctor.potassium` (artifact `com.seanproctor:potassium-packager`)
+- **Updater library:** `com.seanproctor:potassium-updater`
 - **Latest version:** `0.1.0`
 - **Published to:** Maven Central
-- **Repository:** https://github.com/sproctor/potassium-packager
+- **Repository:** https://github.com/sproctor/potassium
 
 ## Requirements
 

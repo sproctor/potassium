@@ -39,7 +39,7 @@ SHORT_PAGES = {
     "migration.md",
 }
 
-SITE_URL = "https://github.com/sproctor/potassium-packager"
+SITE_URL = "https://github.com/sproctor/potassium"
 
 # ---------------------------------------------------------------------------
 # Nav extraction (no PyYAML needed)
@@ -144,8 +144,8 @@ msi/exe/appx, dmg/pkg), code signing & notarization, electron-builder-based \
 auto-update, and GraalVM Native Image builds. Plugin id: com.seanproctor.potassium.
 
 - Docs: {site_url}
-- GitHub: https://github.com/sproctor/potassium-packager
-- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/potassium-packager
+- GitHub: https://github.com/sproctor/potassium
+- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/potassium-packager (plugin), https://central.sonatype.com/artifact/com.seanproctor/potassium-updater (updater)
 - License: MIT
 
 """.format(site_url=SITE_URL)
