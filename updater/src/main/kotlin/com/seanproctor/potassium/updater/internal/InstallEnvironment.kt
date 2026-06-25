@@ -39,5 +39,10 @@ internal object SystemInstallEnvironment : InstallEnvironment {
 
     override fun readText(path: String): String? = File(path).takeIf { it.isFile }?.readText()
 
-    override fun executablePath(): String? = ProcessHandle.current().info().command().orElse(null)
+    override fun executablePath(): String? =
+        ProcessHandle
+            .current()
+            .info()
+            .command()
+            .orElse(null)
 }

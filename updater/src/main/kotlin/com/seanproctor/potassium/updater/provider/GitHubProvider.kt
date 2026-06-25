@@ -61,7 +61,11 @@ public class GitHubProvider(
      * (`/<owner>/<repo>/releases.atom`). Entries are newest-first; a tag's channel is its first
      * semver pre-release identifier (`2.3.5-beta.8` → `beta`), matching electron-updater. The
      * feed is public, so this avoids the REST API rate limit.
+     *
+     * Three distinct failure modes (HTTP error, empty feed, no matching channel) each surface a
+     * specific exception, so `ThrowsCount` is suppressed rather than collapsing the messages.
      */
+    @Suppress("ThrowsCount")
     private fun findTagForChannel(
         channel: String,
         httpClient: HttpClient,
@@ -91,7 +95,8 @@ public class GitHubProvider(
     }
 
     /** The channel of a tag — its first semver pre-release identifier, or "" for a stable tag. */
-    private fun tagChannel(tag: String): String = tag.substringAfter('-', missingDelimiterValue = "").substringBefore('.')
+    private fun tagChannel(tag: String): String =
+        tag.substringAfter('-', missingDelimiterValue = "").substringBefore('.')
 
     private fun platformSuffix(platform: Platform): String =
         when (platform) {

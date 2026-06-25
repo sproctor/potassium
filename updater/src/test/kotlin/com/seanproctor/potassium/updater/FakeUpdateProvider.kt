@@ -1,7 +1,7 @@
 package com.seanproctor.potassium.updater
 
-import com.seanproctor.potassium.updater.runtime.Platform
 import com.seanproctor.potassium.updater.provider.UpdateProvider
+import com.seanproctor.potassium.updater.runtime.Platform
 
 class FakeUpdateProvider : UpdateProvider {
     override fun getUpdateMetadataUrl(

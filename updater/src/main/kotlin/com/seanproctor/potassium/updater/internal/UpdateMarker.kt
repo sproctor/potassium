@@ -91,7 +91,11 @@ internal object UpdateMarker {
     }
 
     private fun String.sanitizedId(): String =
-        removeSuffix(".app").lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').ifBlank { DEFAULT_APP_ID }
+        removeSuffix(".app")
+            .lowercase()
+            .replace(Regex("[^a-z0-9]+"), "-")
+            .trim('-')
+            .ifBlank { DEFAULT_APP_ID }
 
     private fun shortHash(value: String): String =
         HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.toByteArray())).take(HASH_LENGTH)

@@ -1,25 +1,16 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    kotlin("jvm") version "2.3.21"
-    id("com.vanniktech.maven.publish") version "0.36.0"
+    kotlin("jvm")
+    alias(libs.plugins.vanniktechMavenPublish)
 }
 
-group = "com.seanproctor"
-version =
-    providers
-        .environmentVariable("GITHUB_REF")
-        .orNull
-        ?.removePrefix("refs/tags/v")
-        ?: "0.1.0"
-
-repositories {
-    mavenCentral()
-}
+// group / version are inherited from the root build's allprojects {} block
+// (single-version model, derived from GITHUB_REF). Repositories come from settings.gradle.kts.
 
 dependencies {
-    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
-    testImplementation("junit:junit:4.13.2")
+    api(libs.coroutines.core)
+    testImplementation(libs.junit)
 }
 
 kotlin {
@@ -35,7 +26,7 @@ java {
 }
 
 mavenPublishing {
-    coordinates("com.seanproctor", "potassium-updater", version.toString())
+    coordinates(property("GROUP").toString(), "potassium-updater", project.version.toString())
 
     pom {
         name.set("Potassium Updater")
@@ -43,7 +34,7 @@ mavenPublishing {
             "Standalone auto-update library for Compose/JVM desktop apps " +
                 "(a fork of the Nucleus updater-runtime).",
         )
-        url.set("https://github.com/sproctor/potassium-updater")
+        url.set(property("WEBSITE").toString())
 
         licenses {
             license {
@@ -66,7 +57,7 @@ mavenPublishing {
         }
 
         scm {
-            val vcsUrl = "https://github.com/sproctor/potassium-updater"
+            val vcsUrl = property("VCS_URL").toString()
             url.set(vcsUrl)
             connection.set("scm:git:$vcsUrl")
             developerConnection.set("scm:git:$vcsUrl")

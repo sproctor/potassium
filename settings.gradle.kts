@@ -26,6 +26,6 @@ develocity {
     }
 }
 
-rootProject.name = ("potassium-packager")
+rootProject.name = ("potassium")
 
-include(":plugin")
+include(":plugin", ":updater")

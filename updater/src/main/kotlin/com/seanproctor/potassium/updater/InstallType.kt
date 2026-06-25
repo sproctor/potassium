@@ -1,6 +1,8 @@
 package com.seanproctor.potassium.updater
 
-public enum class InstallType(public val id: String) {
+public enum class InstallType(
+    public val id: String,
+) {
     // Windows
     EXE("exe"),
     MSI("msi"),

@@ -1,9 +1,9 @@
 package com.seanproctor.potassium.updater
 
-import com.seanproctor.potassium.updater.runtime.Platform
 import com.seanproctor.potassium.updater.internal.Arch
 import com.seanproctor.potassium.updater.internal.FileSelector
 import com.seanproctor.potassium.updater.internal.YamlFileEntry
+import com.seanproctor.potassium.updater.runtime.Platform
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

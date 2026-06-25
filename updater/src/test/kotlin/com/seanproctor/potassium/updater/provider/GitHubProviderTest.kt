@@ -141,7 +141,9 @@ class GitHubProviderTest {
             append("""<link rel="self" href="https://github.com/acme/tool/releases.atom"/>""")
             for (tag in tags) {
                 append("<entry>")
-                append("""<link rel="alternate" type="text/html" href="https://github.com/acme/tool/releases/tag/$tag"/>""")
+                append(
+                    """<link rel="alternate" type="text/html" href="https://github.com/acme/tool/releases/tag/$tag"/>""",
+                )
                 append("</entry>")
             }
             append("</feed>")
