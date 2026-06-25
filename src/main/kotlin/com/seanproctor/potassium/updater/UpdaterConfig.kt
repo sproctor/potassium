@@ -11,7 +11,6 @@ public class UpdaterConfig {
     public lateinit var provider: UpdateProvider
     public var channel: String = "latest"
     public var allowDowngrade: Boolean = false
-    public var allowPrerelease: Boolean = false
     public var executableType: InstallType? = null
 
     /**
@@ -19,8 +18,6 @@ public class UpdaterConfig {
      * Defaults to a standard client with redirect following enabled.
      */
     public var httpClient: HttpClient? = null
-
-    internal fun resolvedAllowPrerelease(): Boolean = allowPrerelease || currentVersion.contains("-")
 
     internal fun isDevMode(): Boolean = currentVersion == DEV_VERSION
 

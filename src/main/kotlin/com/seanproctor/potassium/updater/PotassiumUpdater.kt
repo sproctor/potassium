@@ -198,11 +198,6 @@ public class PotassiumUpdater(
             return UpdateResult.NotAvailable
         }
 
-        // Skip pre-release remote unless allowed
-        if (remoteVersion.meta.isNotEmpty() && !config.resolvedAllowPrerelease()) {
-            return UpdateResult.NotAvailable
-        }
-
         val executableType = resolveExecutableType()
 
         // The install format is detected at runtime (APPIMAGE/SNAP/FLATPAK env, electron-builder's
