@@ -2,9 +2,9 @@
 
 > Potassium is a Gradle plugin for packaging and distributing Compose / JVM desktop applications on macOS, Windows, and Linux. It extends the official JetBrains Compose Desktop plugin and adds many installer formats (deb/rpm/AppImage/snap/flatpak, msi/exe/appx, dmg/pkg), code signing & notarization, electron-builder-based auto-update, and GraalVM Native Image builds. Plugin id: com.seanproctor.potassium.
 
-- Docs: https://github.com/sproctor/potassium-packager
-- GitHub: https://github.com/sproctor/potassium-packager
-- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/potassium-packager
+- Docs: https://github.com/sproctor/potassium
+- GitHub: https://github.com/sproctor/potassium
+- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/potassium-packager (plugin), https://central.sonatype.com/artifact/com.seanproctor/potassium-updater (updater)
 - License: MIT
 
 **Potassium is a Gradle plugin for packaging and distributing Compose / JVM desktop applications** on macOS, Windows, and Linux.
@@ -73,7 +73,7 @@ potassium {
 - **Plugin id:** `com.seanproctor.potassium`
 - **Latest version:** `0.1.0`
 - **Published to:** Maven Central
-- **Repository:** [github.com/sproctor/potassium-packager](https://github.com/sproctor/potassium-packager)
+- **Repository:** [github.com/sproctor/potassium](https://github.com/sproctor/potassium)
 
 ## Requirements
 
@@ -92,7 +92,7 @@ potassium {
 
 ## License
 
-MIT — See [LICENSE](https://github.com/sproctor/potassium-packager/blob/main/LICENSE).
+MIT — See [LICENSE](https://github.com/sproctor/potassium/blob/main/LICENSE).
 </content>
 
 ---
@@ -835,30 +835,30 @@ Everything from the official plugin works unchanged:
 
 ## Documentation
 
-- [Getting Started](https://github.com/sproctor/potassium-packager/getting-started/)
-- [Configuration](https://github.com/sproctor/potassium-packager/configuration/)
-- [macOS Targets](https://github.com/sproctor/potassium-packager/targets/macos/)
-- [Windows Targets](https://github.com/sproctor/potassium-packager/targets/windows/)
-- [Linux Targets](https://github.com/sproctor/potassium-packager/targets/linux/)
-- [Sandboxing](https://github.com/sproctor/potassium-packager/sandboxing/)
-- [Code Signing](https://github.com/sproctor/potassium-packager/code-signing/)
-- [Auto Update](https://github.com/sproctor/potassium-packager/auto-update/)
-- [Publishing](https://github.com/sproctor/potassium-packager/publishing/)
-- [Trusted CA Certificates](https://github.com/sproctor/potassium-packager/trusted-certificates/)
-- [GraalVM Native Image](https://github.com/sproctor/potassium-packager/graalvm/index/)
-- [Configuration](https://github.com/sproctor/potassium-packager/graalvm/configuration/)
-- [Automatic Metadata Resolution](https://github.com/sproctor/potassium-packager/graalvm/automatic-metadata/)
-- [Runtime Bootstrap](https://github.com/sproctor/potassium-packager/graalvm/runtime-bootstrap/)
-- [Tasks & CI/CD](https://github.com/sproctor/potassium-packager/graalvm/tasks-ci/)
-- [Nucleus Native Access](https://github.com/sproctor/potassium-packager/native-access/index/)
-- [Supported Types](https://github.com/sproctor/potassium-packager/native-access/types/)
-- [Usage & Patterns](https://github.com/sproctor/potassium-packager/native-access/usage/)
-- [CI/CD](https://github.com/sproctor/potassium-packager/ci-cd/)
-- [Packaging](https://github.com/sproctor/potassium-packager/comparison/packaging/)
-- [Migration from org.jetbrains.compose](https://github.com/sproctor/potassium-packager/migration/)
-- [Roadmap](https://github.com/sproctor/potassium-packager/roadmap/)
+- [Getting Started](https://github.com/sproctor/potassium/getting-started/)
+- [Configuration](https://github.com/sproctor/potassium/configuration/)
+- [macOS Targets](https://github.com/sproctor/potassium/targets/macos/)
+- [Windows Targets](https://github.com/sproctor/potassium/targets/windows/)
+- [Linux Targets](https://github.com/sproctor/potassium/targets/linux/)
+- [Sandboxing](https://github.com/sproctor/potassium/sandboxing/)
+- [Code Signing](https://github.com/sproctor/potassium/code-signing/)
+- [Auto Update](https://github.com/sproctor/potassium/auto-update/)
+- [Publishing](https://github.com/sproctor/potassium/publishing/)
+- [Trusted CA Certificates](https://github.com/sproctor/potassium/trusted-certificates/)
+- [GraalVM Native Image](https://github.com/sproctor/potassium/graalvm/index/)
+- [Configuration](https://github.com/sproctor/potassium/graalvm/configuration/)
+- [Automatic Metadata Resolution](https://github.com/sproctor/potassium/graalvm/automatic-metadata/)
+- [Runtime Bootstrap](https://github.com/sproctor/potassium/graalvm/runtime-bootstrap/)
+- [Tasks & CI/CD](https://github.com/sproctor/potassium/graalvm/tasks-ci/)
+- [Nucleus Native Access](https://github.com/sproctor/potassium/native-access/index/)
+- [Supported Types](https://github.com/sproctor/potassium/native-access/types/)
+- [Usage & Patterns](https://github.com/sproctor/potassium/native-access/usage/)
+- [CI/CD](https://github.com/sproctor/potassium/ci-cd/)
+- [Packaging](https://github.com/sproctor/potassium/comparison/packaging/)
+- [Migration from org.jetbrains.compose](https://github.com/sproctor/potassium/migration/)
+- [Roadmap](https://github.com/sproctor/potassium/roadmap/)
 
 ## Full LLM Documentation
 
-- [llms-full.txt](https://github.com/sproctor/potassium-packager/llms-full.txt): Complete documentation in a single file
+- [llms-full.txt](https://github.com/sproctor/potassium/llms-full.txt): Complete documentation in a single file
 

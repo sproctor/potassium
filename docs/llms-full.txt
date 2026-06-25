@@ -2,9 +2,9 @@
 
 > Potassium is a Gradle plugin for packaging and distributing Compose / JVM desktop applications on macOS, Windows, and Linux. It extends the official JetBrains Compose Desktop plugin and adds many installer formats (deb/rpm/AppImage/snap/flatpak, msi/exe/appx, dmg/pkg), code signing & notarization, electron-builder-based auto-update, and GraalVM Native Image builds. Plugin id: com.seanproctor.potassium.
 
-- Docs: https://github.com/sproctor/potassium-packager
-- GitHub: https://github.com/sproctor/potassium-packager
-- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/potassium-packager
+- Docs: https://github.com/sproctor/potassium
+- GitHub: https://github.com/sproctor/potassium
+- Maven Central: https://central.sonatype.com/artifact/com.seanproctor/potassium-packager (plugin), https://central.sonatype.com/artifact/com.seanproctor/potassium-updater (updater)
 - License: MIT
 
 **Potassium is a Gradle plugin for packaging and distributing Compose / JVM desktop applications** on macOS, Windows, and Linux.
@@ -73,7 +73,7 @@ potassium {
 - **Plugin id:** `com.seanproctor.potassium`
 - **Latest version:** `0.1.0`
 - **Published to:** Maven Central
-- **Repository:** [github.com/sproctor/potassium-packager](https://github.com/sproctor/potassium-packager)
+- **Repository:** [github.com/sproctor/potassium](https://github.com/sproctor/potassium)
 
 ## Requirements
 
@@ -92,7 +92,7 @@ potassium {
 
 ## License
 
-MIT — See [LICENSE](https://github.com/sproctor/potassium-packager/blob/main/LICENSE).
+MIT — See [LICENSE](https://github.com/sproctor/potassium/blob/main/LICENSE).
 </content>
 
 ---
