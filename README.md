@@ -39,7 +39,7 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.potassium") version "1.15.11"
+    id("com.seanproctor.potassium") version "0.1.0"
 }
 
 potassium {
@@ -76,7 +76,7 @@ composite build that uses the plugin from source, so `cd sample && ./gradlew run
 ## Coordinates
 
 - **Plugin id:** `com.seanproctor.potassium`
-- **Latest version:** `1.15.11`
+- **Latest version:** `0.1.0`
 - **Published to:** Maven Central
 - **Repository:** https://github.com/sproctor/potassium-packager
 

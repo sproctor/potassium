@@ -9,7 +9,7 @@ Potassium is a drop-in extension of the official JetBrains Compose Desktop plugi
      id("org.jetbrains.kotlin.jvm") version "2.3.10"
      id("org.jetbrains.kotlin.plugin.compose") version "2.3.10"
      id("org.jetbrains.compose") version "1.10.1"
-+    id("com.seanproctor.potassium") version "1.15.11"
++    id("com.seanproctor.potassium") version "0.1.0"
  }
 ```
 
