@@ -2390,10 +2390,12 @@ provider = GenericProvider(
 
 Host your YML files and installers at:
 ```
-https://updates.example.com/latest-mac.yml
-https://updates.example.com/latest.yml
-https://updates.example.com/latest-linux.yml
-https://updates.example.com/MyApp-1.2.3-macos-arm64.dmg
+https://updates.example.com/latest-mac.yml          # macOS (both arches)
+https://updates.example.com/latest.yml               # Windows (both arches)
+https://updates.example.com/latest-linux.yml         # Linux x64
+https://updates.example.com/latest-linux-arm64.yml   # Linux arm64
+https://updates.example.com/MyApp-1.2.3-macos-universal.dmg
+https://updates.example.com/MyApp-1.2.3-linux-arm64.AppImage
 ```
 
 ### API Reference
@@ -2737,9 +2739,7 @@ A GitHub Release created by Potassium contains:
 
 ```
 v1.0.0 (Release)
-├── MyApp-1.0.0-macos-arm64.dmg
-├── MyApp-1.0.0-macos-amd64.dmg
-├── MyApp-1.0.0-macos-universal.dmg
+├── MyApp-1.0.0-macos-universal.dmg   ← one binary runs on both arches
 ├── MyApp-1.0.0-windows-amd64.exe
 ├── MyApp-1.0.0-windows-arm64.exe
 ├── MyApp-1.0.0-windows.msixbundle
@@ -2747,10 +2747,13 @@ v1.0.0 (Release)
 ├── MyApp-1.0.0-linux-arm64.deb
 ├── MyApp-1.0.0-linux-amd64.rpm
 ├── MyApp-1.0.0-linux-amd64.AppImage
-├── latest-mac.yml          ← Auto-update metadata
-├── latest.yml              ← Auto-update metadata (Windows)
-└── latest-linux.yml        ← Auto-update metadata
+├── latest-mac.yml             ← Auto-update metadata (macOS, both arches)
+├── latest.yml                 ← Auto-update metadata (Windows, both arches)
+├── latest-linux.yml           ← Auto-update metadata (Linux x64)
+└── latest-linux-arm64.yml     ← Auto-update metadata (Linux arm64)
 ```
+
+Linux ships a separate manifest per architecture (`latest-linux.yml` / `latest-linux-arm64.yml`) because that's what electron-updater fetches by arch. Windows and macOS use a single manifest each — the [`publish-github-release`](ci-cd.md#multi-architecture-update-manifests) action merges the per-arch outputs into it. Shipping per-arch macOS packages instead of a universal binary? You'll see `MyApp-1.0.0-macos-arm64.dmg` / `-amd64.dmg` in place of the universal one; the single `latest-mac.yml` covers both either way.
 
 ### GitHub Token
 
@@ -2832,7 +2835,7 @@ https://updates.example.com/releases/
 └── latest-linux.yml
 ```
 
-Any static file server (Nginx, Caddy, Apache, S3 with public access, Cloudflare R2, etc.) works — the auto-updater simply fetches `<url>/latest-<platform>.yml` and downloads the installer from the same base URL.
+Any static file server (Nginx, Caddy, Apache, S3 with public access, Cloudflare R2, etc.) works — the auto-updater fetches `<url>/latest-<platform>.yml` (Linux on arm64 fetches `latest-linux-arm64.yml`) and downloads the installer from the same base URL. For a multi-arch release, upload the arm64 installers and `latest-linux-arm64.yml` too.
 
 ## Release Channels
 
