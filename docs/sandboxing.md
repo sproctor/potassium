@@ -196,7 +196,7 @@ The sandboxed pipeline runs transparently in CI. A single `./gradlew packageRele
 - name: Setup Potassium
   uses: ./.github/actions/setup-potassium
   with:
-    jbr-version: '25.0.2b329.66'
+    jbr-version: '25.0.3b508.16'
     packaging-tools: 'true'
     flatpak: 'true'     # Flatpak sandbox support
     snap: 'true'

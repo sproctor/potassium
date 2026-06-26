@@ -44,7 +44,7 @@ The `setup-potassium` composite action (`.github/actions/setup-potassium`) sets 
 ```yaml
 - uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
   with:
-    jbr-version: '25.0.2b329.66'
+    jbr-version: '25.0.3b508.16'
     packaging-tools: 'true'
     flatpak: 'true'
     snap: 'true'
@@ -56,7 +56,7 @@ The `setup-potassium` composite action (`.github/actions/setup-potassium`) sets 
 
 | Input | Default | Description |
 |-------|---------|-------------|
-| `jbr-version` | `25.0.2b329.66` | JBR version (e.g. `25.0.2b329.66`) |
+| `jbr-version` | `25.0.3b508.16` | JBR version (e.g. `25.0.3b508.16`) |
 | `jbr-variant` | `jbrsdk` | JBR variant (`jbrsdk`, `jbrsdk_jcef`, etc.) |
 | `jbr-download-url` | — | Override complete JBR download URL (bypasses version/variant) |
 | `graalvm` | `false` | Use GraalVM (Liberica NIK) instead of JBR |
@@ -174,7 +174,7 @@ jobs:
       - name: Setup Potassium
         uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
         with:
-          jbr-version: '25.0.2b329.66'
+          jbr-version: '25.0.3b508.16'
           packaging-tools: 'true'
           flatpak: 'true'
           snap: 'true'
@@ -227,7 +227,7 @@ matrix:
 steps:
   - uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
     with:
-      jbr-version: '25.0.2b329.66'
+      jbr-version: '25.0.3b508.16'
       jbr-download-url: ${{ matrix.jbr-download-url || '' }}
 ```
 
