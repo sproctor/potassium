@@ -200,7 +200,7 @@ See [Publishing](publishing.md) for the full configuration reference.
 
 ```kotlin
 dependencies {
-    implementation("io.github.kdroidfilter:potassium.updater-runtime:1.0.0")
+    implementation("com.seanproctor:potassium-updater:0.3.0")
 }
 ```
 
