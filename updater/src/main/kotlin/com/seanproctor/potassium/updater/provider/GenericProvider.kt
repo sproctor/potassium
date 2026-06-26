@@ -1,9 +1,10 @@
 package com.seanproctor.potassium.updater.provider
 
+import com.seanproctor.potassium.updater.internal.PlatformInfo
 import com.seanproctor.potassium.updater.runtime.Platform
 
 public class GenericProvider(
-    public val baseUrl: String,
+    baseUrl: String,
 ) : UpdateProvider {
     private val normalizedBaseUrl = baseUrl.trimEnd('/')
 
@@ -11,8 +12,7 @@ public class GenericProvider(
         channel: String,
         platform: Platform,
     ): String {
-        val suffix = platformSuffix(platform)
-        val fileName = if (suffix.isEmpty()) "$channel.yml" else "$channel-$suffix.yml"
+        val fileName = PlatformInfo.ymlFileName(channel, platform)
         return "$normalizedBaseUrl/$fileName"
     }
 
@@ -20,12 +20,4 @@ public class GenericProvider(
         fileName: String,
         version: String,
     ): String = "$normalizedBaseUrl/$fileName"
-
-    private fun platformSuffix(platform: Platform): String =
-        when (platform) {
-            Platform.Windows -> ""
-            Platform.MacOS -> "mac"
-            Platform.Linux -> "linux"
-            Platform.Unknown -> ""
-        }
 }

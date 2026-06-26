@@ -1,6 +1,7 @@
 package com.seanproctor.potassium.updater.provider
 
 import com.seanproctor.potassium.updater.exception.NetworkException
+import com.seanproctor.potassium.updater.internal.PlatformInfo
 import com.seanproctor.potassium.updater.runtime.Platform
 import java.net.URI
 import java.net.http.HttpClient
@@ -21,14 +22,14 @@ public class GitHubProvider(
     override fun getUpdateMetadataUrl(
         channel: String,
         platform: Platform,
-    ): String = "$baseUrl/$owner/$repo/releases/latest/download/${metadataFileName(channel, platform)}"
+    ): String = "$baseUrl/$owner/$repo/releases/latest/download/${PlatformInfo.ymlFileName(channel, platform)}"
 
     override fun resolveMetadataUrl(
         channel: String,
         platform: Platform,
         httpClient: HttpClient,
     ): String {
-        val fileName = metadataFileName(channel, platform)
+        val fileName = PlatformInfo.ymlFileName(channel, platform)
         // Stable uses GitHub's `releases/latest` redirect (the latest non-prerelease), like
         // electron-updater's /releases/latest — no feed lookup needed.
         if (channel.equals(LATEST_CHANNEL, ignoreCase = true)) {
@@ -47,14 +48,6 @@ public class GitHubProvider(
 
     override fun authHeaders(): Map<String, String> =
         if (token != null) mapOf("Authorization" to "token $token") else emptyMap()
-
-    private fun metadataFileName(
-        channel: String,
-        platform: Platform,
-    ): String {
-        val suffix = platformSuffix(platform)
-        return if (suffix.isEmpty()) "$channel.yml" else "$channel-$suffix.yml"
-    }
 
     /**
      * Finds the newest release tag for [channel] by parsing GitHub's releases Atom feed
@@ -97,14 +90,6 @@ public class GitHubProvider(
     /** The channel of a tag — its first semver pre-release identifier, or "" for a stable tag. */
     private fun tagChannel(tag: String): String =
         tag.substringAfter('-', missingDelimiterValue = "").substringBefore('.')
-
-    private fun platformSuffix(platform: Platform): String =
-        when (platform) {
-            Platform.Windows -> ""
-            Platform.MacOS -> "mac"
-            Platform.Linux -> "linux"
-            Platform.Unknown -> ""
-        }
 
     private companion object {
         const val LATEST_CHANNEL = "latest"
