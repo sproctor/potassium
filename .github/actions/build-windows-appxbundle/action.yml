@@ -1,0 +1,236 @@
+name: Build Windows APPX Bundle
+description: Merge architecture-specific .appx packages into a single .msixbundle using MakeAppx.exe
+
+inputs:
+  amd64-path:
+    description: 'Directory containing the amd64 Windows artifacts (must include a *.appx)'
+    required: true
+  arm64-path:
+    description: 'Directory containing the arm64 Windows artifacts (must include a *.appx)'
+    required: true
+  output-path:
+    description: 'Directory where the .msixbundle will be written'
+    required: false
+    default: 'bundle-output'
+  certificate-password:
+    description: 'Password for the signing certificate (read from signing-metadata.json if available). Required for signing.'
+    required: false
+    default: ''
+
+outputs:
+  bundle:
+    description: 'Path to the .msixbundle file'
+    value: ${{ steps.bundle.outputs.bundle }}
+
+runs:
+  using: composite
+  steps:
+    - name: Locate APPX files and signing metadata
+      id: locate
+      shell: pwsh
+      run: |
+        $amd64Appx = Get-ChildItem -Path "${{ inputs.amd64-path }}" -Filter "*.appx" -Recurse | Select-Object -First 1
+        $arm64Appx = Get-ChildItem -Path "${{ inputs.arm64-path }}" -Filter "*.appx" -Recurse | Select-Object -First 1
+
+        if (-not $amd64Appx) {
+          Write-Error "Could not find *.appx in ${{ inputs.amd64-path }}"
+          Get-ChildItem -Path "${{ inputs.amd64-path }}" -Recurse | ForEach-Object { Write-Host $_.FullName }
+          exit 1
+        }
+        if (-not $arm64Appx) {
+          Write-Error "Could not find *.appx in ${{ inputs.arm64-path }}"
+          Get-ChildItem -Path "${{ inputs.arm64-path }}" -Recurse | ForEach-Object { Write-Host $_.FullName }
+          exit 1
+        }
+
+        Write-Host "Found amd64: $($amd64Appx.FullName)"
+        Write-Host "Found arm64: $($arm64Appx.FullName)"
+
+        "amd64_appx=$($amd64Appx.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        "arm64_appx=$($arm64Appx.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+        # Look for signing metadata in either artifact directory
+        $metadata = $null
+        foreach ($dir in @("${{ inputs.amd64-path }}", "${{ inputs.arm64-path }}")) {
+          $metaFile = Get-ChildItem -Path $dir -Filter "signing-metadata.json" -Recurse | Select-Object -First 1
+          if ($metaFile) {
+            $metadata = Get-Content $metaFile.FullName -Raw | ConvertFrom-Json
+            Write-Host "Found signing metadata in: $($metaFile.FullName)"
+            break
+          }
+        }
+
+        if ($metadata -and $metadata.enabled) {
+          "sign_enabled=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "sign_algorithm=$($metadata.algorithm)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "sign_timestamp=$($metadata.timestampServer)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+          # Resolve certificate file path
+          if ($metadata.certificateFile) {
+            "sign_cert=$($metadata.certificateFile)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          }
+        } else {
+          Write-Host "No signing metadata found or signing disabled"
+          "sign_enabled=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        }
+
+    - name: Create MSIX Bundle
+      id: bundle
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+
+        # Locate MakeAppx.exe
+        $makeappx = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\makeappx.exe" |
+          Sort-Object FullName -Descending | Select-Object -First 1
+        if (-not $makeappx) {
+          Write-Error "MakeAppx.exe not found in Windows SDK"
+          exit 1
+        }
+        Write-Host "Using MakeAppx: $($makeappx.FullName)"
+
+        # Harmonize Dependencies in APPX manifests so MakeAppx accepts them in a bundle.
+        # electron-builder may generate different <Dependencies> per architecture.
+        function Repair-AppxForBundle {
+          param([string]$AppxPath, [xml]$ReferenceDeps)
+
+          $workDir = Join-Path $env:RUNNER_TEMP "appx-repair-$(Split-Path $AppxPath -LeafBase)"
+          if (Test-Path $workDir) { Remove-Item $workDir -Recurse -Force }
+          New-Item -ItemType Directory -Path $workDir | Out-Null
+
+          Write-Host "  Extracting: $(Split-Path $AppxPath -Leaf)"
+          & $makeappx.FullName unpack /p $AppxPath /d $workDir /o | Out-Null
+
+          $manifestPath = Join-Path $workDir "AppxManifest.xml"
+          [xml]$manifest = Get-Content $manifestPath -Raw
+          $ns = $manifest.Package.NamespaceURI
+
+          if ($ReferenceDeps) {
+            # Replace Dependencies node with the reference one
+            $oldDeps = $manifest.Package.SelectSingleNode("*[local-name()='Dependencies']")
+            $importedDeps = $manifest.ImportNode($ReferenceDeps.DocumentElement, $true)
+            if ($oldDeps) {
+              $manifest.Package.ReplaceChild($importedDeps, $oldDeps) | Out-Null
+            }
+            $manifest.Save($manifestPath)
+            Write-Host "  Dependencies harmonized"
+          }
+
+          # Re-pack
+          $repackedPath = Join-Path $env:RUNNER_TEMP "$(Split-Path $AppxPath -Leaf)"
+          & $makeappx.FullName pack /d $workDir /p $repackedPath /o | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to repack $(Split-Path $AppxPath -Leaf)"
+            exit 1
+          }
+          Remove-Item $workDir -Recurse -Force
+          return $repackedPath
+        }
+
+        # Extract Dependencies from the amd64 package as reference
+        $refWorkDir = Join-Path $env:RUNNER_TEMP "appx-ref"
+        if (Test-Path $refWorkDir) { Remove-Item $refWorkDir -Recurse -Force }
+        New-Item -ItemType Directory -Path $refWorkDir | Out-Null
+        & $makeappx.FullName unpack /p "${{ steps.locate.outputs.amd64_appx }}" /d $refWorkDir /o | Out-Null
+
+        [xml]$refManifest = Get-Content (Join-Path $refWorkDir "AppxManifest.xml") -Raw
+        $depsNode = $refManifest.Package.SelectSingleNode("*[local-name()='Dependencies']")
+
+        # Create a standalone XML doc with just the Dependencies
+        [xml]$refDeps = New-Object System.Xml.XmlDocument
+        $imported = $refDeps.ImportNode($depsNode, $true)
+        $refDeps.AppendChild($imported) | Out-Null
+
+        Write-Host "Reference Dependencies from amd64:"
+        Write-Host $refDeps.OuterXml
+
+        Remove-Item $refWorkDir -Recurse -Force
+
+        # Repack both appx with harmonized Dependencies
+        Write-Host "Harmonizing amd64 package..."
+        $amd64Repacked = Repair-AppxForBundle -AppxPath "${{ steps.locate.outputs.amd64_appx }}" -ReferenceDeps $null
+        Write-Host "Harmonizing arm64 package..."
+        $arm64Repacked = Repair-AppxForBundle -AppxPath "${{ steps.locate.outputs.arm64_appx }}" -ReferenceDeps $refDeps
+
+        # Stage repacked packages
+        $stageDir = Join-Path $env:RUNNER_TEMP "appx-bundle-stage"
+        if (Test-Path $stageDir) { Remove-Item $stageDir -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
+
+        Copy-Item $amd64Repacked -Destination $stageDir
+        Copy-Item $arm64Repacked -Destination $stageDir
+
+        Write-Host "Staged packages:"
+        Get-ChildItem $stageDir | ForEach-Object { Write-Host "  $($_.Name) ($([math]::Round($_.Length / 1MB, 1)) MB)" }
+
+        # Derive output name: strip trailing architecture token (x64, amd64, arm64, etc.)
+        $amd64Name = [System.IO.Path]::GetFileNameWithoutExtension("${{ steps.locate.outputs.amd64_appx }}")
+        $baseName = $amd64Name -replace '-(x64|amd64|x86_64|arm64|aarch64)$', ''
+        $bundleName = "$baseName.msixbundle"
+
+        $outputDir = "${{ inputs.output-path }}"
+        New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+        $bundlePath = Join-Path $outputDir $bundleName
+
+        Write-Host "Creating bundle: $bundleName"
+        & $makeappx.FullName bundle /v /d $stageDir /p $bundlePath /o
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "MakeAppx bundle failed with exit code $LASTEXITCODE"
+          exit 1
+        }
+
+        Write-Host "Bundle created: $bundlePath"
+        "bundle=$bundlePath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        "bundle_name=$bundleName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+    - name: Sign bundle
+      if: steps.locate.outputs.sign_enabled == 'true' && inputs.certificate-password != ''
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+
+        # Locate SignTool.exe
+        $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" |
+          Sort-Object FullName -Descending | Select-Object -First 1
+        if (-not $signtool) {
+          Write-Error "SignTool.exe not found in Windows SDK"
+          exit 1
+        }
+        Write-Host "Using SignTool: $($signtool.FullName)"
+
+        $certFile = "${{ steps.locate.outputs.sign_cert }}"
+        $certPassword = "${{ inputs.certificate-password }}"
+        $algorithm = "${{ steps.locate.outputs.sign_algorithm }}"
+        $timestampServer = "${{ steps.locate.outputs.sign_timestamp }}"
+        $bundlePath = "${{ steps.bundle.outputs.bundle }}"
+
+        if (-not $algorithm) { $algorithm = "SHA256" }
+
+        $signArgs = @(
+          "sign",
+          "/fd", $algorithm,
+          "/f", $certFile,
+          "/p", $certPassword
+        )
+
+        if ($timestampServer) {
+          $signArgs += @("/tr", $timestampServer, "/td", $algorithm)
+        }
+
+        $signArgs += $bundlePath
+
+        Write-Host "Signing bundle with algorithm: $algorithm"
+        & $signtool.FullName @signArgs
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "SignTool failed with exit code $LASTEXITCODE"
+          exit 1
+        }
+
+        Write-Host "Bundle signed successfully"
+
+    - name: Verify bundle
+      shell: pwsh
+      run: |
+        $bundlePath = "${{ steps.bundle.outputs.bundle }}"
+        $fileInfo = Get-Item $bundlePath
+        Write-Host "Bundle: $($fileInfo.Name) ($([math]::Round($fileInfo.Length / 1MB, 1)) MB)"

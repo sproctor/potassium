@@ -7,7 +7,7 @@ Potassium provides reusable composite actions and ready-to-use GitHub Actions wo
     All composite actions can be referenced directly from the Potassium repository — no need to copy them into your project:
 
     ```yaml
-    - uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
+    - uses: sproctor/potassium/.github/actions/setup-potassium@main
     ```
 
     Replace `@main` with a specific tag (e.g. `@v1.0.0`) to pin a stable version.
@@ -37,14 +37,14 @@ flowchart TB
 
 ## `setup-potassium` Action
 
-The `setup-potassium` composite action (`.github/actions/setup-potassium`) sets up the complete build environment: JetBrains Runtime 25, packaging tools, Gradle, and Node.js — all cross-platform.
+The `setup-potassium` composite action sets up the complete build environment: the JetBrains Runtime, packaging tools, Gradle, and Node.js — all cross-platform. The JBR is installed through [`actions/setup-java`](https://github.com/actions/setup-java)'s `jetbrains` distribution, so there is no download script to maintain.
 
 ### Usage
 
 ```yaml
-- uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
+- uses: sproctor/potassium/.github/actions/setup-potassium@main
   with:
-    jbr-version: '25.0.3b508.16'
+    java-version: '25'
     packaging-tools: 'true'
     flatpak: 'true'
     snap: 'true'
@@ -56,30 +56,43 @@ The `setup-potassium` composite action (`.github/actions/setup-potassium`) sets 
 
 | Input | Default | Description |
 |-------|---------|-------------|
-| `jbr-version` | `25.0.3b508.16` | JBR version (e.g. `25.0.3b508.16`) |
-| `jbr-variant` | `jbrsdk` | JBR variant (`jbrsdk`, `jbrsdk_jcef`, etc.) |
-| `jbr-download-url` | — | Override complete JBR download URL (bypasses version/variant) |
-| `graalvm` | `false` | Use GraalVM (Liberica NIK) instead of JBR |
-| `graalvm-java-version` | `25` | GraalVM Java version (when `graalvm` is `true`) |
-| `packaging-tools` | `true` | Install xvfb, rpm, fakeroot, patchelf, libx11-dev, libdbus-1-dev (Linux only) |
+| `java-version` | `25` | JBR version passed to `actions/setup-java` (`distribution: jetbrains`). JDK 17+ works; 25 is recommended |
+| `jbr-file` | — | Path to a pre-downloaded JBR archive; installed via `setup-java` (`distribution: jdkfile`) instead of resolving `java-version` |
+| `graalvm` | `false` | Install BellSoft Liberica NIK (via `graalvm/setup-graalvm`) instead of the JBR |
+| `graalvm-java-version` | `25` | Liberica NIK Java version (when `graalvm` is `true`) |
+| `packaging-tools` | `true` | Install xvfb, rpm, fakeroot, patchelf, libx11-dev, libdbus-1-dev and start Xvfb (Linux only) |
 | `flatpak` | `false` | Install Flatpak + Freedesktop SDK 24.08 (Linux only) |
 | `snap` | `false` | Install Snapd + Snapcraft (Linux only) |
-| `setup-gradle` | `true` | Setup Gradle via `gradle/actions/setup-gradle@v4` |
-| `setup-node` | `true` | Setup Node.js (needed for electron-builder) |
-| `node-version` | `20` | Node.js version when `setup-node` is `true` |
+| `setup-gradle` | `true` | Set up Gradle caching via `gradle/actions/setup-gradle` |
+| `setup-node` | `true` | Set up Node.js (needed for electron-builder) |
+| `node-version` | `24` | Node.js version when `setup-node` is `true` |
 
 ### Outputs
 
 | Output | Description |
 |--------|-------------|
-| `java-home` | Path to the JBR installation |
+| `java-home` | Path to the installed JDK (JBR or Liberica NIK) |
+
+### Custom JBR
+
+`actions/setup-java` resolves `java-version` to a JBR build automatically. For a **custom JBR archive** (e.g. a build with RTL patches), download it and pass `jbr-file`:
+
+```yaml
+- name: Download custom JBR
+  shell: bash
+  run: curl -fL -o "$RUNNER_TEMP/jbr.tar.gz" "https://example.com/jbr-25-custom.tar.gz"
+
+- uses: sproctor/potassium/.github/actions/setup-potassium@main
+  with:
+    jbr-file: ${{ runner.temp }}/jbr.tar.gz
+```
 
 ### GraalVM Mode
 
-When `graalvm: 'true'` is set, the action installs **BellSoft Liberica NIK** instead of JBR, plus platform-specific toolchains:
+When `graalvm: 'true'` is set, the action installs **BellSoft Liberica NIK** instead of the JBR, plus platform-specific toolchains:
 
 ```yaml
-- uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
+- uses: sproctor/potassium/.github/actions/setup-potassium@main
   with:
     graalvm: 'true'
     setup-gradle: 'true'
@@ -91,17 +104,16 @@ This automatically:
 - Installs **Liberica NIK 25** via `graalvm/setup-graalvm@v1`
 - Selects **Xcode 26** on macOS
 - Sets up **MSVC** on Windows via `ilammy/msvc-dev-cmd@v1`
-- Skips JBR installation entirely
+- Skips the JBR installation entirely
 
 ### What It Does
 
 The action automatically:
-- Downloads and installs **JBR 25** (or **Liberica NIK 25** in GraalVM mode) for the current platform and architecture
-- Sets `JAVA_HOME` and adds the JDK to `PATH`
+- Installs the **JBR** (or **Liberica NIK** in GraalVM mode) via `actions/setup-java` / `graalvm/setup-graalvm`, and sets `JAVA_HOME` and `PATH`
 - Installs Linux packaging tools (`xvfb`, `rpm`, `fakeroot`, `patchelf`, `libx11-dev`, `libdbus-1-dev`) and starts Xvfb with `DISPLAY=:99`
 - Installs Flatpak + Freedesktop SDK 24.08 (if enabled)
 - Installs Snapd + Snapcraft (if enabled)
-- Sets up Gradle caching via `gradle/actions/setup-gradle@v4`
+- Sets up Gradle caching via `gradle/actions/setup-gradle`
 - Sets up Node.js (if enabled)
 
 ## Release Build
@@ -172,9 +184,9 @@ jobs:
           echo "RELEASE_VERSION=$tag" >> "$GITHUB_ENV"
 
       - name: Setup Potassium
-        uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
+        uses: sproctor/potassium/.github/actions/setup-potassium@main
         with:
-          jbr-version: '25.0.3b508.16'
+          java-version: '25'
           packaging-tools: 'true'
           flatpak: 'true'
           snap: 'true'
@@ -208,27 +220,6 @@ jobs:
             !build/potassium/binaries/**/app/**
             !build/potassium/binaries/**/runtime/**
           if-no-files-found: error
-```
-
-### Custom JBR URL (per-matrix entry)
-
-You can override the JBR download URL for specific matrix entries. This is useful for custom JBR builds (e.g. with RTL patches):
-
-```yaml
-matrix:
-  include:
-    - os: macos-latest
-      arch: arm64
-      jbr-download-url: 'https://example.com/jbr-25-macos-aarch64-custom.tar.gz'
-    - os: macos-15-intel
-      arch: amd64
-      jbr-download-url: 'https://example.com/jbr-25-macos-x64-custom.tar.gz'
-
-steps:
-  - uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
-    with:
-      jbr-version: '25.0.3b508.16'
-      jbr-download-url: ${{ matrix.jbr-download-url || '' }}
 ```
 
 ### Version from Tag
@@ -269,7 +260,7 @@ Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then opti
       - name: Setup macOS signing
         id: signing
         if: ${{ secrets.MAC_CERTIFICATES_P12 != '' }}
-        uses: kdroidFilter/Nucleus/.github/actions/setup-macos-signing@main
+        uses: sproctor/potassium/.github/actions/setup-macos-signing@main
         with:
           certificate-base64: ${{ secrets.MAC_CERTIFICATES_P12 }}
           certificate-password: ${{ secrets.MAC_CERTIFICATES_PASSWORD }}
@@ -297,7 +288,7 @@ Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then opti
           path: artifacts/release-assets-macOS-amd64
 
       - name: Build universal binary
-        uses: kdroidFilter/Nucleus/.github/actions/build-macos-universal@main
+        uses: sproctor/potassium/.github/actions/build-macos-universal@main
         with:
           arm64-path: artifacts/release-assets-macOS-arm64
           x64-path: artifacts/release-assets-macOS-amd64
@@ -373,7 +364,7 @@ Combine amd64 and arm64 `.appx` files into a single `.msixbundle`. Potassium inc
           path: artifacts/release-assets-Windows-arm64
 
       - name: Build APPX Bundle
-        uses: kdroidFilter/Nucleus/.github/actions/build-windows-appxbundle@main
+        uses: sproctor/potassium/.github/actions/build-windows-appxbundle@main
         with:
           amd64-path: artifacts/release-assets-Windows-amd64
           arm64-path: artifacts/release-assets-Windows-arm64
@@ -430,14 +421,14 @@ After all builds complete, create a GitHub Release with all artifacts and update
           fi
 
       - name: Generate update YML files
-        uses: kdroidFilter/Nucleus/.github/actions/generate-update-yml@main
+        uses: sproctor/potassium/.github/actions/generate-update-yml@main
         with:
           artifacts-path: artifacts
           version: ${{ env.VERSION }}
           channel: ${{ env.CHANNEL }}
 
       - name: Publish release
-        uses: kdroidFilter/Nucleus/.github/actions/publish-release@main
+        uses: sproctor/potassium/.github/actions/publish-release@main
         with:
           artifacts-path: artifacts
           tag: ${{ env.TAG }}
@@ -465,16 +456,16 @@ After all builds complete, create a GitHub Release with all artifacts and update
 
 ## Composite Actions Reference
 
-Potassium provides reusable composite actions that you can reference directly in your workflows using `kdroidFilter/Nucleus/.github/actions/<action>@main`:
+Potassium provides reusable composite actions that you can reference directly in your workflows using `sproctor/potassium/.github/actions/<action>@main`:
 
 | Action | Usage | Description |
 |--------|-------|-------------|
-| `setup-potassium` | `kdroidFilter/Nucleus/.github/actions/setup-potassium@main` | Setup JBR 25, packaging tools, Gradle, Node.js |
-| `setup-macos-signing` | `kdroidFilter/Nucleus/.github/actions/setup-macos-signing@main` | Create temporary keychain and import signing certificates |
-| `build-macos-universal` | `kdroidFilter/Nucleus/.github/actions/build-macos-universal@main` | Merge arm64 + x64 into universal binary via `lipo`, sign, and package |
-| `build-windows-appxbundle` | `kdroidFilter/Nucleus/.github/actions/build-windows-appxbundle@main` | Combine amd64 + arm64 `.appx` into `.msixbundle` |
-| `generate-update-yml` | `kdroidFilter/Nucleus/.github/actions/generate-update-yml@main` | Generate `latest-*.yml` / `beta-*.yml` / `alpha-*.yml` metadata |
-| `publish-release` | `kdroidFilter/Nucleus/.github/actions/publish-release@main` | Create GitHub Release with all artifacts |
+| `setup-potassium` | `sproctor/potassium/.github/actions/setup-potassium@main` | Set up JBR (or Liberica NIK), packaging tools, Gradle, Node.js |
+| `setup-macos-signing` | `sproctor/potassium/.github/actions/setup-macos-signing@main` | Create temporary keychain and import signing certificates |
+| `build-macos-universal` | `sproctor/potassium/.github/actions/build-macos-universal@main` | Merge arm64 + x64 into universal binary via `lipo`, sign, and package |
+| `build-windows-appxbundle` | `sproctor/potassium/.github/actions/build-windows-appxbundle@main` | Combine amd64 + arm64 `.appx` into `.msixbundle` |
+| `generate-update-yml` | `sproctor/potassium/.github/actions/generate-update-yml@main` | Generate `latest-*.yml` / `beta-*.yml` / `alpha-*.yml` metadata |
+| `publish-release` | `sproctor/potassium/.github/actions/publish-release@main` | Create GitHub Release with all artifacts |
 
 ## GraalVM Native Image Release
 
@@ -519,7 +510,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Potassium (GraalVM)
-        uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
+        uses: sproctor/potassium/.github/actions/setup-potassium@main
         with:
           graalvm: 'true'
           setup-gradle: 'true'
@@ -559,11 +550,11 @@ These tasks first compile the native image via `packageGraalvmNative`, then pack
 
 ## Tips
 
-- **JBR 25 required**: Use `setup-potassium` for all packaging builds — it installs JBR 25 automatically
+- **JBR for packaging**: `setup-potassium` installs the JetBrains Runtime via `actions/setup-java` — JDK 17+ works, 25 is recommended
 - **Pin a version**: Use a tag (e.g. `@v1.0.0`) instead of `@main` for reproducible builds
 - **Concurrency**: Use `concurrency` to prevent parallel releases
 - **fail-fast: false**: Continue building other platforms if one fails
 - **Timeout**: Set generous timeouts (120min) for Flatpak/Snap builds
-- **Caching**: `setup-potassium` enables Gradle caching automatically via `gradle/actions/setup-gradle@v4`
-- **No checkout needed**: When using actions from `kdroidFilter/Nucleus`, GitHub fetches them automatically — no need to checkout the Potassium repository
+- **Caching**: `setup-potassium` enables Gradle build caching automatically via `gradle/actions/setup-gradle`
+- **No checkout needed**: When using actions from `sproctor/potassium`, GitHub fetches them automatically — no need to check out the Potassium repository
 - **workflow_dispatch**: Add it as a trigger to allow re-running a release manually

@@ -1,0 +1,147 @@
+name: Setup Potassium
+description: Set up the JetBrains Runtime (or Liberica NIK), packaging tools, Gradle, and Node.js for Potassium builds
+
+inputs:
+  java-version:
+    description: 'JetBrains Runtime version for actions/setup-java (e.g. 25, 21)'
+    required: false
+    default: '25'
+  jbr-file:
+    description: 'Path to a pre-downloaded JBR archive. When set, it is installed via setup-java (distribution: jdkfile) instead of resolving java-version.'
+    required: false
+    default: ''
+  packaging-tools:
+    description: 'Install xvfb, rpm, fakeroot, patchelf, libx11-dev, libdbus-1-dev (Linux only)'
+    required: false
+    default: 'true'
+  flatpak:
+    description: 'Install Flatpak + Freedesktop SDK 24.08 (Linux only)'
+    required: false
+    default: 'false'
+  snap:
+    description: 'Install Snapd + Snapcraft (Linux only)'
+    required: false
+    default: 'false'
+  setup-gradle:
+    description: 'Set up Gradle via gradle/actions/setup-gradle'
+    required: false
+    default: 'true'
+  graalvm:
+    description: 'Use GraalVM (BellSoft Liberica NIK) instead of the JBR'
+    required: false
+    default: 'false'
+  graalvm-java-version:
+    description: 'Liberica NIK Java version (when graalvm is true)'
+    required: false
+    default: '25'
+  setup-node:
+    description: 'Set up Node.js (needed for electron-builder)'
+    required: false
+    default: 'true'
+  node-version:
+    description: 'Node.js version'
+    required: false
+    default: '24'
+
+outputs:
+  java-home:
+    description: 'Path to the installed JDK (JBR or Liberica NIK)'
+    value: ${{ steps.set-java-home.outputs.java-home }}
+
+runs:
+  using: composite
+  steps:
+    # ── GraalVM (BellSoft Liberica NIK) ──────────────────────────────────
+    - name: Select Xcode 26 (macOS)
+      if: runner.os == 'macOS' && inputs.graalvm == 'true'
+      shell: bash
+      run: sudo xcode-select -s /Applications/Xcode_26.0.app/Contents/Developer
+
+    - name: Set up BellSoft Liberica NIK
+      if: inputs.graalvm == 'true'
+      uses: graalvm/setup-graalvm@v1
+      with:
+        distribution: 'liberica'
+        java-version: ${{ inputs.graalvm-java-version }}
+
+    - name: Set up MSVC (Windows)
+      if: runner.os == 'Windows' && inputs.graalvm == 'true'
+      uses: ilammy/msvc-dev-cmd@v1
+
+    # ── JetBrains Runtime (via setup-java) ───────────────────────────────
+    - name: Set up JetBrains Runtime
+      if: inputs.graalvm != 'true' && inputs.jbr-file == ''
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'jetbrains'
+        java-version: ${{ inputs.java-version }}
+
+    - name: Set up JetBrains Runtime (custom archive)
+      if: inputs.graalvm != 'true' && inputs.jbr-file != ''
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'jdkfile'
+        jdkFile: ${{ inputs.jbr-file }}
+        java-version: ${{ inputs.java-version }}
+
+    - name: Set java-home output
+      id: set-java-home
+      shell: bash
+      run: echo "java-home=$JAVA_HOME" >> "$GITHUB_OUTPUT"
+
+    - name: Verify JDK
+      shell: bash
+      run: java -version
+
+    # ── Packaging tools (Linux only) ─────────────────────────────────────
+    - name: Install packaging tools (Linux)
+      if: runner.os == 'Linux' && inputs.packaging-tools == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y xvfb rpm fakeroot libdbus-1-dev libglib2.0-dev libx11-dev patchelf
+        if ! pgrep -x Xvfb >/dev/null 2>&1; then
+          Xvfb :99 -screen 0 1280x1024x24 >/tmp/xvfb.log 2>&1 &
+        fi
+        echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
+    # ── Flatpak (Linux only) ─────────────────────────────────────────────
+    - name: Install Flatpak (Linux)
+      if: runner.os == 'Linux' && inputs.flatpak == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y flatpak flatpak-builder
+        # Install runtimes for the current user — flatpak-builder (via @malept/flatpak-bundler)
+        # defaults to --user mode and won't find system-only runtimes.
+        flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+        flatpak --user install -y flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+
+    # ── Snap (Linux only) ────────────────────────────────────────────────
+    - name: Install Snap (Linux)
+      if: runner.os == 'Linux' && inputs.snap == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y snapd
+        sudo systemctl enable --now snapd.socket || true
+        sudo systemctl start snapd || true
+        sudo snap wait system seed.loaded || true
+        echo "/snap/bin" >> "$GITHUB_PATH"
+        sudo snap install snapcraft --classic
+        /snap/bin/snapcraft --version
+
+    # ── Gradle ───────────────────────────────────────────────────────────
+    - name: Setup Gradle
+      if: inputs.setup-gradle == 'true'
+      uses: gradle/actions/setup-gradle@v6
+
+    # ── Node.js ──────────────────────────────────────────────────────────
+    - name: Setup Node.js
+      if: inputs.setup-node == 'true'
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node-version }}

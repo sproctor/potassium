@@ -225,7 +225,7 @@ Flatpak requires `flatpak` and `flatpak-builder` with the target runtime and SDK
 **Using the `setup-potassium` GitHub Action** (recommended):
 
 ```yaml
-- uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
+- uses: sproctor/potassium/.github/actions/setup-potassium@main
   with:
     flatpak: 'true'
 ```

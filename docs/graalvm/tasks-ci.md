@@ -103,7 +103,7 @@ jobs:
       # Download pre-built JNI native libraries here...
 
       - name: Setup Potassium (GraalVM)
-        uses: kdroidFilter/Nucleus/.github/actions/setup-potassium@main
+        uses: sproctor/potassium/.github/actions/setup-potassium@main
         with:
           graalvm: 'true'
           setup-gradle: 'true'
