@@ -2167,46 +2167,21 @@ The auto-updater relies on three YAML files that list all available installers w
 
 ### How CI generates them
 
-In the release workflow, each platform builds its installers in parallel and uploads them as separate artifacts (`release-assets-macOS-arm64`, `release-assets-Linux-amd64`, etc.). A final `release` job then:
+Each platform's build runs electron-builder in a single invocation, so electron-builder writes the update manifest (`latest-mac.yml`, `latest.yml` on Windows, `latest-linux.yml`) alongside the installers it produces — SHA-512 checksums and file sizes already filled in. CI just collects and publishes those files:
 
-1. Downloads all platform artifacts into a single directory
-2. Runs the `generate-update-yml` action, which scans every installer file, computes SHA-512 checksums, and produces `latest-mac.yml`, `latest.yml` (Windows), and `latest-linux.yml`
-3. Uploads everything (installers + YML files) to the release
+1. Each platform builds its installers in parallel and uploads them — together with its `latest-*.yml` — as separate artifacts (`release-assets-macOS-arm64`, `release-assets-Linux-amd64`, etc.)
+2. A final `release` job downloads all platform artifacts into a single directory
+3. The `publish-release` action uploads everything (installers + YML files) to the release
 
-See the [example release workflow](https://github.com/kdroidFilter/Nucleus/blob/main/.github/workflows/release-desktop.yaml) for the full setup.
+See the [example release workflow](https://github.com/sproctor/potassium/blob/main/.github/workflows/release-desktop.yaml) for the full setup.
 
 ### Building locally
 
 Each platform is packaged in a single electron-builder invocation, so electron-builder writes one `latest-<os>.yml` (covering all of that platform's installers) alongside them when you run `packageDistributionForCurrentOS`, and — for github, s3, and generic alike — uploads it as part of publishing. If you build on a single machine, the YML is ready to use for that platform.
 
-However, for a real multi-platform release, you need to build on each platform (macOS, Windows, Linux) and then **merge** the per-platform YML files into final ones that reference all architectures. The CI does this automatically with the `generate-update-yml` action. To do it locally:
+For a multi-platform release, build on each platform (macOS, Windows, Linux) and collect each platform's manifest into the same release. The three files have distinct names — `latest-mac.yml`, `latest.yml` (Windows), and `latest-linux.yml` — so they coexist without any merge step. On macOS, the [`build-macos-universal`](ci-cd.md#universal-macos-binaries) action merges arm64 + x64 into a single universal build, so one `latest-mac.yml` already covers both architectures.
 
-1. Build on each platform and collect all installers + YML files into a single directory
-2. For each platform YML (e.g. `latest-mac.yml`), merge the `files:` entries from all architectures into one file
-
-For example, if you built on macOS ARM64 and macOS x64 separately, combine both `files:` entries into a single `latest-mac.yml`:
-
-```yaml
-version: 1.2.3
-files:
-  - url: MyApp-1.2.3-macos-arm64.dmg
-    sha512: <hash-from-arm64-build>
-    size: 102400000
-  - url: MyApp-1.2.3-macos-arm64.zip
-    sha512: <hash-from-arm64-build>
-    size: 98000000
-  - url: MyApp-1.2.3-macos-x64.dmg
-    sha512: <hash-from-x64-build>
-    size: 98765432
-  - url: MyApp-1.2.3-macos-x64.zip
-    sha512: <hash-from-x64-build>
-    size: 95000000
-path: MyApp-1.2.3-macos-arm64.dmg
-sha512: <hash-of-first-file>
-releaseDate: '2026-03-01T12:00:00.000Z'
-```
-
-**TIP:** In practice, always use CI for multi-platform releases. The [release workflow](https://github.com/kdroidFilter/Nucleus/blob/main/.github/workflows/release-desktop.yaml) handles all of this automatically: build in parallel, merge YML files, and publish to GitHub Releases in a single pipeline.
+**TIP:** In practice, always use CI for multi-platform releases. The [release workflow](https://github.com/sproctor/potassium/blob/main/.github/workflows/release-desktop.yaml) handles all of this automatically: build on each platform in parallel and publish to GitHub Releases in a single pipeline.
 ### YML file examples
 
 Three YAML files are generated per release:
@@ -4084,6 +4059,7 @@ jobs:
             build/potassium/binaries/**/*.tar
             build/potassium/binaries/**/*.7z
             build/potassium/binaries/**/*.blockmap
+            build/potassium/binaries/**/*.yml
             build/potassium/binaries/**/signing-metadata.json
             build/potassium/binaries/**/packaging-metadata.json
             !build/potassium/binaries/**/app/**
@@ -4249,7 +4225,7 @@ Combine amd64 and arm64 `.appx` files into a single `.msixbundle`. Potassium inc
 
 ## Publish to GitHub Releases
 
-After all builds complete, create a GitHub Release with all artifacts and update YML files. Potassium includes composite actions for both (`generate-update-yml` and `publish-release`):
+After all builds complete, create a GitHub Release with all artifacts — the installers plus the `latest-*.yml` update manifests that electron-builder writes alongside them during each build. Potassium includes a `publish-release` composite action for this:
 
 ```yaml
   publish:
@@ -4269,32 +4245,17 @@ After all builds complete, create a GitHub Release with all artifacts and update
           path: artifacts
           pattern: release-assets-*
 
-      - name: Determine version and channel
+      - name: Determine release type
         shell: bash
         run: |
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
           echo "TAG=$TAG" >> "$GITHUB_ENV"
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-
-          if [[ "$VERSION" == *"-alpha"* ]]; then
-            echo "CHANNEL=alpha" >> "$GITHUB_ENV"
-            echo "RELEASE_TYPE=prerelease" >> "$GITHUB_ENV"
-          elif [[ "$VERSION" == *"-beta"* ]]; then
-            echo "CHANNEL=beta" >> "$GITHUB_ENV"
+          if [[ "$TAG" == *-alpha* || "$TAG" == *-beta* ]]; then
             echo "RELEASE_TYPE=prerelease" >> "$GITHUB_ENV"
           else
-            echo "CHANNEL=latest" >> "$GITHUB_ENV"
             echo "RELEASE_TYPE=release" >> "$GITHUB_ENV"
           fi
-
-      - name: Generate update YML files
-        uses: sproctor/potassium/.github/actions/generate-update-yml@main
-        with:
-          artifacts-path: artifacts
-          version: ${{ env.VERSION }}
-          channel: ${{ env.CHANNEL }}
 
       - name: Publish release
         uses: sproctor/potassium/.github/actions/publish-release@main
@@ -4333,8 +4294,7 @@ Potassium provides reusable composite actions that you can reference directly in
 | `setup-macos-signing` | `sproctor/potassium/.github/actions/setup-macos-signing@main` | Create temporary keychain and import signing certificates |
 | `build-macos-universal` | `sproctor/potassium/.github/actions/build-macos-universal@main` | Merge arm64 + x64 into universal binary via `lipo`, sign, and package |
 | `build-windows-appxbundle` | `sproctor/potassium/.github/actions/build-windows-appxbundle@main` | Combine amd64 + arm64 `.appx` into `.msixbundle` |
-| `generate-update-yml` | `sproctor/potassium/.github/actions/generate-update-yml@main` | Generate `latest-*.yml` / `beta-*.yml` / `alpha-*.yml` metadata |
-| `publish-release` | `sproctor/potassium/.github/actions/publish-release@main` | Create GitHub Release with all artifacts |
+| `publish-release` | `sproctor/potassium/.github/actions/publish-release@main` | Create GitHub Release with all artifacts (installers + electron-builder's `latest-*.yml`) |
 
 ## GraalVM Native Image Release
 
@@ -4611,7 +4571,7 @@ Conveyor has the broadest signing provider support (6 cloud HSM services). Potas
 | Compose MP | ❌ | ❌ | ❌ | ❌ | ❌ | **1** |
 
 ??? info "Sources"
-    - **Potassium**: 6 composite actions in [`.github/actions/`](https://github.com/kdroidFilter/Nucleus/tree/main/.github/actions) — `setup-potassium` (JBR or GraalVM Liberica NIK + tools), `setup-macos-signing` (keychain + P12), `build-macos-universal` (lipo merge + re-sign), `build-windows-appxbundle` (MakeAppx + SignTool), `generate-update-yml` (SHA-512 metadata), `publish-release` (gh release create). Since v1.3.0, `setup-potassium` supports a `graalvm` option to install BellSoft Liberica NIK instead of JBR, enabling GraalVM Native Image builds in CI.
+    - **Potassium**: 5 composite actions in [`.github/actions/`](https://github.com/sproctor/potassium/tree/main/.github/actions) — `setup-potassium` (JBR or GraalVM Liberica NIK + tools), `setup-macos-signing` (keychain + P12), `build-macos-universal` (lipo merge + re-sign), `build-windows-appxbundle` (MakeAppx + SignTool), `publish-release` (gh release create, uploading electron-builder's `latest-*.yml` update manifests alongside the installers). `setup-potassium` supports a `graalvm` option to install BellSoft Liberica NIK instead of JBR, enabling GraalVM Native Image builds in CI.
     - **Conveyor**: [CI tutorial](https://conveyor.hydraulic.dev/21.1/tutorial/hare/ci/) — example workflows for GitHub Actions (build, deploy-to-gh, deploy-to-ssh). Conveyor runs on a single machine since it cross-compiles.
     - **install4j**: [What's new](https://www.ej-technologies.com/install4j/whatsnew12) — CLI mode for CI, no pre-built actions
     - **jDeploy**: [GitHub](https://github.com/shannah/jdeploy) — `jdeploy-action` for automated builds on tag push
