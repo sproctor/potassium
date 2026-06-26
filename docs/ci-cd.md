@@ -30,7 +30,7 @@ flowchart TB
     build --> macos_sign["macOS Universal Binary\n+ Signing + Notarize"]
     build --> msix["Windows MSIX Bundle"]
 
-    macos_sign --> publish["Publish — GitHub Release\n+ Update YML metadata"]
+    macos_sign --> publish["Publish — GitHub Release\n(installers + latest-*.yml)"]
     msix --> publish
 
 ```
@@ -215,6 +215,7 @@ jobs:
             build/potassium/binaries/**/*.tar
             build/potassium/binaries/**/*.7z
             build/potassium/binaries/**/*.blockmap
+            build/potassium/binaries/**/*.yml
             build/potassium/binaries/**/signing-metadata.json
             build/potassium/binaries/**/packaging-metadata.json
             !build/potassium/binaries/**/app/**
@@ -380,7 +381,7 @@ Combine amd64 and arm64 `.appx` files into a single `.msixbundle`. Potassium inc
 
 ## Publish to GitHub Releases
 
-After all builds complete, create a GitHub Release with all artifacts and update YML files. Potassium includes composite actions for both (`generate-update-yml` and `publish-release`):
+After all builds complete, create a GitHub Release with all artifacts — the installers plus the `latest-*.yml` update manifests that electron-builder writes alongside them during each build. Potassium includes a `publish-release` composite action for this:
 
 ```yaml
   publish:
@@ -400,32 +401,17 @@ After all builds complete, create a GitHub Release with all artifacts and update
           path: artifacts
           pattern: release-assets-*
 
-      - name: Determine version and channel
+      - name: Determine release type
         shell: bash
         run: |
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
           echo "TAG=$TAG" >> "$GITHUB_ENV"
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-
-          if [[ "$VERSION" == *"-alpha"* ]]; then
-            echo "CHANNEL=alpha" >> "$GITHUB_ENV"
-            echo "RELEASE_TYPE=prerelease" >> "$GITHUB_ENV"
-          elif [[ "$VERSION" == *"-beta"* ]]; then
-            echo "CHANNEL=beta" >> "$GITHUB_ENV"
+          if [[ "$TAG" == *-alpha* || "$TAG" == *-beta* ]]; then
             echo "RELEASE_TYPE=prerelease" >> "$GITHUB_ENV"
           else
-            echo "CHANNEL=latest" >> "$GITHUB_ENV"
             echo "RELEASE_TYPE=release" >> "$GITHUB_ENV"
           fi
-
-      - name: Generate update YML files
-        uses: sproctor/potassium/.github/actions/generate-update-yml@main
-        with:
-          artifacts-path: artifacts
-          version: ${{ env.VERSION }}
-          channel: ${{ env.CHANNEL }}
 
       - name: Publish release
         uses: sproctor/potassium/.github/actions/publish-release@main
@@ -464,8 +450,7 @@ Potassium provides reusable composite actions that you can reference directly in
 | `setup-macos-signing` | `sproctor/potassium/.github/actions/setup-macos-signing@main` | Create temporary keychain and import signing certificates |
 | `build-macos-universal` | `sproctor/potassium/.github/actions/build-macos-universal@main` | Merge arm64 + x64 into universal binary via `lipo`, sign, and package |
 | `build-windows-appxbundle` | `sproctor/potassium/.github/actions/build-windows-appxbundle@main` | Combine amd64 + arm64 `.appx` into `.msixbundle` |
-| `generate-update-yml` | `sproctor/potassium/.github/actions/generate-update-yml@main` | Generate `latest-*.yml` / `beta-*.yml` / `alpha-*.yml` metadata |
-| `publish-release` | `sproctor/potassium/.github/actions/publish-release@main` | Create GitHub Release with all artifacts |
+| `publish-release` | `sproctor/potassium/.github/actions/publish-release@main` | Create GitHub Release with all artifacts (installers + electron-builder's `latest-*.yml`) |
 
 ## GraalVM Native Image Release
 

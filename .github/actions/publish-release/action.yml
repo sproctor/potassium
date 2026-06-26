@@ -3,7 +3,7 @@ description: Create/update a GitHub Release and upload all artifacts
 
 inputs:
   artifacts-path:
-    description: 'Directory containing release-assets-* and update-yml/'
+    description: 'Directory containing the release-assets-* directories'
     required: true
   tag:
     description: 'Git tag (e.g. v1.2.3)'
@@ -31,9 +31,6 @@ runs:
         TAG="${{ inputs.tag }}"
         RELEASE_TYPE="${{ inputs.release-type }}"
 
-        # File extensions to skip uploading (already included in update-yml)
-        SKIP_PATTERN='\.(yml|yaml)$'
-
         # Known parasitic files: raw executables from jpackage app-image and internal metadata
         SKIP_NAMES='^(java\.exe|javaw\.exe|signing-metadata\.json|packaging-metadata\.json)$'
 
@@ -54,21 +51,17 @@ runs:
           gh release create "$TAG" "${CREATE_FLAGS[@]}"
         fi
 
-        # Collect all binary files to upload (deduplicated by basename)
+        # Collect all release files to upload — installers plus the electron-builder
+        # update manifests (latest-*.yml) — deduplicated by basename.
         UPLOAD_FILES=()
         declare -A SEEN_BASENAMES
 
-        # Binaries from build artifacts
+        # Files from each platform's build artifacts
         for asset_dir in "$ARTIFACTS_DIR"/release-assets-*/; do
           [ -d "$asset_dir" ] || continue
           while IFS= read -r -d '' file; do
             [ -f "$file" ] || continue
             basename_file="$(basename "$file")"
-
-            # Skip yml/yaml metadata (we upload our consolidated ones instead)
-            if echo "$basename_file" | grep -qE "$SKIP_PATTERN"; then
-              continue
-            fi
 
             # Skip known parasitic files (raw jpackage executables and internal metadata)
             if echo "$basename_file" | grep -qE "$SKIP_NAMES"; then
@@ -92,14 +85,6 @@ runs:
             UPLOAD_FILES+=("$file")
           done < <(find "$asset_dir" -type f -print0 | sort -z)
         done
-
-        # Consolidated update-yml files
-        if [ -d "$ARTIFACTS_DIR/update-yml" ]; then
-          for yml_file in "$ARTIFACTS_DIR"/update-yml/*.yml; do
-            [ -f "$yml_file" ] || continue
-            UPLOAD_FILES+=("$yml_file")
-          done
-        fi
 
         if [ ${#UPLOAD_FILES[@]} -eq 0 ]; then
           echo "No files to upload!"

@@ -181,7 +181,7 @@ Conveyor has the broadest signing provider support (6 cloud HSM services). Potas
 | Compose MP | ❌ | ❌ | ❌ | ❌ | ❌ | **1** |
 
 ??? info "Sources"
-    - **Potassium**: 6 composite actions in [`.github/actions/`](https://github.com/kdroidFilter/Nucleus/tree/main/.github/actions) — `setup-potassium` (JBR or GraalVM Liberica NIK + tools), `setup-macos-signing` (keychain + P12), `build-macos-universal` (lipo merge + re-sign), `build-windows-appxbundle` (MakeAppx + SignTool), `generate-update-yml` (SHA-512 metadata), `publish-release` (gh release create). Since v1.3.0, `setup-potassium` supports a `graalvm` option to install BellSoft Liberica NIK instead of JBR, enabling GraalVM Native Image builds in CI.
+    - **Potassium**: 5 composite actions in [`.github/actions/`](https://github.com/sproctor/potassium/tree/main/.github/actions) — `setup-potassium` (JBR or GraalVM Liberica NIK + tools), `setup-macos-signing` (keychain + P12), `build-macos-universal` (lipo merge + re-sign), `build-windows-appxbundle` (MakeAppx + SignTool), `publish-release` (gh release create, uploading electron-builder's `latest-*.yml` update manifests alongside the installers). `setup-potassium` supports a `graalvm` option to install BellSoft Liberica NIK instead of JBR, enabling GraalVM Native Image builds in CI.
     - **Conveyor**: [CI tutorial](https://conveyor.hydraulic.dev/21.1/tutorial/hare/ci/) — example workflows for GitHub Actions (build, deploy-to-gh, deploy-to-ssh). Conveyor runs on a single machine since it cross-compiles.
     - **install4j**: [What's new](https://www.ej-technologies.com/install4j/whatsnew12) — CLI mode for CI, no pre-built actions
     - **jDeploy**: [GitHub](https://github.com/shannah/jdeploy) — `jdeploy-action` for automated builds on tag push

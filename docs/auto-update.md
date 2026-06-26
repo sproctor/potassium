@@ -56,47 +56,22 @@ The auto-updater relies on three YAML files that list all available installers w
 
 ### How CI generates them
 
-In the release workflow, each platform builds its installers in parallel and uploads them as separate artifacts (`release-assets-macOS-arm64`, `release-assets-Linux-amd64`, etc.). A final `release` job then:
+Each platform's build runs electron-builder in a single invocation, so electron-builder writes the update manifest (`latest-mac.yml`, `latest.yml` on Windows, `latest-linux.yml`) alongside the installers it produces — SHA-512 checksums and file sizes already filled in. CI just collects and publishes those files:
 
-1. Downloads all platform artifacts into a single directory
-2. Runs the `generate-update-yml` action, which scans every installer file, computes SHA-512 checksums, and produces `latest-mac.yml`, `latest.yml` (Windows), and `latest-linux.yml`
-3. Uploads everything (installers + YML files) to the release
+1. Each platform builds its installers in parallel and uploads them — together with its `latest-*.yml` — as separate artifacts (`release-assets-macOS-arm64`, `release-assets-Linux-amd64`, etc.)
+2. A final `release` job downloads all platform artifacts into a single directory
+3. The `publish-release` action uploads everything (installers + YML files) to the release
 
-See the [example release workflow](https://github.com/kdroidFilter/Nucleus/blob/main/.github/workflows/release-desktop.yaml) for the full setup.
+See the [example release workflow](https://github.com/sproctor/potassium/blob/main/.github/workflows/release-desktop.yaml) for the full setup.
 
 ### Building locally
 
 Each platform is packaged in a single electron-builder invocation, so electron-builder writes one `latest-<os>.yml` (covering all of that platform's installers) alongside them when you run `packageDistributionForCurrentOS`, and — for github, s3, and generic alike — uploads it as part of publishing. If you build on a single machine, the YML is ready to use for that platform.
 
-However, for a real multi-platform release, you need to build on each platform (macOS, Windows, Linux) and then **merge** the per-platform YML files into final ones that reference all architectures. The CI does this automatically with the `generate-update-yml` action. To do it locally:
-
-1. Build on each platform and collect all installers + YML files into a single directory
-2. For each platform YML (e.g. `latest-mac.yml`), merge the `files:` entries from all architectures into one file
-
-For example, if you built on macOS ARM64 and macOS x64 separately, combine both `files:` entries into a single `latest-mac.yml`:
-
-```yaml
-version: 1.2.3
-files:
-  - url: MyApp-1.2.3-macos-arm64.dmg
-    sha512: <hash-from-arm64-build>
-    size: 102400000
-  - url: MyApp-1.2.3-macos-arm64.zip
-    sha512: <hash-from-arm64-build>
-    size: 98000000
-  - url: MyApp-1.2.3-macos-x64.dmg
-    sha512: <hash-from-x64-build>
-    size: 98765432
-  - url: MyApp-1.2.3-macos-x64.zip
-    sha512: <hash-from-x64-build>
-    size: 95000000
-path: MyApp-1.2.3-macos-arm64.dmg
-sha512: <hash-of-first-file>
-releaseDate: '2026-03-01T12:00:00.000Z'
-```
+For a multi-platform release, build on each platform (macOS, Windows, Linux) and collect each platform's manifest into the same release. The three files have distinct names — `latest-mac.yml`, `latest.yml` (Windows), and `latest-linux.yml` — so they coexist without any merge step. On macOS, the [`build-macos-universal`](ci-cd.md#universal-macos-binaries) action merges arm64 + x64 into a single universal build, so one `latest-mac.yml` already covers both architectures.
 
 !!! tip
-    In practice, always use CI for multi-platform releases. The [release workflow](https://github.com/kdroidFilter/Nucleus/blob/main/.github/workflows/release-desktop.yaml) handles all of this automatically: build in parallel, merge YML files, and publish to GitHub Releases in a single pipeline.
+    In practice, always use CI for multi-platform releases. The [release workflow](https://github.com/sproctor/potassium/blob/main/.github/workflows/release-desktop.yaml) handles all of this automatically: build on each platform in parallel and publish to GitHub Releases in a single pipeline.
 
 ### YML file examples
 
