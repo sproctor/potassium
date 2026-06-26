@@ -152,33 +152,73 @@ export AWS_REGION=us-east-1
 ### Multi-architecture S3 releases
 
 !!! warning "Inline S3 upload does not merge manifests"
-    electron-builder's inline S3 publish PUTs each build's manifest independently, so two
-    runners that share a manifest name **overwrite each other** on S3 — the last upload wins and
-    its manifest lists only its own architecture. Unlike GitHub Releases, where the
-    [`publish-github-release`](ci-cd.md#multi-architecture-update-manifests) action merges per-arch
-    manifests before upload, **there is no S3 publish action that merges**, so inline S3 publish is
-    only safe for a single architecture per OS.
+    electron-builder's inline S3 publish (`publishMode = Auto` / `Always`) PUTs each build's
+    manifest independently, so two runners that share a manifest name **overwrite each other** on
+    S3 — the last upload wins and lists only its own architecture.
 
     - **Linux** is unaffected — electron-builder names the files per-arch (`latest-linux.yml` /
       `latest-linux-arm64.yml`), so they never collide.
     - **Windows and macOS** share one manifest each (`latest.yml`, `latest-mac.yml`); uploading two
       arches inline leaves the loser's clients unable to update.
 
-For a multi-arch Windows/macOS release on S3, **consolidate before uploading** instead of
-publishing inline:
+    So inline S3 publish is only safe for a single architecture per OS.
 
-1. Build every `(os, arch)` with `publishMode = Never` — electron-builder writes correct manifests
-   locally and uploads nothing. On macOS, assemble the universal binary and its `latest-mac.yml`
-   first (see [Universal macOS Binaries](ci-cd.md#universal-macos-binaries)).
-2. Collect every runner's `build/potassium/binaries/**` output into one directory.
-3. Merge the same-named manifests' `files:` arrays into one — the `publish-github-release` action's
-   `merge_update_manifests.py` does exactly this (see
-   [Multi-architecture update manifests](ci-cd.md#multi-architecture-update-manifests)).
-4. Upload the consolidated tree:
+For a multi-arch release, **don't publish inline** — build with `publishMode = Never` (manifests
+written locally, nothing uploaded) and upload from one job with the **`publish-s3-release`**
+composite action. It merges the per-arch manifests (the same consolidation as
+[`publish-github-release`](ci-cd.md#multi-architecture-update-manifests)) and `aws s3 sync`s the
+result:
 
-   ```bash
-   aws s3 sync ./release s3://my-updates-bucket/releases/myapp/ --acl public-read
-   ```
+```yaml
+  publish-s3:
+    name: Publish to S3
+    needs: [build, universal-macos]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: release-assets-*
+
+      - name: Prefer the universal macOS build
+        shell: bash
+        run: |
+          # Universal job present → publish only the universal macOS artifacts.
+          # Omit it to ship per-arch macOS (the two latest-mac.yml are merged instead).
+          if [ -d artifacts/release-assets-macOS-universal ]; then
+            rm -rf artifacts/release-assets-macOS-arm64 artifacts/release-assets-macOS-amd64
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Publish to S3
+        uses: sproctor/potassium/.github/actions/publish-s3-release@main
+        with:
+          artifacts-path: artifacts
+          bucket: my-updates-bucket
+          prefix: releases/myapp        # match your updater's GenericProvider base URL
+          acl: public-read
+```
+
+| `publish-s3-release` input | Description |
+|----------------------------|-------------|
+| `artifacts-path` | Directory containing the downloaded `release-assets-*` artifacts |
+| `bucket` | Target S3 bucket |
+| `prefix` | Key prefix within the bucket — match the updater's base URL |
+| `region` | AWS region (or supply via the environment) |
+| `acl` | Canned ACL for uploaded objects, e.g. `public-read` |
+| `endpoint-url` | Custom endpoint for S3-compatible stores (Cloudflare R2, MinIO, …) |
+| `delete` | Remove objects under the prefix not in this release (default `false`) |
+
+The auto-updater reads an S3 bucket over HTTP via [`GenericProvider`](auto-update.md#generic-http-server),
+so point it at the matching public URL — e.g.
+`GenericProvider("https://my-updates-bucket.s3.us-east-1.amazonaws.com/releases/myapp")`.
 
 ## Generic HTTP Server
 

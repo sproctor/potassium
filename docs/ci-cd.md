@@ -481,6 +481,7 @@ Potassium provides reusable composite actions that you can reference directly in
 | `build-macos-universal` | `sproctor/potassium/.github/actions/build-macos-universal@main` | Merge arm64 + x64 into universal binary via `lipo`, sign, and package |
 | `build-windows-appxbundle` | `sproctor/potassium/.github/actions/build-windows-appxbundle@main` | Combine amd64 + arm64 `.appx` into `.msixbundle` |
 | `publish-github-release` | `sproctor/potassium/.github/actions/publish-github-release@main` | Merge per-arch update manifests, then create a GitHub Release with all artifacts (installers + electron-builder's `latest-*.yml`) |
+| `publish-s3-release` | `sproctor/potassium/.github/actions/publish-s3-release@main` | Merge per-arch update manifests, then `aws s3 sync` installers + `latest-*.yml` to an S3 / S3-compatible bucket |
 
 ## GraalVM Native Image Release
 

@@ -1,0 +1,122 @@
+name: Publish S3 Release
+description: Merge multi-arch update manifests, then sync installers + manifests to an S3 (or S3-compatible) bucket
+
+inputs:
+  artifacts-path:
+    description: 'Directory containing the release-assets-* directories'
+    required: true
+  bucket:
+    description: 'Target S3 bucket name'
+    required: true
+  prefix:
+    description: >-
+      Key prefix within the bucket (e.g. releases/myapp). Must match the path the auto-updater's
+      GenericProvider points at, so clients fetch the manifests from where they were uploaded.
+    required: false
+    default: ''
+  region:
+    description: 'AWS region. Exported as AWS_REGION for the upload; may also be supplied via the environment.'
+    required: false
+    default: ''
+  acl:
+    description: 'Canned ACL applied to uploaded objects (e.g. public-read). Omit to inherit the bucket default.'
+    required: false
+    default: ''
+  endpoint-url:
+    description: 'Custom S3 endpoint for S3-compatible stores (Cloudflare R2, MinIO, …). Omit for AWS S3.'
+    required: false
+    default: ''
+  delete:
+    description: >-
+      Delete objects under the prefix that are not part of this release. Default false — keep older
+      releases so existing clients can still download and diff against them.
+    required: false
+    default: 'false'
+
+outputs:
+  destination:
+    description: 'The s3:// URI the release was synced to'
+    value: ${{ steps.sync.outputs.destination }}
+
+runs:
+  using: composite
+  steps:
+    # Windows (latest.yml) and macOS (latest-mac.yml) expose one channel file per OS regardless of
+    # CPU arch, so per-arch runners produce same-named manifests. Union their files[] into one
+    # before upload — reusing the same script publish-github-release uses (both actions ship in
+    # this repo and are checked out together). Linux is unaffected: its channel files are already
+    # arch-suffixed (latest-linux.yml vs latest-linux-arm64.yml).
+    - name: Consolidate multi-arch update manifests
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! python3 -c "import yaml" 2>/dev/null; then
+          pip3 install --quiet --disable-pip-version-check pyyaml 2>/dev/null \
+            || pip3 install --quiet --disable-pip-version-check --break-system-packages pyyaml
+        fi
+        python3 "$GITHUB_ACTION_PATH/../publish-github-release/merge_update_manifests.py" "${{ inputs.artifacts-path }}"
+
+    - name: Sync release to S3
+      id: sync
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        command -v aws >/dev/null 2>&1 || { echo "::error::aws CLI not found on the runner"; exit 1; }
+
+        ARTIFACTS_DIR="${{ inputs.artifacts-path }}"
+        BUCKET="${{ inputs.bucket }}"
+        PREFIX="${{ inputs.prefix }}"
+        ACL="${{ inputs.acl }}"
+        ENDPOINT="${{ inputs.endpoint-url }}"
+        DELETE="${{ inputs.delete }}"
+        REGION="${{ inputs.region }}"
+        if [ -n "$REGION" ]; then export AWS_REGION="$REGION"; fi
+
+        # Known parasitic files: raw executables from jpackage app-image and internal metadata.
+        SKIP_NAMES='^(java\.exe|javaw\.exe|signing-metadata\.json|packaging-metadata\.json)$'
+
+        # Stage a flat, de-duplicated set of release files (installers + merged latest-*.yml +
+        # blockmaps), mirroring publish-github-release's selection, then sync it to the bucket.
+        STAGING="$(mktemp -d)"
+        declare -A SEEN
+        count=0
+        for asset_dir in "$ARTIFACTS_DIR"/release-assets-*/; do
+          [ -d "$asset_dir" ] || continue
+          while IFS= read -r -d '' file; do
+            [ -f "$file" ] || continue
+            base="$(basename "$file")"
+
+            # Skip known parasitic files (raw jpackage executables and internal metadata)
+            if echo "$base" | grep -qE "$SKIP_NAMES"; then continue; fi
+            # Skip raw jpackage launcher .exe (no hyphen = no version/arch in name)
+            if [[ "$base" == *.exe ]] && [[ "$base" != *-* ]]; then continue; fi
+            # Skip duplicate basenames
+            if [[ -n "${SEEN[$base]+x}" ]]; then echo "Skipping duplicate: $file"; continue; fi
+
+            SEEN[$base]="$file"
+            cp "$file" "$STAGING/$base"
+            count=$((count + 1))
+          done < <(find "$asset_dir" -type f -print0 | sort -z)
+        done
+
+        if [ "$count" -eq 0 ]; then
+          echo "::error::No files to upload under $ARTIFACTS_DIR/release-assets-*/"
+          exit 1
+        fi
+
+        DEST="s3://$BUCKET"
+        if [ -n "$PREFIX" ]; then DEST="$DEST/${PREFIX#/}"; fi
+        DEST="${DEST%/}"
+
+        SYNC_ARGS=(--no-progress)
+        if [ -n "$ACL" ]; then SYNC_ARGS+=(--acl "$ACL"); fi
+        if [ -n "$ENDPOINT" ]; then SYNC_ARGS+=(--endpoint-url "$ENDPOINT"); fi
+        if [ "$DELETE" = "true" ]; then SYNC_ARGS+=(--delete); fi
+
+        echo "Syncing $count files to $DEST/ ..."
+        aws s3 sync "$STAGING" "$DEST/" "${SYNC_ARGS[@]}"
+        rm -rf "$STAGING"
+
+        echo "destination=$DEST/" >> "$GITHUB_OUTPUT"
+        echo "Synced $count files to $DEST/"
