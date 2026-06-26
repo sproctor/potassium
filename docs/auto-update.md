@@ -281,10 +281,12 @@ provider = GenericProvider(
 
 Host your YML files and installers at:
 ```
-https://updates.example.com/latest-mac.yml
-https://updates.example.com/latest.yml
-https://updates.example.com/latest-linux.yml
-https://updates.example.com/MyApp-1.2.3-macos-arm64.dmg
+https://updates.example.com/latest-mac.yml          # macOS (both arches)
+https://updates.example.com/latest.yml               # Windows (both arches)
+https://updates.example.com/latest-linux.yml         # Linux x64
+https://updates.example.com/latest-linux-arm64.yml   # Linux arm64
+https://updates.example.com/MyApp-1.2.3-macos-universal.dmg
+https://updates.example.com/MyApp-1.2.3-linux-arm64.AppImage
 ```
 
 ### API Reference
