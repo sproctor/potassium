@@ -16,7 +16,7 @@ import java.util.HexFormat
  * - Windows: `%APPDATA%/<appId>/`
  */
 internal object UpdateMarker {
-    private const val MARKER_FILE_NAME = "nucleus-update-event"
+    private const val MARKER_FILE_NAME = "potassium-update-event"
     private const val KEY_PREVIOUS_VERSION = "previousVersion"
     private const val KEY_NEW_VERSION = "newVersion"
     private const val DEFAULT_APP_ID = "potassium-app"
