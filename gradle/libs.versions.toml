@@ -2,78 +2,30 @@
 agp = "8.13.2"
 asm = "9.9.1"
 batik = "1.19"
-coilVersion = "3.4.0"
-compose = "1.10.3"
 coroutines = "1.11.0"
 detekt = "2.0.0-alpha.3"
 downloadTask = "5.7.0"
-graalvmNative = "1.1.0"
-icons = "261.23567.174"
-jbrApi = "1.10.1"
-jewel = "0.36.0-261.24374.85"
-jna = "5.18.1"
 kotlin = "2.3.21"
 kotlinPoet = "2.3.0"
-kotlinxSerialization = "1.11.0"
 ktlintGradle = "14.2.0"
-ktor = "3.4.3"
-material3 = "1.9.0"
-materialIcons = "1.7.3"
-okhttp = "5.3.2"
-reorderable = "3.1.0"
 thumbnailator = "0.4.21"
 vanniktechMavenPublish = "0.36.0"
 versionCheck = "0.54.0"
 
 [plugins]
-detekt = { id = "dev.detekt", version.ref = "detekt"}
-kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}
-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle"}
-versionCheck = { id = "com.github.ben-manes.versions", version.ref = "versionCheck"}
-vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechMavenPublish"}
-kotlinComposePlugin = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin"}
-jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose"}
-graalvmNative = { id = "org.graalvm.buildtools.native", version.ref = "graalvmNative" }
-kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-androidApplication = { id = "com.android.application", version.ref = "agp" }
-kotlinxSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
+versionCheck = { id = "com.github.ben-manes.versions", version.ref = "versionCheck" }
+vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechMavenPublish" }
 
 [libraries]
-coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coilVersion" }
-intellij-icons = { module = "com.jetbrains.intellij.platform:icons", version.ref = "icons" }
-junit = "junit:junit:4.13.2"
 agp = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 agp-api = { module = "com.android.tools.build:gradle-api", version.ref = "agp" }
-download-task = { module = "de.undercouch:gradle-download-task", version.ref = "downloadTask" }
-kotlin-poet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinPoet" }
-batik-transcoder = { module = "org.apache.xmlgraphics:batik-transcoder", version.ref = "batik" }
-jbr-api = { module = "org.jetbrains.runtime:jbr-api", version.ref = "jbrApi" }
-jna-jpms = { module = "net.java.dev.jna:jna-jpms", version.ref = "jna" }
-jna-platform-jpms = { module = "net.java.dev.jna:jna-platform-jpms", version.ref = "jna" }
-okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
-ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
-ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
-ktor-client-apache5 = { module = "io.ktor:ktor-client-apache5", version.ref = "ktor" }
-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
-jewel-foundation = { module = "org.jetbrains.jewel:jewel-foundation", version.ref = "jewel" }
-jewel-int-ui-standalone = { module = "org.jetbrains.jewel:jewel-int-ui-standalone", version.ref = "jewel" }
-jewel-markdown-int-ui-standalone-styling = { module = "org.jetbrains.jewel:jewel-markdown-int-ui-standalone-styling", version.ref = "jewel" }
-jewel-markdown-extensions-autolink = { module = "org.jetbrains.jewel:jewel-markdown-extensions-autolink", version.ref = "jewel" }
-jewel-markdown-extensions-gfm-alerts = { module = "org.jetbrains.jewel:jewel-markdown-extensions-gfm-alerts", version.ref = "jewel" }
-jewel-markdown-extensions-gfm-tables = { module = "org.jetbrains.jewel:jewel-markdown-extensions-gfm-tables", version.ref = "jewel" }
-jewel-markdown-extensions-gfm-strikethrough = { module = "org.jetbrains.jewel:jewel-markdown-extensions-gfm-strikethrough", version.ref = "jewel" }
-jewel-markdown-extensions-images = { module = "org.jetbrains.jewel:jewel-markdown-extensions-images", version.ref = "jewel" }
-compose-desktop-common = { module = "org.jetbrains.compose.desktop:desktop", version.ref = "compose" }
-compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
-compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose" }
-compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose" }
-compose-material = { module = "org.jetbrains.compose.material:material", version.ref = "compose" }
-compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
-compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIcons" }
-reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
-thumbnailator = { module = "net.coobird:thumbnailator", version.ref = "thumbnailator" }
 asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+batik-transcoder = { module = "org.apache.xmlgraphics:batik-transcoder", version.ref = "batik" }
+coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+download-task = { module = "de.undercouch:gradle-download-task", version.ref = "downloadTask" }
+junit = "junit:junit:4.13.2"
+kotlin-poet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinPoet" }
+thumbnailator = { module = "net.coobird:thumbnailator", version.ref = "thumbnailator" }
