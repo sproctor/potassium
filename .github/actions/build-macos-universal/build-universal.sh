@@ -454,6 +454,41 @@ generate_package_json() {
   echo "{ \"name\": \"$NPM_NAME\", \"version\": \"$BUNDLE_VERSION\", \"private\": true }" > "$1"
 }
 
+# ── Write the electron-updater manifest for the universal artifacts ────────
+# macOS auto-update (Squirrel.Mac) pulls the .zip, and electron-updater fetches
+# latest-mac.yml regardless of CPU arch — so a single manifest pointing at the
+# universal .zip serves both architectures. The .zip is built with ditto (no
+# .blockmap), so differential download is unavailable; a full .zip download is
+# used instead, which is correct, just larger.
+write_update_manifest() {
+  local out="$OUTPUT_DIR/latest-mac.yml"
+  local zip_name zip_sha zip_size rel
+  zip_name="$(basename "$ZIP_OUT")"
+  zip_sha="$(openssl dgst -sha512 -binary "$ZIP_OUT" | openssl base64 -A)"
+  zip_size="$(stat -f%z "$ZIP_OUT")"
+  rel="$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")"
+  {
+    echo "version: $BUNDLE_VERSION"
+    echo "files:"
+    echo "  - url: $zip_name"
+    echo "    sha512: $zip_sha"
+    echo "    size: $zip_size"
+    if [[ -n "${DMG_OUT:-}" && -f "${DMG_OUT:-}" ]]; then
+      local dmg_name dmg_sha dmg_size
+      dmg_name="$(basename "$DMG_OUT")"
+      dmg_sha="$(openssl dgst -sha512 -binary "$DMG_OUT" | openssl base64 -A)"
+      dmg_size="$(stat -f%z "$DMG_OUT")"
+      echo "  - url: $dmg_name"
+      echo "    sha512: $dmg_sha"
+      echo "    size: $dmg_size"
+    fi
+    echo "path: $zip_name"
+    echo "sha512: $zip_sha"
+    echo "releaseDate: '$rel'"
+  } > "$out"
+  echo "==> Wrote update manifest: $out"
+}
+
 # ── Shared vars ───────────────────────────────────────────────────────────
 NPM_NAME="$(echo "${PRODUCT_NAME:-app}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g' | sed 's/^-//;s/-$//')"
 BUNDLE_VERSION="$(defaults read "$UNIVERSAL_APP/Contents/Info" CFBundleShortVersionString 2>/dev/null || echo "1.0.0")"
@@ -565,6 +600,11 @@ else
   PKG_OUT="$(run_electron_builder pkg)"
   [[ -n "$PKG_OUT" ]] && echo "==> PKG created: $PKG_OUT" || echo "::warning::electron-builder did not produce a PKG"
 fi
+
+# ── Update manifest (latest-mac.yml) ──────────────────────────────────────
+echo ""
+echo "==> Writing universal latest-mac.yml..."
+write_update_manifest
 
 # ── Outputs ───────────────────────────────────────────────────────────────
 echo ""

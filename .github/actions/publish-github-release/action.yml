@@ -1,5 +1,5 @@
-name: Publish Release
-description: Create/update a GitHub Release and upload all artifacts
+name: Publish GitHub Release
+description: Merge multi-arch update manifests, then create/update a GitHub Release and upload all artifacts
 
 inputs:
   artifacts-path:
@@ -21,6 +21,22 @@ outputs:
 runs:
   using: composite
   steps:
+    # Some platforms expose one update channel file per OS regardless of CPU
+    # architecture (Windows -> latest.yml, macOS -> latest-mac.yml), so two
+    # native runners produce same-named manifests that each list only their own
+    # arch. Union their files[] into one before upload. (Linux is unaffected:
+    # electron-builder names its channel files per-arch — latest-linux.yml vs
+    # latest-linux-arm64.yml — and electron-updater fetches the matching name.)
+    - name: Consolidate multi-arch update manifests
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! python3 -c "import yaml" 2>/dev/null; then
+          pip3 install --quiet --disable-pip-version-check pyyaml 2>/dev/null \
+            || pip3 install --quiet --disable-pip-version-check --break-system-packages pyyaml
+        fi
+        python3 "$GITHUB_ACTION_PATH/merge_update_manifests.py" "${{ inputs.artifacts-path }}"
+
     - name: Publish release
       id: publish
       shell: bash

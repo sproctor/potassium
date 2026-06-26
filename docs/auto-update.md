@@ -52,30 +52,34 @@ PKG (macOS), AppX/MSIX (Windows), Snap, and Flatpak are not supported by the aut
 
 ## Update Metadata (YML Files)
 
-The auto-updater relies on three YAML files that list all available installers with their SHA-512 checksums. These files **must be generated after building on all platforms**, because each platform produces its own artifacts.
+The auto-updater relies on the `latest-*.yml` manifests electron-builder writes next to each installer — each lists the available files with their SHA-512 checksums and sizes. Because a Compose/JVM app can't cross-compile its bundled runtime image, every architecture is built on its own machine, so producing the final manifests is partly a matter of **combining per-arch outputs**.
 
 ### How CI generates them
 
-Each platform's build runs electron-builder in a single invocation, so electron-builder writes the update manifest (`latest-mac.yml`, `latest.yml` on Windows, `latest-linux.yml`) alongside the installers it produces — SHA-512 checksums and file sizes already filled in. CI just collects and publishes those files:
+Each build runs electron-builder in a single invocation, so electron-builder writes the manifest (`latest-mac.yml`, `latest.yml` on Windows, `latest-linux.yml` / `latest-linux-arm64.yml`) alongside the installers it produces — checksums and sizes already filled in. CI then collects and publishes them:
 
-1. Each platform builds its installers in parallel and uploads them — together with its `latest-*.yml` — as separate artifacts (`release-assets-macOS-arm64`, `release-assets-Linux-amd64`, etc.)
-2. A final `release` job downloads all platform artifacts into a single directory
-3. The `publish-release` action uploads everything (installers + YML files) to the release
+1. Each `(os, arch)` builds its installers in parallel and uploads them — together with its `latest-*.yml` — as separate artifacts (`release-assets-macOS-arm64`, `release-assets-Linux-amd64`, etc.)
+2. A final `release` job downloads all artifacts into a single directory
+3. The `publish-github-release` action consolidates the per-arch manifests and uploads everything to the release
 
-See the [example release workflow](https://github.com/sproctor/potassium/blob/main/.github/workflows/release-desktop.yaml) for the full setup.
+How those manifests combine depends on the OS, because electron-updater fetches a different filename per platform:
+
+- **Linux** — already per-arch: `latest-linux.yml` (x64) and `latest-linux-arm64.yml` (arm64). Nothing to merge.
+- **Windows** — both arches share `latest.yml`, so `publish-github-release` unions their `files:` arrays into one.
+- **macOS** — both arches share `latest-mac.yml`. Ship a **universal** binary (one manifest, via `build-macos-universal`) or **per-arch** packages (the two manifests get merged like Windows).
+
+See [Multi-architecture update manifests](ci-cd.md#multi-architecture-update-manifests) for the full mechanics, and the [example release workflow](https://github.com/sproctor/potassium/blob/main/.github/workflows/release-desktop.yaml) for the setup.
 
 ### Building locally
 
-Each platform is packaged in a single electron-builder invocation, so electron-builder writes one `latest-<os>.yml` (covering all of that platform's installers) alongside them when you run `packageDistributionForCurrentOS`, and — for github, s3, and generic alike — uploads it as part of publishing. If you build on a single machine, the YML is ready to use for that platform.
-
-For a multi-platform release, build on each platform (macOS, Windows, Linux) and collect each platform's manifest into the same release. The three files have distinct names — `latest-mac.yml`, `latest.yml` (Windows), and `latest-linux.yml` — so they coexist without any merge step. On macOS, the [`build-macos-universal`](ci-cd.md#universal-macos-binaries) action merges arm64 + x64 into a single universal build, so one `latest-mac.yml` already covers both architectures.
+Each build is packaged in a single electron-builder invocation, so electron-builder writes the `latest-<os>.yml` for that build alongside the installers when you run `packageDistributionForCurrentOS`, and — for github, s3, and generic alike — uploads it as part of publishing. A single-arch build on one machine is ready to use as-is; combining architectures into one release is what CI's publish step automates.
 
 !!! tip
     In practice, always use CI for multi-platform releases. The [release workflow](https://github.com/sproctor/potassium/blob/main/.github/workflows/release-desktop.yaml) handles all of this automatically: build on each platform in parallel and publish to GitHub Releases in a single pipeline.
 
 ### YML file examples
 
-Three YAML files are generated per release:
+electron-builder generates one manifest per platform (plus a `-arm64` variant for non-x64 Linux):
 
 ### `latest-mac.yml`
 ```yaml

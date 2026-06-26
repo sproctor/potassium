@@ -240,7 +240,9 @@ potassium {
 
 ## Universal macOS Binaries
 
-Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then optionally sign and notarize. Potassium includes reusable composite actions (`setup-macos-signing` and `build-macos-universal`):
+Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then optionally sign and notarize. `build-macos-universal` also writes a `latest-mac.yml` referencing the universal `.zip`/`.dmg`, so auto-update works from a single download on both architectures. Potassium includes reusable composite actions (`setup-macos-signing` and `build-macos-universal`):
+
+> Shipping per-arch macOS packages instead of a universal binary? Skip this job entirely — see [Multi-architecture update manifests](#multi-architecture-update-manifests).
 
 ```yaml
   universal-macos:
@@ -381,7 +383,7 @@ Combine amd64 and arm64 `.appx` files into a single `.msixbundle`. Potassium inc
 
 ## Publish to GitHub Releases
 
-After all builds complete, create a GitHub Release with all artifacts — the installers plus the `latest-*.yml` update manifests that electron-builder writes alongside them during each build. Potassium includes a `publish-release` composite action for this:
+After all builds complete, create a GitHub Release with all artifacts — the installers plus the `latest-*.yml` update manifests that electron-builder writes alongside them during each build. The `publish-github-release` composite action does this, and first consolidates the per-architecture update manifests so a single release serves both x64 and arm64 clients (see [Multi-architecture update manifests](#multi-architecture-update-manifests) below):
 
 ```yaml
   publish:
@@ -401,6 +403,17 @@ After all builds complete, create a GitHub Release with all artifacts — the in
           path: artifacts
           pattern: release-assets-*
 
+      - name: Prefer the universal macOS build
+        shell: bash
+        run: |
+          # If the universal-macos job ran, drop the per-arch macOS intermediates
+          # so only the universal installers + their latest-mac.yml are published.
+          # Omit the universal-macos job to ship per-arch macOS instead — then
+          # publish-github-release merges the two latest-mac.yml automatically.
+          if [ -d artifacts/release-assets-macOS-universal ]; then
+            rm -rf artifacts/release-assets-macOS-arm64 artifacts/release-assets-macOS-amd64
+          fi
+
       - name: Determine release type
         shell: bash
         run: |
@@ -414,12 +427,29 @@ After all builds complete, create a GitHub Release with all artifacts — the in
           fi
 
       - name: Publish release
-        uses: sproctor/potassium/.github/actions/publish-release@main
+        uses: sproctor/potassium/.github/actions/publish-github-release@main
         with:
           artifacts-path: artifacts
           tag: ${{ env.TAG }}
           release-type: ${{ env.RELEASE_TYPE }}
 ```
+
+### Multi-architecture update manifests
+
+To ship **both x64 and arm64** with working auto-update you need to know one thing: a Compose/JVM app can't cross-compile its bundled runtime image, so every `(os, arch)` is built on its own native runner — and each runner's electron-builder writes an update manifest naming only its own arch. How those manifests reconcile differs per OS, because electron-updater fetches a different filename per platform:
+
+| OS | Manifest the client fetches | How both arches are served |
+|----|-----------------------------|-----------------------------|
+| **Linux** | `latest-linux.yml` (x64) / `latest-linux-arm64.yml` (arm64) | Nothing to do — electron-builder already names the files per-arch and the client fetches the matching name. The two manifests never collide. |
+| **Windows** | `latest.yml` (both arches) | Both runners emit `latest.yml`. `publish-github-release` **merges** their `files:` arrays into one manifest listing both arches. |
+| **macOS** | `latest-mac.yml` (both arches) | Your choice — see below. |
+
+For **macOS**, pick one of:
+
+- **Universal binary** (include the `universal-macos` job): `lipo` merges arm64 + x64 into one fat binary, and `build-macos-universal` writes a single `latest-mac.yml` for it. The publish job drops the per-arch macOS intermediates, so one download runs natively on both architectures.
+- **Per-arch packages** (omit the `universal-macos` job): ship separate arm64 + x64 `.dmg`/`.zip`. `publish-github-release` merges their two `latest-mac.yml` into one (exactly like Windows), and electron-updater selects the entry matching the running architecture.
+
+Either way the merge only touches manifests that share a filename; distinctly-named ones (all of Linux, and the universal macOS manifest) pass through untouched.
 
 ## Required Secrets Summary
 
@@ -450,7 +480,7 @@ Potassium provides reusable composite actions that you can reference directly in
 | `setup-macos-signing` | `sproctor/potassium/.github/actions/setup-macos-signing@main` | Create temporary keychain and import signing certificates |
 | `build-macos-universal` | `sproctor/potassium/.github/actions/build-macos-universal@main` | Merge arm64 + x64 into universal binary via `lipo`, sign, and package |
 | `build-windows-appxbundle` | `sproctor/potassium/.github/actions/build-windows-appxbundle@main` | Combine amd64 + arm64 `.appx` into `.msixbundle` |
-| `publish-release` | `sproctor/potassium/.github/actions/publish-release@main` | Create GitHub Release with all artifacts (installers + electron-builder's `latest-*.yml`) |
+| `publish-github-release` | `sproctor/potassium/.github/actions/publish-github-release@main` | Merge per-arch update manifests, then create a GitHub Release with all artifacts (installers + electron-builder's `latest-*.yml`) |
 
 ## GraalVM Native Image Release
 
