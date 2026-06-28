@@ -28,6 +28,9 @@ public class PotassiumUpdater(
 ) {
     public val currentVersion: String get() = config.currentVersion
 
+    public val channel: String
+        get() = resolveChannel()
+
     private var pendingUpdateVersion: String? = null
 
     private val httpClient: HttpClient =
@@ -179,7 +182,7 @@ public class PotassiumUpdater(
     private fun doCheckForUpdates(): UpdateResult {
         val platform = PlatformInfo.currentPlatform()
         val arch = PlatformInfo.currentArch()
-        val metadataUrl = config.provider.resolveMetadataUrl(config.channel, platform, httpClient)
+        val metadataUrl = config.provider.resolveMetadataUrl(channel, platform, httpClient)
 
         val requestBuilder =
             HttpRequest
@@ -261,6 +264,13 @@ public class PotassiumUpdater(
             builder.header(key, value)
         }
     }
+
+    private fun resolveChannel(): String =
+        config.channel ?: when {
+            currentVersion.contains("alpha") -> "alpha"
+            currentVersion.contains("beta") -> "beta"
+            else -> "latest"
+        }
 
     public companion object {
         private const val HTTP_OK = 200

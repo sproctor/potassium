@@ -9,7 +9,7 @@ public class UpdaterConfig {
             ?: System.getProperty("jpackage.app-version")
             ?: DEV_VERSION
     public lateinit var provider: UpdateProvider
-    public var channel: String = "latest"
+    public var channel: String? = null
     public var allowDowngrade: Boolean = false
     public var executableType: InstallType? = null
 
