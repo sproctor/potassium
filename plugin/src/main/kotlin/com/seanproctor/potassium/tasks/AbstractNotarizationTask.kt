@@ -77,6 +77,7 @@ abstract class AbstractNotarizationTask
 
             var submissionId: String? = null
             var stdout = ""
+            var stderr = ""
 
             val result =
                 runExternalTool(
@@ -88,6 +89,7 @@ abstract class AbstractNotarizationTask
                         stdout = output
                         submissionId = SUBMISSION_ID_REGEX.find(output)?.groupValues?.get(1)
                     },
+                    processStderr = { stderr = it },
                 )
 
             if (submissionId != null) {
@@ -97,6 +99,10 @@ abstract class AbstractNotarizationTask
 
             if (result.exitValue != 0 || stdout.contains("status: Invalid")) {
                 val appleLog = fetchNotarizationLog(notarization, submissionId)
+                // notarytool's own stdout/stderr is the only diagnostic when the submission never
+                // reaches Apple (e.g. an authentication failure produces no submission ID or log).
+                // The app-specific password is fed via stdin, so it never appears in this output.
+                val toolOutput = listOf(stdout, stderr).joinToString(separator = "\n").trim()
                 val errMsg =
                     buildString {
                         appendLine("Notarization failed for '${packageFile.name}'")
@@ -104,6 +110,10 @@ abstract class AbstractNotarizationTask
                             appendLine("Submission ID: $submissionId")
                         }
                         appendLine("Exit code: ${result.exitValue}")
+                        if (toolOutput.isNotEmpty()) {
+                            appendLine("notarytool output:")
+                            appendLine(toolOutput)
+                        }
                         if (appleLog != null) {
                             appendLine("Apple notarization log:")
                             appendLine(appleLog)
