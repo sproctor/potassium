@@ -27,6 +27,7 @@ internal class ExternalToolRunner(
         OnlyWhenVerbose,
     }
 
+    @Suppress("LongParameterList") // External-process runner: many independent, optional knobs.
     operator fun invoke(
         tool: File,
         args: Collection<String>,
@@ -37,6 +38,7 @@ internal class ExternalToolRunner(
         logToConsole: LogToConsole = LogToConsole.OnlyWhenVerbose,
         stdinStr: String? = null,
         sensitiveArgs: Set<String> = emptySet(),
+        processStderr: Function1<String, Unit>? = null,
     ): ExecResult {
         val logsDir = logsDir.ioFile
         logsDir.mkdirs()
@@ -101,6 +103,10 @@ internal class ExternalToolRunner(
 
         if (processStdout != null) {
             processStdout(outFile.readText())
+        }
+
+        if (processStderr != null) {
+            processStderr(errFile.readText())
         }
 
         if (result.exitValue == 0) {
