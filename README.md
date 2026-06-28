@@ -43,7 +43,7 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.potassium") version "0.3.0"
+    id("com.seanproctor.potassium") version "0.3.1"
 }
 
 potassium {
@@ -87,7 +87,7 @@ Add it to your app's runtime classpath:
 
 ```kotlin
 dependencies {
-    implementation("com.seanproctor:potassium-updater:0.3.0")
+    implementation("com.seanproctor:potassium-updater:0.3.1")
 }
 ```
 
@@ -97,7 +97,7 @@ See [`updater/README.md`](updater/README.md) and the [Auto Update](docs/auto-upd
 
 - **Plugin id:** `com.seanproctor.potassium` (artifact `com.seanproctor:potassium-packager`)
 - **Updater library:** `com.seanproctor:potassium-updater`
-- **Latest version:** `0.3.0`
+- **Latest version:** `0.3.1`
 - **Published to:** Maven Central
 - **Repository:** https://github.com/sproctor/potassium
 

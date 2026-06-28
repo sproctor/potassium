@@ -99,7 +99,7 @@ plugins {
     kotlin("multiplatform")
     id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.seanproctor.potassium") version "0.3.0"
+    id("com.seanproctor.potassium") version "0.3.1"
 }
 
 kotlin {
