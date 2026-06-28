@@ -47,7 +47,7 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.potassium") version "0.1.0"
+    id("com.seanproctor.potassium") version "0.3.0"
 }
 
 potassium {
@@ -71,7 +71,7 @@ potassium {
 ## Coordinates
 
 - **Plugin id:** `com.seanproctor.potassium`
-- **Latest version:** `0.1.0`
+- **Latest version:** `0.3.0`
 - **Published to:** Maven Central
 - **Repository:** [github.com/sproctor/potassium](https://github.com/sproctor/potassium)
 
@@ -130,7 +130,7 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.potassium") version "0.1.0"
+    id("com.seanproctor.potassium") version "0.3.0"
 }
 ```
 
@@ -443,6 +443,25 @@ Potassium and electron-builder format the one version per target automatically.
 The pre-release identifier (`beta`, `alpha`, …) also selects the auto-update channel — see
 [Auto-Update](auto-update.md).
 
+### Runtime System Properties
+
+Potassium injects the application's version and id into the packaged launcher (and the `run` task)
+as JVM system properties, so your code can read them at runtime without bundling a generated
+`BuildConfig` or reading a properties file:
+
+| System property | Value | Source |
+|-----------------|-------|--------|
+| `app.version` | The application version | `packageVersion`, falling back to the Gradle project version. Omitted when neither is set. |
+| `app.id` | The platform application id | macOS: `bundleID` → `macOS.packageName` → `packageName` → project name. Linux/Windows: per-OS `packageName` → `packageName` → project name. |
+
+```kotlin
+val version = System.getProperty("app.version")   // e.g. "1.2.3-beta.1"
+val appId = System.getProperty("app.id")          // e.g. "com.example.myapp"
+```
+
+The [updater](auto-update.md) reads `app.version` automatically to detect the currently installed
+version, and `app.id` to namespace its update marker.
+
 ## Potassium-Specific Features
 
 ### Native Library Cleanup
@@ -644,7 +663,7 @@ Potassium is a drop-in extension of the official JetBrains Compose Desktop plugi
      id("org.jetbrains.kotlin.jvm") version "2.3.10"
      id("org.jetbrains.kotlin.plugin.compose") version "2.3.10"
      id("org.jetbrains.compose") version "1.10.1"
-+    id("com.seanproctor.potassium") version "0.1.0"
++    id("com.seanproctor.potassium") version "0.3.0"
  }
 ```
 

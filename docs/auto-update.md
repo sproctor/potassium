@@ -127,7 +127,12 @@ Potassium supports three release channels. Different YML files are generated for
 | `beta` | `beta-*.yml` | `v1.0.0-beta.1` |
 | `alpha` | `alpha-*.yml` | `v1.0.0-alpha.1` |
 
-The channel is auto-detected from the version tag in CI.
+The channel is auto-detected in two places from the same SemVer pre-release identifier:
+
+- **At build time**, CI picks the channel from the version tag to name the generated YML files.
+- **At runtime**, the updater picks the channel from `currentVersion` when `channel` is left `null`
+  (a version containing `alpha`/`beta` tracks that channel, otherwise `latest`) — see
+  [Configuration](#configuration).
 
 ## Publishing Artifacts
 
@@ -235,25 +240,30 @@ when (val result = updater.checkForUpdates()) {
 
 ```kotlin
 PotassiumUpdater {
-    // Current app version (auto-detected from jpackage.app-version system property)
+    // Current app version (auto-detected from the `app.version` system property that
+    // Potassium injects, falling back to `jpackage.app-version`)
     currentVersion = "1.0.0"
 
     // Update source (required)
     provider = GitHubProvider(owner = "myorg", repo = "myapp")
 
-    // Release channel: "latest", "beta", or "alpha"
-    channel = "latest"
+    // Release channel. Leave null (the default) to auto-detect from currentVersion:
+    // "alpha" if it contains "alpha", "beta" if it contains "beta", otherwise "latest".
+    // Set it explicitly to pin a channel.
+    channel = null
 
     // Allow installing older versions
     allowDowngrade = false
-
-    // Allow pre-release versions (auto-enabled if currentVersion contains "-")
-    allowPrerelease = false
 
     // Force a specific installer format (auto-detected if null)
     executableType = null
 }
 ```
+
+Because the channel defaults to `null` and is derived from `currentVersion`, an app built from a
+`1.2.3-beta.1` tag automatically tracks the `beta` channel, while a `1.2.3` release tracks `latest` —
+no extra configuration needed. Pin `channel` explicitly only when you want a build to follow a
+channel that doesn't match its own version.
 
 ### Providers
 
@@ -293,8 +303,10 @@ https://updates.example.com/MyApp-1.2.3-linux-arm64.AppImage
 
 #### PotassiumUpdater
 
-| Method | Description |
+| Member | Description |
 |--------|-------------|
+| `val currentVersion: String` | The currently installed version the updater compares against |
+| `val channel: String` | The effective release channel — the configured `channel`, or auto-detected from `currentVersion` when it is `null` |
 | `isUpdateSupported(): Boolean` | Check if the current executable type supports auto-update |
 | `suspend checkForUpdates(): UpdateResult` | Check for a newer version |
 | `downloadUpdate(info: UpdateInfo): Flow<DownloadProgress>` | Download the installer with progress |
