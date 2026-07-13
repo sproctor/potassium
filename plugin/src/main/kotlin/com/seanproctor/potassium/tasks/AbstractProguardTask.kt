@@ -159,17 +159,23 @@ abstract class AbstractProguardTask : AbstractPotassiumTask() {
         }
 
         val javaBinary = jvmToolFile(toolName = "java", javaHome = javaHome)
+        // Unlike jlink/jpackage, these args are passed straight to java via ExecOperations.exec (no
+        // @argfile), so each element reaches the process verbatim. They must NOT be quoted: the cliArg
+        // helper quotes values for the argfile tokenizer, and a quoted -cp entry would be treated as a
+        // literal (non-existent) path — silently dropping the first and last classpath entries.
         val args =
             arrayListOf<String>().apply {
                 val maxHeapSize = maxHeapSize.orNull
                 if (maxHeapSize != null) {
                     add("-Xmx:$maxHeapSize")
                 }
-                cliArg("-cp", proguardFiles.map { it.normalizedPath() }.joinToString(File.pathSeparator))
+                add("-cp")
+                add(proguardFiles.joinToString(File.pathSeparator) { it.normalizedPath() })
                 add("proguard.ProGuard")
                 // todo: consider separate flag
-                cliArg("-verbose", verbose)
-                cliArg("-include", rootConfigurationFile)
+                if (verbose.get()) add("-verbose")
+                add("-include")
+                add(rootConfigurationFile.get().asFile.normalizedPath())
             }
 
         runExternalTool(

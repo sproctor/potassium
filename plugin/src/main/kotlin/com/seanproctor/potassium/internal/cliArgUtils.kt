@@ -35,6 +35,12 @@ internal fun MutableCollection<String>.javaOption(value: String) {
     cliArg("--java-options", "'$value'")
 }
 
+// Values are wrapped in double quotes because these args are written to a jpackage/jlink `@argfile`
+// (see AbstractJvmToolOperationTask), whose parser tokenizes each line on whitespace — quoting keeps
+// values with spaces (paths, descriptions) as a single token. Do NOT use cliArg for tools invoked
+// directly via ExecOperations.exec (e.g. a raw `java -cp` call): there each list element is passed to
+// the process verbatim, so the surrounding quotes become part of the argument and corrupt it. Such
+// callers should build their args without quoting.
 private fun <T : Any> defaultToString(): (T) -> String =
     {
         val asString =
