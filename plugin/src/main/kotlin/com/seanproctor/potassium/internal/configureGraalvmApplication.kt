@@ -242,7 +242,7 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
 
     val unpackDefaultResources =
         project.tasks.named(
-            "unpackDefaultComposeDesktopJvmApplicationResources",
+            "unpackDefaultPotassiumJvmApplicationResources",
             AbstractUnpackDefaultApplicationResourcesTask::class.java,
         )
 

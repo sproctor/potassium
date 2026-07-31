@@ -56,7 +56,7 @@ private fun configureNativeApplication(
     unpackDefaultResources: TaskProvider<AbstractUnpackDefaultApplicationResourcesTask>,
 ) {
     val createDistributable =
-        project.tasks.composeDesktopNativeTask<AbstractNativeMacApplicationPackageAppDirTask>(
+        project.tasks.registerNativeTask<AbstractNativeMacApplicationPackageAppDirTask>(
             desktopNativeTaskName("createDistributableNative", binary),
         ) {
             configureNativePackageTask(app, binary, TargetFormat.JpackageImage)
@@ -85,7 +85,7 @@ private fun configureNativeApplication(
         }
 
     if (MacOSTargetFormat.Dmg in app.distributions.targetFormats) {
-            project.tasks.composeDesktopNativeTask<AbstractNativeMacApplicationPackageDmgTask>(
+            project.tasks.registerNativeTask<AbstractNativeMacApplicationPackageDmgTask>(
                 desktopNativeTaskName("packageDmgNative", binary),
             ) {
                 configureNativePackageTask(app, binary, TargetFormat.Dmg)
@@ -153,7 +153,7 @@ private fun desktopNativeTaskName(
     binary: NativeBinary,
 ): String = joinLowerCamelCase(action, binary.buildType.name.lowercase(), binary.target.name)
 
-private inline fun <reified T : Task> TaskContainer.composeDesktopNativeTask(
+private inline fun <reified T : Task> TaskContainer.registerNativeTask(
     name: String,
     args: List<Any> = emptyList(),
     noinline configureFn: T.() -> Unit = {},

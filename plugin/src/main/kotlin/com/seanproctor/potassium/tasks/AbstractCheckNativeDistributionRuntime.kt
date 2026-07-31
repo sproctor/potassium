@@ -23,7 +23,6 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.*
 
-// __COMPOSE_NATIVE_DISTRIBUTIONS_MIN_JAVA_VERSION__
 internal const val MIN_JAVA_RUNTIME_VERSION = 17
 
 /** Classpath resource holding the runnable JDK-version probe jar bundled into the plugin. */

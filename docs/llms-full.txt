@@ -1975,9 +1975,9 @@ Equivalent Gradle properties:
 
 | Gradle property | Description |
 |-----------------|-------------|
-| `compose.desktop.mac.notarization.appleID` | Apple ID email |
-| `compose.desktop.mac.notarization.password` | App-specific password |
-| `compose.desktop.mac.notarization.teamID` | Apple Team ID |
+| `potassium.mac.notarization.appleID` | Apple ID email |
+| `potassium.mac.notarization.password` | App-specific password |
+| `potassium.mac.notarization.teamID` | Apple Team ID |
 
 #### Mode 2 — `notarytool` keychain profile
 
@@ -2004,8 +2004,8 @@ Equivalent Gradle properties:
 
 | Gradle property | Description |
 |-----------------|-------------|
-| `compose.desktop.mac.notarization.keychainProfile` | Profile name created via `store-credentials` |
-| `compose.desktop.mac.notarization.keychainPath` | Optional path to the keychain holding the profile |
+| `potassium.mac.notarization.keychainProfile` | Profile name created via `store-credentials` |
+| `potassium.mac.notarization.keychainPath` | Optional path to the keychain holding the profile |
 
 #### Mode 3 — App Store Connect API key
 
@@ -2025,9 +2025,9 @@ Equivalent Gradle properties:
 
 | Gradle property | Description |
 |-----------------|-------------|
-| `compose.desktop.mac.notarization.apiKey` | Path to the `.p8` API key file |
-| `compose.desktop.mac.notarization.apiKeyId` | Key ID (the 10-character identifier) |
-| `compose.desktop.mac.notarization.apiIssuer` | Issuer UUID for the team |
+| `potassium.mac.notarization.apiKey` | Path to the `.p8` API key file |
+| `potassium.mac.notarization.apiKeyId` | Key ID (the 10-character identifier) |
+| `potassium.mac.notarization.apiIssuer` | Issuer UUID for the team |
 
 This mode is recommended for CI/CD: API keys can be revoked independently of the Apple ID, support role-based scoping, and are not affected by 2FA.
 

@@ -346,7 +346,7 @@ abstract class AbstractElectronBuilderPackageTask
                 logger = logger,
             ) ?: throw GradleException(
                 "npx not found. Node.js 18+ is required for electron-builder packaging. " +
-                    "Install Node.js or set the 'compose.electronBuilder.nodePath' Gradle property.",
+                    "Install Node.js or set the 'potassium.electronBuilder.nodePath' Gradle property.",
             )
 
         private fun validateNodeVersion() {

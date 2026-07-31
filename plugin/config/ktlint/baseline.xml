@@ -9,12 +9,6 @@
         <error line="7" column="1" source="standard:indent" />
         <error line="7" column="11" source="standard:property-naming" />
     </file>
-    <file name="src/main/kotlin/com/seanproctor/potassium/CheckComposeCompilerPlugin.kt">
-        <error line="31" column="20" source="standard:property-naming" />
-        <error line="32" column="20" source="standard:property-naming" />
-        <error line="35" column="20" source="standard:property-naming" />
-        <error line="36" column="20" source="standard:property-naming" />
-    </file>
     <file name="src/main/kotlin/com/seanproctor/potassium/PotassiumExtension.kt">
         <error line="18" column="19" source="standard:property-naming" />
     </file>
@@ -28,22 +22,9 @@
     <file name="src/main/kotlin/com/seanproctor/potassium/dsl/NativeApplicationDistributions.kt">
         <error line="9" column="1" source="standard:no-wildcard-imports" />
     </file>
-    <file name="src/main/kotlin/com/seanproctor/potassium/internal/PotassiumProjectProperties.kt">
-        <error line="1" column="1" source="standard:filename" />
-    </file>
     <file name="src/main/kotlin/com/seanproctor/potassium/internal/InfoPlistBuilder.kt">
         <error line="8" column="1" source="standard:no-wildcard-imports" />
         <error line="12" column="19" source="standard:property-naming" />
-    </file>
-    <file name="src/main/kotlin/com/seanproctor/potassium/internal/LinuxPackagePostProcessor.kt">
-        <error line="218" column="59" source="standard:string-template" />
-        <error line="231" column="39" source="standard:function-literal" />
-        <error line="231" column="105" source="standard:parameter-list-wrapping" />
-        <error line="231" column="108" source="standard:function-literal" />
-        <error line="231" column="124" source="standard:function-literal" />
-        <error line="231" column="135" source="standard:function-literal" />
-        <error line="231" column="137" source="standard:binary-expression-wrapping" />
-        <error line="231" column="141" source="standard:max-line-length" />
     </file>
     <file name="src/main/kotlin/com/seanproctor/potassium/internal/MacSigningHelper.kt">
         <error line="10" column="1" source="standard:no-wildcard-imports" />
@@ -81,12 +62,6 @@
         <error line="1" column="1" source="standard:filename" />
     </file>
     <file name="src/main/kotlin/com/seanproctor/potassium/internal/validation/validateBundleID.kt">
-        <error line="1" column="1" source="standard:filename" />
-    </file>
-    <file name="src/main/kotlin/com/seanproctor/potassium/internal/validation/validatePackageVersions.kt">
-        <error line="1" column="1" source="standard:filename" />
-    </file>
-    <file name="src/main/kotlin/com/seanproctor/potassium/internal/wixToolset.kt">
         <error line="1" column="1" source="standard:filename" />
     </file>
     <file name="src/main/kotlin/com/seanproctor/potassium/tasks/AbstractCheckNativeDistributionRuntime.kt">
@@ -165,9 +140,6 @@
     <file name="src/main/kotlin/com/seanproctor/potassium/tasks/AbstractSuggestModulesTask.kt">
         <error line="13" column="1" source="standard:no-wildcard-imports" />
         <error line="20" column="1" source="standard:no-wildcard-imports" />
-    </file>
-    <file name="src/main/kotlin/com/seanproctor/potassium/experimental/internal/checkExperimentalTargets.kt">
-        <error line="1" column="1" source="standard:filename" />
     </file>
     <file name="src/main/kotlin/com/seanproctor/potassium/internal/constants.kt">
         <error line="1" column="1" source="standard:filename" />

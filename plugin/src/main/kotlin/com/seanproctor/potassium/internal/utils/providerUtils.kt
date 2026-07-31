@@ -5,13 +5,11 @@
 
 package com.seanproctor.potassium.internal.utils
 
-import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
-import org.jetbrains.kotlin.gradle.plugin.extraProperties
 
 internal inline fun <reified T : Any> ObjectFactory.new(vararg params: Any): T = newInstance(T::class.java, *params)
 
@@ -31,15 +29,3 @@ internal fun ProviderFactory.valueOrNull(prop: String): Provider<String> = gradl
 
 internal fun Provider<String>.toBooleanProvider(defaultValue: Boolean): Provider<Boolean> =
     orElse(defaultValue.toString()).map { "true" == it }
-
-internal fun Project.findLocalOrGlobalProperty(
-    name: String,
-    default: String = "",
-): Provider<String> =
-    provider {
-        if (extraProperties.has(name)) {
-            extraProperties.get(name).toString()
-        } else {
-            providers.gradleProperty(name).getOrElse(default)
-        }
-    }
