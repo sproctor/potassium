@@ -11,12 +11,11 @@ import com.seanproctor.potassium.internal.NOTARIZATION_REQUEST_INFO_FILE_NAME
 import com.seanproctor.potassium.internal.NotarizationRequestInfo
 import com.seanproctor.potassium.internal.files.checkExistingFile
 import com.seanproctor.potassium.internal.files.findOutputFileOrDir
+import com.seanproctor.potassium.internal.utils.MacUtils
+import com.seanproctor.potassium.internal.utils.ioFile
 import com.seanproctor.potassium.internal.validation.ValidatedMacOSNotarizationSettings
 import com.seanproctor.potassium.internal.validation.toNotaryToolArgs
 import com.seanproctor.potassium.internal.validation.validate
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
-import com.seanproctor.potassium.internal.utils.MacUtils
-import com.seanproctor.potassium.internal.utils.ioFile
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
@@ -248,7 +247,8 @@ abstract class AbstractNotarizationTask
                 return lines.joinToString("\n")
             }
 
-            private fun isUrlEntry(trimmed: String): Boolean = trimmed.startsWith("- url:") || trimmed.startsWith("-url:")
+            private fun isUrlEntry(trimmed: String): Boolean =
+                trimmed.startsWith("- url:") || trimmed.startsWith("-url:")
 
             private fun extractUrl(trimmed: String): String =
                 trimmed

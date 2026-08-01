@@ -9,6 +9,7 @@ import com.seanproctor.potassium.dsl.CompressionLevel
 import com.seanproctor.potassium.dsl.JvmApplicationDistributions
 import com.seanproctor.potassium.dsl.MacOSSigningSettings
 import com.seanproctor.potassium.dsl.TargetFormat
+import com.seanproctor.potassium.internal.MACOS_DMG_TITLE_BAR_HEIGHT
 import com.seanproctor.potassium.internal.MacSigner
 import com.seanproctor.potassium.internal.MacSignerImpl
 import com.seanproctor.potassium.internal.NoCertificateSigner
@@ -18,12 +19,8 @@ import com.seanproctor.potassium.internal.electronbuilder.ElectronBuilderInvocat
 import com.seanproctor.potassium.internal.electronbuilder.ElectronBuilderToolManager
 import com.seanproctor.potassium.internal.electronbuilder.NodeJsDetector
 import com.seanproctor.potassium.internal.files.isDylibPath
-import com.seanproctor.potassium.internal.MACOS_DMG_TITLE_BAR_HEIGHT
 import com.seanproctor.potassium.internal.padDmgBackgroundForTitleBar
 import com.seanproctor.potassium.internal.readImageDimensions
-import com.seanproctor.potassium.internal.validation.ValidatedMacOSSigningSettings
-import com.seanproctor.potassium.internal.validation.validate
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import com.seanproctor.potassium.internal.utils.Arch
 import com.seanproctor.potassium.internal.utils.OS
 import com.seanproctor.potassium.internal.utils.currentArch
@@ -31,6 +28,8 @@ import com.seanproctor.potassium.internal.utils.currentOS
 import com.seanproctor.potassium.internal.utils.ioFile
 import com.seanproctor.potassium.internal.utils.notNullProperty
 import com.seanproctor.potassium.internal.utils.nullableProperty
+import com.seanproctor.potassium.internal.validation.ValidatedMacOSSigningSettings
+import com.seanproctor.potassium.internal.validation.validate
 import net.coobird.thumbnailator.Thumbnails
 import net.coobird.thumbnailator.filters.Canvas
 import net.coobird.thumbnailator.geometry.Positions
@@ -376,20 +375,24 @@ abstract class AbstractElectronBuilderPackageTask
             val configGenerator = ElectronBuilderConfigGenerator()
             val resolvedArch = Arch.entries.first { it.id == targetArch.get() }
 
-            val (dmgBackgroundOverride, dmgWindowOverride) = if (TargetFormat.Dmg in targetFormats) {
-                val bgFile = distributions.macOS.dmg.background.orNull?.asFile
-                if (bgFile != null) {
-                    val processedBg = padDmgBackgroundForTitleBar(bgFile, outputDir.resolve("dmg-assets"), logger)
-                    val windowOverride = readImageDimensions(processedBg)?.let { (w, h) ->
-                        ElectronBuilderConfigGenerator.DmgWindowOverride(w, h + MACOS_DMG_TITLE_BAR_HEIGHT)
+            val (dmgBackgroundOverride, dmgWindowOverride) =
+                if (TargetFormat.Dmg in targetFormats) {
+                    val bgFile =
+                        distributions.macOS.dmg.background.orNull
+                            ?.asFile
+                    if (bgFile != null) {
+                        val processedBg = padDmgBackgroundForTitleBar(bgFile, outputDir.resolve("dmg-assets"), logger)
+                        val windowOverride =
+                            readImageDimensions(processedBg)?.let { (w, h) ->
+                                ElectronBuilderConfigGenerator.DmgWindowOverride(w, h + MACOS_DMG_TITLE_BAR_HEIGHT)
+                            }
+                        processedBg to windowOverride
+                    } else {
+                        null to null
                     }
-                    processedBg to windowOverride
                 } else {
                     null to null
                 }
-            } else {
-                null to null
-            }
 
             if (TargetFormat.AppImage in targetFormats && distributions.compressionLevel == CompressionLevel.Maximum) {
                 logger.warn(
@@ -580,7 +583,7 @@ abstract class AbstractElectronBuilderPackageTask
             // passes notarization (timestamp + hardened runtime). Without this, DMG/ZIP
             // formats would ship with an ad-hoc signature that Apple rejects.
             val signer = macSigner
-            if (signer != null && signer.settings != null) {
+            if (signer?.settings != null) {
                 resignApp(appDir, "${targetFormats.joinToString { it.name }} format(s)")
                 return
             }
@@ -909,10 +912,8 @@ abstract class AbstractElectronBuilderPackageTask
             return ImageIO.read(file)
         }
 
-        private fun isToolAvailableFor(targetFormat: TargetFormat): Boolean {
-            if (currentOS != OS.Linux) return true
-
-            return when (targetFormat) {
+        private fun isToolAvailableFor(targetFormat: TargetFormat): Boolean =
+            when (targetFormat) {
                 TargetFormat.Snap -> {
                     when {
                         !isCommandAvailable("snapcraft") -> {
@@ -942,7 +943,6 @@ abstract class AbstractElectronBuilderPackageTask
                 }
                 else -> true
             }
-        }
 
         private fun isCommandAvailable(command: String): Boolean {
             val stdout = ByteArrayOutputStream()

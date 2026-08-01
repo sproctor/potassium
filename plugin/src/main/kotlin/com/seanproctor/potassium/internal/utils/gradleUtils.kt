@@ -9,7 +9,7 @@ import org.gradle.api.DomainObjectCollection
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
-import java.util.*
+import java.util.Properties
 
 internal inline fun Logger.info(fn: () -> String) {
     if (isInfoEnabled) {

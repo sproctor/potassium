@@ -9,7 +9,6 @@ import com.seanproctor.potassium.internal.ExternalToolRunner
 import com.seanproctor.potassium.internal.PotassiumProperties
 import com.seanproctor.potassium.internal.utils.notNullProperty
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.ArchiveOperations
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.model.ObjectFactory
@@ -35,9 +34,6 @@ abstract class AbstractPotassiumTask : DefaultTask() {
 
     @get:Inject
     protected abstract val fileOperations: FileSystemOperations
-
-    @get:Inject
-    protected abstract val archiveOperations: ArchiveOperations
 
     @get:LocalState
     protected val logsDir: Provider<Directory> = project.layout.buildDirectory.dir("potassium/logs/$name")

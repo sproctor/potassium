@@ -15,10 +15,6 @@
     <file name="src/main/kotlin/com/seanproctor/potassium/dsl/AbstractDistributions.kt">
         <error line="12" column="1" source="standard:no-wildcard-imports" />
     </file>
-    <file name="src/main/kotlin/com/seanproctor/potassium/dsl/NativeApplication.kt">
-        <error line="25" column="22" source="standard:backing-property-naming" />
-        <error line="25" column="22" source="standard:backing-property-naming" />
-    </file>
     <file name="src/main/kotlin/com/seanproctor/potassium/dsl/NativeApplicationDistributions.kt">
         <error line="9" column="1" source="standard:no-wildcard-imports" />
     </file>
@@ -49,7 +45,6 @@
     </file>
     <file name="src/main/kotlin/com/seanproctor/potassium/internal/configureNativeApplication.kt">
         <error line="1" column="1" source="standard:filename" />
-        <error line="24" column="1" source="standard:no-wildcard-imports" />
     </file>
     <file name="src/main/kotlin/com/seanproctor/potassium/internal/dirLayoutUtils.kt">
         <error line="1" column="1" source="standard:filename" />
@@ -64,9 +59,11 @@
     <file name="src/main/kotlin/com/seanproctor/potassium/internal/validation/validateBundleID.kt">
         <error line="1" column="1" source="standard:filename" />
     </file>
-    <file name="src/main/kotlin/com/seanproctor/potassium/tasks/AbstractCheckNativeDistributionRuntime.kt">
-        <error line="22" column="1" source="standard:no-wildcard-imports" />
-        <error line="25" column="1" source="standard:no-wildcard-imports" />
+    <file name="src/main/kotlin/com/seanproctor/potassium/internal/validation/validatePackageVersion.kt">
+        <error line="1" column="1" source="standard:filename" />
+    </file>
+    <file name="src/main/kotlin/com/seanproctor/potassium/internal/validation/validatePublishProviders.kt">
+        <error line="1" column="1" source="standard:filename" />
     </file>
     <file name="src/main/kotlin/com/seanproctor/potassium/tasks/AbstractGenerateAotCacheTask.kt">
         <error line="8" column="1" source="standard:import-ordering" />

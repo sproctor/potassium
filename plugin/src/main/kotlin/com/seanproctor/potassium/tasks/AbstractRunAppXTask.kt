@@ -1,6 +1,5 @@
 package com.seanproctor.potassium.tasks
 
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input

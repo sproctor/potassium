@@ -98,7 +98,9 @@ internal class MacAssetsTool(
             }
 
         if (versionString.isNullOrBlank()) {
-            error("Could not extract short-bundle-version from actool output: '$outputContent'. Assuming it meets requirements.")
+            error(
+                "Could not extract short-bundle-version from actool output: '$outputContent'. Assuming it meets requirements.",
+            )
         }
 
         val majorVersion =

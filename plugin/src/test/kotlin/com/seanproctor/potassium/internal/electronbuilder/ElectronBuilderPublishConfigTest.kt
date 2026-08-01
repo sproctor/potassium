@@ -14,7 +14,11 @@ import org.junit.Test
  */
 class ElectronBuilderPublishConfigTest {
     private fun publishSettings(): PublishSettings =
-        ProjectBuilder.builder().build().objects.newInstance(PublishSettings::class.java)
+        ProjectBuilder
+            .builder()
+            .build()
+            .objects
+            .newInstance(PublishSettings::class.java)
 
     private fun render(publish: PublishSettings): String {
         val yaml = StringBuilder()

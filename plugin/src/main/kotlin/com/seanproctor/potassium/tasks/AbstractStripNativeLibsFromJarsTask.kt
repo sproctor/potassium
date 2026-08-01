@@ -7,7 +7,6 @@ package com.seanproctor.potassium.tasks
 
 import com.seanproctor.potassium.internal.NativeLibArchDetector
 import com.seanproctor.potassium.internal.files.mangledName
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFile
@@ -146,7 +145,7 @@ abstract class AbstractStripNativeLibsFromJarsTask : AbstractPotassiumTask() {
         }
     }
 
-    private companion object {
+    internal companion object {
         const val MAIN_JAR_META_FILE = ".main-jar-name"
     }
 }

@@ -8,7 +8,6 @@ package com.seanproctor.potassium.tasks
 import com.seanproctor.potassium.dsl.FileAssociation
 import com.seanproctor.potassium.dsl.LaunchAgentDefinition
 import com.seanproctor.potassium.dsl.MacOSSigningSettings
-import com.seanproctor.potassium.internal.LaunchAgentPlistGenerator
 import com.seanproctor.potassium.dsl.TargetFormat
 import com.seanproctor.potassium.dsl.UrlProtocol
 import com.seanproctor.potassium.internal.APP_RESOURCES_DIR
@@ -17,6 +16,7 @@ import com.seanproctor.potassium.internal.InfoPlistBuilder.InfoPlistValue.InfoPl
 import com.seanproctor.potassium.internal.InfoPlistBuilder.InfoPlistValue.InfoPlistMapValue
 import com.seanproctor.potassium.internal.InfoPlistBuilder.InfoPlistValue.InfoPlistStringValue
 import com.seanproctor.potassium.internal.JvmRuntimeProperties
+import com.seanproctor.potassium.internal.LaunchAgentPlistGenerator
 import com.seanproctor.potassium.internal.MacAssetsTool
 import com.seanproctor.potassium.internal.MacSigner
 import com.seanproctor.potassium.internal.MacSignerImpl
@@ -36,7 +36,6 @@ import com.seanproctor.potassium.internal.files.mangledName
 import com.seanproctor.potassium.internal.files.normalizedPath
 import com.seanproctor.potassium.internal.files.transformJar
 import com.seanproctor.potassium.internal.javaOption
-import com.seanproctor.potassium.internal.validation.validate
 import com.seanproctor.potassium.internal.utils.OS
 import com.seanproctor.potassium.internal.utils.clearDirs
 import com.seanproctor.potassium.internal.utils.currentArch
@@ -49,6 +48,7 @@ import com.seanproctor.potassium.internal.utils.mkdirs
 import com.seanproctor.potassium.internal.utils.notNullProperty
 import com.seanproctor.potassium.internal.utils.nullableProperty
 import com.seanproctor.potassium.internal.utils.stacktraceToString
+import com.seanproctor.potassium.internal.validation.validate
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
@@ -332,7 +332,10 @@ abstract class AbstractJPackageTask
         protected val signDir: Provider<Directory> = project.layout.buildDirectory.dir("potassium/tmp/sign")
 
         @get:LocalState
-        protected val jpackageResources: Provider<Directory> = project.layout.buildDirectory.dir("potassium/tmp/resources")
+        protected val jpackageResources: Provider<Directory> =
+            project.layout.buildDirectory.dir(
+                "potassium/tmp/resources",
+            )
 
         @get:LocalState
         protected val skikoDir: Provider<Directory> = project.layout.buildDirectory.dir("potassium/tmp/skiko")
@@ -774,7 +777,8 @@ abstract class AbstractJPackageTask
             val packageVersion = packageVersion.get()
             plist[PlistKeys.CFBundleShortVersionString] = packageVersion
             // If building for the App Store, use "utilities" as default just like jpackage.
-            val category = macAppCategory.orNull ?: (if (macAppStore.orNull == true) "public.app-category.utilities" else null)
+            val category =
+                macAppCategory.orNull ?: (if (macAppStore.orNull == true) "public.app-category.utilities" else null)
             plist[PlistKeys.LSApplicationCategoryType] = category ?: "Unknown"
             val packageBuildVersion = packageBuildVersion.orNull ?: packageVersion
             plist[PlistKeys.CFBundleVersion] = packageBuildVersion
@@ -793,7 +797,11 @@ abstract class AbstractJPackageTask
                         .groupBy { it.mimeType to it.description }
                         .map { (key, extensions) ->
                             val (mimeType, description) = key
-                            val iconPath = extensions.firstNotNullOfOrNull { it.iconFile }?.let { iconMapping[it]?.name }
+                            val iconPath =
+                                extensions
+                                    .firstNotNullOfOrNull {
+                                        it.iconFile
+                                    }?.let { iconMapping[it]?.name }
                             InfoPlistMapValue(
                                 PlistKeys.CFBundleTypeRole to InfoPlistStringValue("Editor"),
                                 PlistKeys.CFBundleTypeExtensions to
@@ -831,7 +839,6 @@ private class FilesMapping : Serializable {
         private const val serialVersionUID: Long = 1L
     }
 
-    // Reassigned in readObject during deserialization; cannot be `val`.
     @Suppress("DoubleMutabilityForCollection")
     private var mapping = HashMap<File, List<File>>()
 
@@ -873,7 +880,6 @@ private class FilesMapping : Serializable {
         stream.writeObject(mapping)
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun readObject(stream: ObjectInputStream) {
         mapping = stream.readObject() as HashMap<File, List<File>>
     }

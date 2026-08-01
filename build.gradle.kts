@@ -1,4 +1,7 @@
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import dev.detekt.gradle.Detekt
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.specs.Spec
 
 plugins {
     alias(libs.plugins.kotlin) apply false
@@ -54,6 +57,19 @@ tasks.withType<Detekt>().configureEach {
     reports {
         html.required.set(true)
         html.outputLocation.set(file("build/reports/detekt.html"))
+    }
+}
+
+fun isNonStable(version: String): Boolean {
+    val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
+    val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+    return !(stableKeyword || regex.matches(version))
+}
+
+tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
+    filterConfigurations = Spec<Configuration> { !it.name.startsWith("test") }
+    rejectVersionIf {
+        isNonStable(candidate.version) && !isNonStable(currentVersion)
     }
 }
 

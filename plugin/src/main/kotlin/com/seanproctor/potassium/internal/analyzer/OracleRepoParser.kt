@@ -36,7 +36,8 @@ internal object OracleRepoParser {
     /**
      * Parses a reflect-config.json (old format: JSON array of type entries).
      */
-    fun parseReflectConfig(file: File): Set<ReflectionEntry> = parseTypeArray(file).map { it.toReflectionEntry() }.toSet()
+    fun parseReflectConfig(file: File): Set<ReflectionEntry> =
+        parseTypeArray(file).map { it.toReflectionEntry() }.toSet()
 
     /**
      * Parses a jni-config.json (old format: JSON array of type entries).

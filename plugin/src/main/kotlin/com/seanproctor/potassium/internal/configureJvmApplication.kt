@@ -9,24 +9,6 @@ package com.seanproctor.potassium.internal
 
 import com.seanproctor.potassium.dsl.PackagingBackend
 import com.seanproctor.potassium.dsl.TargetFormat
-import com.seanproctor.potassium.internal.validation.validatePackageVersion
-import com.seanproctor.potassium.internal.validation.validatePublishProviders
-import com.seanproctor.potassium.tasks.AbstractCheckNativeDistributionRuntime
-import com.seanproctor.potassium.tasks.AbstractElectronBuilderPackageTask
-import com.seanproctor.potassium.tasks.AbstractExtractNativeLibsTask
-import com.seanproctor.potassium.tasks.AbstractGenerateAotCacheTask
-import com.seanproctor.potassium.tasks.AbstractJLinkTask
-import com.seanproctor.potassium.tasks.AbstractJPackageTask
-import com.seanproctor.potassium.tasks.AbstractNotarizationTask
-import com.seanproctor.potassium.tasks.AbstractPatchCaCertificatesTask
-import com.seanproctor.potassium.tasks.AbstractPatchMacJvmTask
-import com.seanproctor.potassium.tasks.AbstractProguardTask
-import com.seanproctor.potassium.tasks.AbstractRunAppXTask
-import com.seanproctor.potassium.tasks.AbstractRunDistributableTask
-import com.seanproctor.potassium.tasks.AbstractStripNativeLibsFromJarsTask
-import com.seanproctor.potassium.tasks.AbstractSuggestModulesTask
-import com.seanproctor.potassium.tasks.AbstractJarsFlattenTask
-import com.seanproctor.potassium.tasks.AbstractUnpackDefaultApplicationResourcesTask
 import com.seanproctor.potassium.internal.utils.Arch
 import com.seanproctor.potassium.internal.utils.OS
 import com.seanproctor.potassium.internal.utils.currentOS
@@ -39,6 +21,23 @@ import com.seanproctor.potassium.internal.utils.ioFileOrNull
 import com.seanproctor.potassium.internal.utils.javaExecutable
 import com.seanproctor.potassium.internal.utils.jdkArch
 import com.seanproctor.potassium.internal.utils.provider
+import com.seanproctor.potassium.internal.validation.validatePackageVersion
+import com.seanproctor.potassium.internal.validation.validatePublishProviders
+import com.seanproctor.potassium.tasks.AbstractCheckNativeDistributionRuntime
+import com.seanproctor.potassium.tasks.AbstractElectronBuilderPackageTask
+import com.seanproctor.potassium.tasks.AbstractExtractNativeLibsTask
+import com.seanproctor.potassium.tasks.AbstractGenerateAotCacheTask
+import com.seanproctor.potassium.tasks.AbstractJLinkTask
+import com.seanproctor.potassium.tasks.AbstractJPackageTask
+import com.seanproctor.potassium.tasks.AbstractJarsFlattenTask
+import com.seanproctor.potassium.tasks.AbstractNotarizationTask
+import com.seanproctor.potassium.tasks.AbstractPatchCaCertificatesTask
+import com.seanproctor.potassium.tasks.AbstractProguardTask
+import com.seanproctor.potassium.tasks.AbstractRunAppXTask
+import com.seanproctor.potassium.tasks.AbstractRunDistributableTask
+import com.seanproctor.potassium.tasks.AbstractStripNativeLibsFromJarsTask
+import com.seanproctor.potassium.tasks.AbstractSuggestModulesTask
+import com.seanproctor.potassium.tasks.AbstractUnpackDefaultApplicationResourcesTask
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.provider.Provider
@@ -497,12 +496,12 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
             configureFlattenJars(this, runProguard)
         }
 
-        tasks.register<Jar>(
-            taskNameAction = "package",
-            taskNameObject = "uberJarForCurrentOS",
-        ) {
-            configurePackageUberJarForCurrentOS(this, flattenJars)
-        }
+    tasks.register<Jar>(
+        taskNameAction = "package",
+        taskNameObject = "uberJarForCurrentOS",
+    ) {
+        configurePackageUberJarForCurrentOS(this, flattenJars)
+    }
 
     // runDistributable always uses the non-sandboxed distributable (most relevant for local dev/test)
     val runDistributable =
@@ -544,23 +543,9 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
         }
     }
 
-    // Register the patch task eagerly so it's available for the run task's
-    // lazy configuration (Gradle forbids task registration from within
-    // another task's configuration action).
-    val patchMacJvmTask: TaskProvider<AbstractPatchMacJvmTask>? =
-        if (currentOS == OS.MacOS && app.nativeDistributions.macOS.macOsSdkVersion != null) {
-            registerPatchMacJvmTask(
-                javaHome = app.javaHome,
-                minVersion = app.nativeDistributions.macOS.minimumSystemVersion ?: "10.13",
-                sdkVersion = checkNotNull(app.nativeDistributions.macOS.macOsSdkVersion),
-            )
-        } else {
-            null
-        }
-
-        tasks.register<JavaExec>(taskNameAction = "run") {
-            configureRunTask(this, commonTasks.prepareAppResources, runProguard, patchMacJvmTask)
-        }
+    tasks.register<JavaExec>(taskNameAction = "run") {
+        configureRunTask(this, commonTasks.prepareAppResources, runProguard)
+    }
 }
 
 private fun JvmApplicationContext.configureProguardTask(
@@ -671,20 +656,10 @@ private fun JvmApplicationContext.configurePackageTask(
             val strippedOutputDir = stripNativeLibs.flatMap { it.outputDir }
             packageTask.files.from(
                 strippedOutputDir.map { dir ->
-                    dir.asFileTree.matching { it.exclude(".main-jar-name") }
+                    dir.asFileTree.matching { it.exclude(AbstractStripNativeLibsFromJarsTask.MAIN_JAR_META_FILE) }
                 },
             )
-            val strippedMainJarName = stripNativeLibs.flatMap { it.mainJarName }
-            packageTask.launcherMainJar.fileProvider(
-                strippedOutputDir.zip(strippedMainJarName) { dir, mainJarName ->
-                    val metaFile = dir.asFile.resolve(".main-jar-name")
-                    if (metaFile.exists()) {
-                        dir.asFile.resolve(metaFile.readText().trim())
-                    } else {
-                        dir.asFile.resolve(mainJarName)
-                    }
-                },
-            )
+            packageTask.launcherMainJar.set(stripNativeLibs.flatMap { it.mainJarInOutputDir })
             // Strip task already mangles filenames for deduplication
             packageTask.mangleJarFilesNames.set(false)
             if (runProguard != null) {
@@ -924,49 +899,11 @@ private fun JvmApplicationContext.configureRunTask(
     exec: JavaExec,
     prepareAppResources: TaskProvider<Sync>,
     runProguard: Provider<AbstractProguardTask>?,
-    patchMacJvmTask: TaskProvider<AbstractPatchMacJvmTask>?,
 ) {
     exec.dependsOn(prepareAppResources)
 
     exec.mainClass.set(app.mainClass)
     exec.executable(javaExecutable(app.javaHome))
-    if (currentOS == OS.MacOS) {
-        val sdkVersion = app.nativeDistributions.macOS.macOsSdkVersion
-        if (sdkVersion != null && patchMacJvmTask != null) {
-            val javaHome = app.javaHome
-            exec.dependsOn(patchMacJvmTask)
-            // Route the fork through a vtool-patched copy of the JDK so AppKit
-            // gates Liquid Glass on. `javaLauncher` is finalized before
-            // `doFirst`, so it must be wired at configuration time — but
-            // reading the patch task's output from inside a `.map` chain
-            // breaks the configuration cache (Gradle forbids querying a
-            // property whose value depends on a task that hasn't completed).
-            // Instead, resolve the patched binary path from `project.layout`
-            // at config time; `dependsOn` guarantees the file exists by the
-            // time the run task fires. Letting JavaExec stay in charge of
-            // the fork is what allows IntelliJ's Gradle debugger to inject
-            // JDWP and manage the process lifecycle.
-            val patchedBinFile = project.layout.buildDirectory
-                .file("potassium/patched-jvm/bin/java")
-                .get()
-                .asFile
-            val patchedJavaHomeFile = patchedBinFile.parentFile.parentFile
-            exec.javaLauncher.set(
-                PatchedJavaLauncher(
-                    patchedJavaBinary = patchedBinFile,
-                    patchedJavaHome = patchedJavaHomeFile,
-                    sourceJavaHome = java.io.File(javaHome),
-                    objects = project.objects,
-                ),
-            )
-            // `executable` isn't Provider-aware in Gradle 9, but it isn't
-            // finalized before `doFirst` either — align it with the launcher
-            // right before the action runs so the toolchain check passes.
-            exec.doFirst {
-                (it as JavaExec).executable(patchedBinFile.absolutePath)
-            }
-        }
-    }
     exec.jvmArgs =
         arrayListOf<String>().apply {
             addAll(defaultJvmArgs)
@@ -1092,27 +1029,3 @@ private fun sandboxingJvmArgs(resourcesPath: String): List<String> =
         "-Djna.boot.library.path=$resourcesPath",
         "-Djna.library.path=$resourcesPath",
     )
-
-/**
- * Registers (or reuses) the per-project task that produces a vtool-patched
- * copy of the source JDK's `java` binary for Liquid Glass. Shared across run
- * tasks of all build types since inputs (javaHome, SDK/min version) are
- * identical at the project level.
- */
-private fun JvmApplicationContext.registerPatchMacJvmTask(
-    javaHome: String,
-    minVersion: String,
-    sdkVersion: String,
-): TaskProvider<AbstractPatchMacJvmTask> {
-    val taskName = "potassiumPatchMacJvm"
-    return if (project.tasks.names.contains(taskName)) {
-        project.tasks.named(taskName, AbstractPatchMacJvmTask::class.java)
-    } else {
-        project.tasks.register(taskName, AbstractPatchMacJvmTask::class.java) {
-            it.sourceJavaHome.set(javaHome)
-            it.minimumSystemVersion.set(minVersion)
-            it.sdkVersion.set(sdkVersion)
-            it.outputJavaHome.set(project.layout.buildDirectory.dir("potassium/patched-jvm"))
-        }
-    }
-}

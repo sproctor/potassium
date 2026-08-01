@@ -5,7 +5,6 @@
 
 package com.seanproctor.potassium.tasks
 
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import com.seanproctor.potassium.internal.utils.OS
 import com.seanproctor.potassium.internal.utils.currentOS
 import com.seanproctor.potassium.internal.utils.executableName
@@ -49,7 +48,10 @@ abstract class AbstractRunDistributableTask
                     if (files.isNullOrEmpty()) {
                         error("Could not find application image: $appImageRoot is empty!")
                     } else if (files.size > 1) {
-                        error("Could not find application image: $appImageRoot contains multiple children [${files.joinToString(", ")}]")
+                        val childNames = files.joinToString(", ")
+                        error(
+                            "Could not find application image: $appImageRoot contains multiple children [$childNames]",
+                        )
                     } else {
                         files.single()
                     }

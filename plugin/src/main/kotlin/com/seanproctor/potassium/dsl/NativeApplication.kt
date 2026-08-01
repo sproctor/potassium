@@ -22,8 +22,7 @@ abstract class NativeApplication
         @get:Inject
         internal abstract val objects: ObjectFactory
 
-        @Suppress("VariableNaming")
-        internal val _targets = arrayListOf<KotlinNativeTarget>()
+        internal val nativeTargets = arrayListOf<KotlinNativeTarget>()
 
         fun targets(vararg targets: KotlinTarget) {
             val nonNativeTargets = arrayListOf<KotlinTarget>()
@@ -31,7 +30,7 @@ abstract class NativeApplication
             for (target in targets) {
                 if (target is KotlinNativeTarget) {
                     if (target.konanTarget.family == Family.OSX) {
-                        _targets.add(target)
+                        nativeTargets.add(target)
                     } else {
                         nonMacOSTargets.add(target)
                     }

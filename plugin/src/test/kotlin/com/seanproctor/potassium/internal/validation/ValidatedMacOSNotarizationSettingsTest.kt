@@ -14,7 +14,10 @@ class ValidatedMacOSNotarizationSettingsTest {
         return project.objects.newInstance(MacOSNotarizationSettings::class.java)
     }
 
-    private fun assertFailsWith(message: String, block: () -> Unit) {
+    private fun assertFailsWith(
+        message: String,
+        block: () -> Unit,
+    ) {
         try {
             block()
             fail("Expected IllegalStateException containing: $message")
@@ -254,9 +257,12 @@ class ValidatedMacOSNotarizationSettingsTest {
         val (args, stdin) = auth.toNotaryToolArgs()
         assertEquals(
             listOf(
-                "--key", "/path/to/AuthKey.p8",
-                "--key-id", "ABC123",
-                "--issuer", "issuer-uuid",
+                "--key",
+                "/path/to/AuthKey.p8",
+                "--key-id",
+                "ABC123",
+                "--issuer",
+                "issuer-uuid",
             ),
             args,
         )

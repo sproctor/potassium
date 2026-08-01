@@ -5,13 +5,18 @@
 
 package com.seanproctor.potassium.tasks
 
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
-import com.seanproctor.potassium.internal.utils.*
+import com.seanproctor.potassium.internal.utils.clearDirs
+import com.seanproctor.potassium.internal.utils.ioFile
+import com.seanproctor.potassium.internal.utils.notNullProperty
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.LocalState
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import java.io.File
 

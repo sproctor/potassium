@@ -8,7 +8,6 @@ package com.seanproctor.potassium.tasks
 import com.seanproctor.potassium.internal.NativeLibArchDetector
 import com.seanproctor.potassium.internal.NativeLibArchDetector.NativeArch
 import com.seanproctor.potassium.internal.NativeLibArchDetector.NativeOs
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property

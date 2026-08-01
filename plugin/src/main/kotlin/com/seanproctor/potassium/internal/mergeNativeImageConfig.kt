@@ -244,7 +244,13 @@ internal fun deduplicateAgainstLibraryMetadata(
                         entry.name.endsWith("reachability-metadata.json")
                     ) {
                         val text = jar.getInputStream(entry).bufferedReader().readText()
-                        collectLibraryMetadata(slurper, text, libraryEntries, libraryResourceJsons, libraryResourceGlobs)
+                        collectLibraryMetadata(
+                            slurper,
+                            text,
+                            libraryEntries,
+                            libraryResourceJsons,
+                            libraryResourceGlobs,
+                        )
                     }
 
                     // Collect IncludeResources patterns from native-image.properties
@@ -286,7 +292,13 @@ internal fun deduplicateAgainstLibraryMetadata(
         val metadataFile = File(dir, "reachability-metadata.json")
         if (metadataFile.exists()) {
             try {
-                collectLibraryMetadata(slurper, metadataFile.readText(), libraryEntries, libraryResourceJsons, libraryResourceGlobs)
+                collectLibraryMetadata(
+                    slurper,
+                    metadataFile.readText(),
+                    libraryEntries,
+                    libraryResourceJsons,
+                    libraryResourceGlobs,
+                )
             } catch (_: Exception) {
                 // Skip unreadable metadata files
             }

@@ -5,10 +5,10 @@
 
 package com.seanproctor.potassium.internal
 
-import com.seanproctor.potassium.internal.validation.ValidatedMacOSSigningSettings
 import com.seanproctor.potassium.internal.utils.Arch
 import com.seanproctor.potassium.internal.utils.MacUtils
 import com.seanproctor.potassium.internal.utils.currentArch
+import com.seanproctor.potassium.internal.validation.ValidatedMacOSSigningSettings
 import java.io.File
 import java.util.regex.Pattern
 import kotlin.io.path.isExecutable

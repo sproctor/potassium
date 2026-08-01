@@ -6,7 +6,6 @@
 package com.seanproctor.potassium.tasks
 
 import com.seanproctor.potassium.internal.JvmRuntimeProperties
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import com.seanproctor.potassium.internal.utils.notNullProperty
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
@@ -124,7 +123,9 @@ internal fun createAotTempFileWithFallback(
     }
 
     throw GradleException(
-        "Failed to create temporary file '$prefix*$suffix' in candidate directories: ${attemptedDirs.joinToString(", ")}",
+        "Failed to create temporary file '$prefix*$suffix' in candidate directories: ${attemptedDirs.joinToString(
+            ", ",
+        )}",
         firstFailure,
     )
 }
@@ -458,8 +459,8 @@ abstract class AbstractGenerateAotCacheTask : AbstractPotassiumTask() {
             val javaLauncherArgs =
                 try {
                     argFile = createAotTempFileWithFallback("potassium-aot-", ".args", candidateDirs)
-                    writeJavaArgFile(requireNotNull(argFile), javaArgs)
-                    listOf(javaExe, "@${requireNotNull(argFile).absolutePath}")
+                    writeJavaArgFile(argFile, javaArgs)
+                    listOf(javaExe, "@${argFile.absolutePath}")
                 } catch (e: GradleException) {
                     if (isWindows()) {
                         throw GradleException(

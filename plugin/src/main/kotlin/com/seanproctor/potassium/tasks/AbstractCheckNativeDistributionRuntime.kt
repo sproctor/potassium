@@ -6,10 +6,8 @@
 package com.seanproctor.potassium.tasks
 
 import com.seanproctor.potassium.internal.ExternalToolRunner
-import com.seanproctor.potassium.internal.JdkVersionProbe
 import com.seanproctor.potassium.internal.JvmRuntimeProperties
 import com.seanproctor.potassium.internal.PotassiumProperties
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import com.seanproctor.potassium.internal.utils.OS
 import com.seanproctor.potassium.internal.utils.currentOS
 import com.seanproctor.potassium.internal.utils.executableName
@@ -18,16 +16,20 @@ import com.seanproctor.potassium.internal.utils.notNullProperty
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.*
-import java.io.ByteArrayInputStream
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import java.io.File
-import java.util.*
 
 internal const val MIN_JAVA_RUNTIME_VERSION = 17
 
-/** Classpath resource holding the runnable JDK-version probe jar bundled into the plugin. */
-private const val PROBE_JAR_RESOURCE = "potassium/jdk-version-probe.jar"
-private const val PROBE_JAR_NAME = "jdk-version-probe.jar"
+/** Keys read from the JDK's `release` file (standard since JDK 9). */
+private const val RELEASE_JAVA_VERSION_KEY = "JAVA_VERSION"
+private const val RELEASE_IMPLEMENTOR_KEY = "IMPLEMENTOR"
 
 @CacheableTask
 abstract class AbstractCheckNativeDistributionRuntime : AbstractPotassiumTask() {
@@ -77,12 +79,14 @@ abstract class AbstractCheckNativeDistributionRuntime : AbstractPotassiumTask() 
         val jpackageExecutabke = jdkHome.getJdkTool("jpackage")
         ensureToolsExist(javaExecutable, jlinkExecutable, jpackageExecutabke)
 
-        val jdkRuntimeProperties = getJDKRuntimeProperties(javaExecutable)
+        val releaseProperties = readReleaseFile(jdkHome)
 
-        val jdkMajorVersionString = jdkRuntimeProperties.getProperty(JdkVersionProbe.JDK_MAJOR_VERSION_KEY)
+        val javaVersionString =
+            releaseProperties[RELEASE_JAVA_VERSION_KEY]
+                ?: jdkDistributionProbingError("Could not read '$RELEASE_JAVA_VERSION_KEY' from $jdkHome/release")
         val jdkMajorVersion =
-            jdkMajorVersionString?.toIntOrNull()
-                ?: jdkDistributionProbingError("JDK version '$jdkMajorVersionString' has unexpected format")
+            javaVersionString.substringBefore('.').toIntOrNull()
+                ?: jdkDistributionProbingError("JDK version '$javaVersionString' has unexpected format")
 
         check(jdkMajorVersion >= MIN_JAVA_RUNTIME_VERSION) {
             jdkDistributionProbingError(
@@ -92,7 +96,7 @@ abstract class AbstractCheckNativeDistributionRuntime : AbstractPotassiumTask() 
         }
 
         if (checkJdkVendor.get()) {
-            val vendor = jdkRuntimeProperties.getProperty(JdkVersionProbe.JDK_VENDOR_KEY)
+            val vendor = releaseProperties[RELEASE_IMPLEMENTOR_KEY]
             if (vendor == null) {
                 logger.warn("JDK vendor probe failed: $jdkHome")
             } else {
@@ -129,29 +133,17 @@ abstract class AbstractCheckNativeDistributionRuntime : AbstractPotassiumTask() 
         JvmRuntimeProperties.writeToFile(properties, javaRuntimePropertiesFile.ioFile)
     }
 
-    private fun getJDKRuntimeProperties(javaExecutable: File): Properties {
-        val jdkProperties = Properties()
-        runExternalTool(
-            tool = javaExecutable,
-            args = listOf("-jar", extractProbeJar().absolutePath),
-            processStdout = { stdout ->
-                ByteArrayInputStream(stdout.trim().toByteArray()).use {
-                    jdkProperties.loadFromXML(it)
-                }
-            },
-        )
-        return jdkProperties
-    }
-
-    /** Copies the bundled probe jar out of the plugin classpath into the task dir so it can be run. */
-    private fun extractProbeJar(): File {
-        val probeJar = taskDir.ioFile.resolve(PROBE_JAR_NAME)
-        val resource =
-            javaClass.classLoader.getResourceAsStream(PROBE_JAR_RESOURCE)
-                ?: error("Bundled JDK version probe jar not found on plugin classpath: $PROBE_JAR_RESOURCE")
-        resource.use { input ->
-            probeJar.outputStream().buffered().use { output -> input.copyTo(output) }
+    /** Parses the target JDK's `release` file (`KEY="value"` per line) without executing it. */
+    private fun readReleaseFile(jdkHome: File): Map<String, String> {
+        val releaseFile = File(jdkHome, "release")
+        if (!releaseFile.exists()) {
+            jdkDistributionProbingError("No 'release' file found at ${releaseFile.absolutePath}")
         }
-        return probeJar
+        return releaseFile
+            .readLines()
+            .mapNotNull { line ->
+                val idx = line.indexOf('=')
+                if (idx <= 0) null else line.substring(0, idx).trim() to line.substring(idx + 1).trim().trim('"')
+            }.toMap()
     }
 }

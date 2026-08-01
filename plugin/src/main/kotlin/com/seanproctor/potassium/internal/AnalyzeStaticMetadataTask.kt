@@ -1,11 +1,11 @@
 package com.seanproctor.potassium.internal
 
-import groovy.json.JsonOutput
 import com.seanproctor.potassium.internal.analyzer.BytecodeAnalyzer
 import com.seanproctor.potassium.internal.analyzer.JniEntry
 import com.seanproctor.potassium.internal.analyzer.MethodSignature
 import com.seanproctor.potassium.internal.analyzer.ReflectionEntry
 import com.seanproctor.potassium.internal.analyzer.ResourcePattern
+import groovy.json.JsonOutput
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty

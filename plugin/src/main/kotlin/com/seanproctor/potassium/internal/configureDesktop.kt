@@ -6,8 +6,8 @@
 package com.seanproctor.potassium.internal
 
 import com.seanproctor.potassium.PotassiumExtension
-import com.seanproctor.potassium.tasks.AbstractUnpackDefaultApplicationResourcesTask
 import com.seanproctor.potassium.internal.utils.registerTask
+import com.seanproctor.potassium.tasks.AbstractUnpackDefaultApplicationResourcesTask
 import org.gradle.api.Project
 
 internal fun configureDesktop(

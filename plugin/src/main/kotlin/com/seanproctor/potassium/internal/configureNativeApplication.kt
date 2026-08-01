@@ -8,13 +8,13 @@ package com.seanproctor.potassium.internal
 import com.seanproctor.potassium.dsl.MacOSTargetFormat
 import com.seanproctor.potassium.dsl.NativeApplication
 import com.seanproctor.potassium.dsl.TargetFormat
+import com.seanproctor.potassium.internal.utils.OS
+import com.seanproctor.potassium.internal.utils.currentOS
+import com.seanproctor.potassium.internal.utils.joinLowerCamelCase
 import com.seanproctor.potassium.tasks.AbstractNativeMacApplicationPackageAppDirTask
 import com.seanproctor.potassium.tasks.AbstractNativeMacApplicationPackageDmgTask
 import com.seanproctor.potassium.tasks.AbstractNativeMacApplicationPackageTask
 import com.seanproctor.potassium.tasks.AbstractUnpackDefaultApplicationResourcesTask
-import com.seanproctor.potassium.internal.utils.OS
-import com.seanproctor.potassium.internal.utils.currentOS
-import com.seanproctor.potassium.internal.utils.joinLowerCamelCase
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.TaskContainer
@@ -22,7 +22,7 @@ import org.gradle.api.tasks.TaskProvider
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeOutputKind
-import java.util.*
+import java.util.Calendar
 
 internal fun configureNativeApplication(
     project: Project,
@@ -31,7 +31,7 @@ internal fun configureNativeApplication(
 ) {
     if (currentOS != OS.MacOS) return
 
-    for (target in app._targets) {
+    for (target in app.nativeTargets) {
         configureNativeApplication(project, app, target, unpackDefaultResources)
     }
 }
@@ -85,36 +85,36 @@ private fun configureNativeApplication(
         }
 
     if (MacOSTargetFormat.Dmg in app.distributions.targetFormats) {
-            project.tasks.registerNativeTask<AbstractNativeMacApplicationPackageDmgTask>(
-                desktopNativeTaskName("packageDmgNative", binary),
-            ) {
-                configureNativePackageTask(app, binary, TargetFormat.Dmg)
+        project.tasks.registerNativeTask<AbstractNativeMacApplicationPackageDmgTask>(
+            desktopNativeTaskName("packageDmgNative", binary),
+        ) {
+            configureNativePackageTask(app, binary, TargetFormat.Dmg)
 
-                dependsOn(createDistributable)
-                appDir.set(createDistributable.flatMap { it.destinationDir })
+            dependsOn(createDistributable)
+            appDir.set(createDistributable.flatMap { it.destinationDir })
 
-                installDir.set(
-                    project.provider {
-                        app.distributions.macOS.installationPath ?: "/Applications"
-                    },
-                )
+            installDir.set(
+                project.provider {
+                    app.distributions.macOS.installationPath ?: "/Applications"
+                },
+            )
 
-                val dmgDsl = app.distributions.macOS.dmg
-                dmgDsl.format?.let { dmgFormat.set(it) }
-                dmgDsl.iconSize?.let { dmgIconSize.set(it) }
-                dmgDsl.window.x?.let { dmgWindowX.set(it) }
-                dmgDsl.window.y?.let { dmgWindowY.set(it) }
-                dmgDsl.window.width?.let { dmgWindowWidth.set(it) }
-                dmgDsl.window.height?.let { dmgWindowHeight.set(it) }
-                dmgDsl.title?.let { dmgTitle.set(it) }
-                dmgDsl.backgroundColor?.let { dmgBackgroundColor.set(it) }
-                if (dmgDsl.background.isPresent) {
-                    dmgBackgroundImage.set(dmgDsl.background)
-                }
-                if (dmgDsl.contents.isNotEmpty()) {
-                    dmgContents.set(dmgDsl.contents.toList())
-                }
+            val dmgDsl = app.distributions.macOS.dmg
+            dmgDsl.format?.let { dmgFormat.set(it) }
+            dmgDsl.iconSize?.let { dmgIconSize.set(it) }
+            dmgDsl.window.x?.let { dmgWindowX.set(it) }
+            dmgDsl.window.y?.let { dmgWindowY.set(it) }
+            dmgDsl.window.width?.let { dmgWindowWidth.set(it) }
+            dmgDsl.window.height?.let { dmgWindowHeight.set(it) }
+            dmgDsl.title?.let { dmgTitle.set(it) }
+            dmgDsl.backgroundColor?.let { dmgBackgroundColor.set(it) }
+            if (dmgDsl.background.isPresent) {
+                dmgBackgroundImage.set(dmgDsl.background)
             }
+            if (dmgDsl.contents.isNotEmpty()) {
+                dmgContents.set(dmgDsl.contents.toList())
+            }
+        }
     }
 }
 

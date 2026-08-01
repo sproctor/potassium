@@ -5,20 +5,35 @@
 
 package com.seanproctor.potassium.tasks
 
-import com.seanproctor.potassium.internal.*
+import com.seanproctor.potassium.internal.ExternalToolRunner
 import com.seanproctor.potassium.internal.files.mangledName
 import com.seanproctor.potassium.internal.files.normalizedPath
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
-import com.seanproctor.potassium.internal.utils.*
-import org.gradle.api.file.*
+import com.seanproctor.potassium.internal.utils.clearDirs
+import com.seanproctor.potassium.internal.utils.ioFile
+import com.seanproctor.potassium.internal.utils.jvmToolFile
+import com.seanproctor.potassium.internal.utils.notNullProperty
+import com.seanproctor.potassium.internal.utils.nullableProperty
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.Directory
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFile
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.LocalState
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import java.io.File
 import java.io.Writer
-import kotlin.collections.LinkedHashMap
 
 @DisableCachingByDefault(because = "Depends on external ProGuard tool")
 abstract class AbstractProguardTask : AbstractPotassiumTask() {
@@ -153,7 +168,7 @@ abstract class AbstractProguardTask : AbstractPotassiumTask() {
                     jarsConfigurationFile.ioFile,
                     defaultProguardRulesFile.ioFile,
                 ) + configurationFiles.files.asSequence()
-            for (configFile in includeFiles.filterNotNull()) {
+            for (configFile in includeFiles) {
                 writer.writeLn("-include '${configFile.normalizedPath()}'")
             }
         }
