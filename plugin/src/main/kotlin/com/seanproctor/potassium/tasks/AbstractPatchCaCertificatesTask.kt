@@ -5,8 +5,8 @@
 
 package com.seanproctor.potassium.tasks
 
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import com.seanproctor.potassium.internal.utils.notNullProperty
+import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty

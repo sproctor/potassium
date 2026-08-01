@@ -11,7 +11,14 @@ import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import java.io.File
 import java.io.IOException
@@ -116,7 +123,9 @@ internal fun createAotTempFileWithFallback(
     }
 
     throw GradleException(
-        "Failed to create temporary file '$prefix*$suffix' in candidate directories: ${attemptedDirs.joinToString(", ")}",
+        "Failed to create temporary file '$prefix*$suffix' in candidate directories: ${attemptedDirs.joinToString(
+            ", ",
+        )}",
         firstFailure,
     )
 }

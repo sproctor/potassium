@@ -8,11 +8,21 @@ package com.seanproctor.potassium.tasks
 import com.seanproctor.potassium.internal.ExternalToolRunner
 import com.seanproctor.potassium.internal.JvmRuntimeProperties
 import com.seanproctor.potassium.internal.PotassiumProperties
-import com.seanproctor.potassium.internal.utils.*
+import com.seanproctor.potassium.internal.utils.OS
+import com.seanproctor.potassium.internal.utils.currentOS
+import com.seanproctor.potassium.internal.utils.executableName
+import com.seanproctor.potassium.internal.utils.ioFile
+import com.seanproctor.potassium.internal.utils.notNullProperty
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import java.io.File
 
 internal const val MIN_JAVA_RUNTIME_VERSION = 17
@@ -129,9 +139,11 @@ abstract class AbstractCheckNativeDistributionRuntime : AbstractPotassiumTask() 
         if (!releaseFile.exists()) {
             jdkDistributionProbingError("No 'release' file found at ${releaseFile.absolutePath}")
         }
-        return releaseFile.readLines().mapNotNull { line ->
-            val idx = line.indexOf('=')
-            if (idx <= 0) null else line.substring(0, idx).trim() to line.substring(idx + 1).trim().trim('"')
-        }.toMap()
+        return releaseFile
+            .readLines()
+            .mapNotNull { line ->
+                val idx = line.indexOf('=')
+                if (idx <= 0) null else line.substring(0, idx).trim() to line.substring(idx + 1).trim().trim('"')
+            }.toMap()
     }
 }

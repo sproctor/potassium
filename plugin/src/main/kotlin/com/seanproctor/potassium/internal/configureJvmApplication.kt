@@ -9,23 +9,6 @@ package com.seanproctor.potassium.internal
 
 import com.seanproctor.potassium.dsl.PackagingBackend
 import com.seanproctor.potassium.dsl.TargetFormat
-import com.seanproctor.potassium.internal.validation.validatePackageVersion
-import com.seanproctor.potassium.internal.validation.validatePublishProviders
-import com.seanproctor.potassium.tasks.AbstractCheckNativeDistributionRuntime
-import com.seanproctor.potassium.tasks.AbstractElectronBuilderPackageTask
-import com.seanproctor.potassium.tasks.AbstractExtractNativeLibsTask
-import com.seanproctor.potassium.tasks.AbstractGenerateAotCacheTask
-import com.seanproctor.potassium.tasks.AbstractJLinkTask
-import com.seanproctor.potassium.tasks.AbstractJPackageTask
-import com.seanproctor.potassium.tasks.AbstractNotarizationTask
-import com.seanproctor.potassium.tasks.AbstractPatchCaCertificatesTask
-import com.seanproctor.potassium.tasks.AbstractProguardTask
-import com.seanproctor.potassium.tasks.AbstractRunAppXTask
-import com.seanproctor.potassium.tasks.AbstractRunDistributableTask
-import com.seanproctor.potassium.tasks.AbstractStripNativeLibsFromJarsTask
-import com.seanproctor.potassium.tasks.AbstractSuggestModulesTask
-import com.seanproctor.potassium.tasks.AbstractJarsFlattenTask
-import com.seanproctor.potassium.tasks.AbstractUnpackDefaultApplicationResourcesTask
 import com.seanproctor.potassium.internal.utils.Arch
 import com.seanproctor.potassium.internal.utils.OS
 import com.seanproctor.potassium.internal.utils.currentOS
@@ -38,6 +21,23 @@ import com.seanproctor.potassium.internal.utils.ioFileOrNull
 import com.seanproctor.potassium.internal.utils.javaExecutable
 import com.seanproctor.potassium.internal.utils.jdkArch
 import com.seanproctor.potassium.internal.utils.provider
+import com.seanproctor.potassium.internal.validation.validatePackageVersion
+import com.seanproctor.potassium.internal.validation.validatePublishProviders
+import com.seanproctor.potassium.tasks.AbstractCheckNativeDistributionRuntime
+import com.seanproctor.potassium.tasks.AbstractElectronBuilderPackageTask
+import com.seanproctor.potassium.tasks.AbstractExtractNativeLibsTask
+import com.seanproctor.potassium.tasks.AbstractGenerateAotCacheTask
+import com.seanproctor.potassium.tasks.AbstractJLinkTask
+import com.seanproctor.potassium.tasks.AbstractJPackageTask
+import com.seanproctor.potassium.tasks.AbstractJarsFlattenTask
+import com.seanproctor.potassium.tasks.AbstractNotarizationTask
+import com.seanproctor.potassium.tasks.AbstractPatchCaCertificatesTask
+import com.seanproctor.potassium.tasks.AbstractProguardTask
+import com.seanproctor.potassium.tasks.AbstractRunAppXTask
+import com.seanproctor.potassium.tasks.AbstractRunDistributableTask
+import com.seanproctor.potassium.tasks.AbstractStripNativeLibsFromJarsTask
+import com.seanproctor.potassium.tasks.AbstractSuggestModulesTask
+import com.seanproctor.potassium.tasks.AbstractUnpackDefaultApplicationResourcesTask
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.provider.Provider
@@ -496,12 +496,12 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
             configureFlattenJars(this, runProguard)
         }
 
-        tasks.register<Jar>(
-            taskNameAction = "package",
-            taskNameObject = "uberJarForCurrentOS",
-        ) {
-            configurePackageUberJarForCurrentOS(this, flattenJars)
-        }
+    tasks.register<Jar>(
+        taskNameAction = "package",
+        taskNameObject = "uberJarForCurrentOS",
+    ) {
+        configurePackageUberJarForCurrentOS(this, flattenJars)
+    }
 
     // runDistributable always uses the non-sandboxed distributable (most relevant for local dev/test)
     val runDistributable =
@@ -1029,4 +1029,3 @@ private fun sandboxingJvmArgs(resourcesPath: String): List<String> =
         "-Djna.boot.library.path=$resourcesPath",
         "-Djna.library.path=$resourcesPath",
     )
-

@@ -29,11 +29,14 @@ internal object PotassiumProperties {
     internal const val ELECTRON_BUILDER_NODE_PATH = "potassium.electronBuilder.nodePath"
     internal const val ELECTRON_BUILDER_PUBLISH_MODE = "potassium.electronBuilder.publishMode"
 
-    fun isVerbose(providers: ProviderFactory): Provider<Boolean> = providers.valueOrNull(VERBOSE).toBooleanProvider(false)
+    fun isVerbose(providers: ProviderFactory): Provider<Boolean> =
+        providers.valueOrNull(VERBOSE).toBooleanProvider(false)
 
-    fun preserveWorkingDir(providers: ProviderFactory): Provider<Boolean> = providers.valueOrNull(PRESERVE_WD).toBooleanProvider(false)
+    fun preserveWorkingDir(providers: ProviderFactory): Provider<Boolean> =
+        providers.valueOrNull(PRESERVE_WD).toBooleanProvider(false)
 
-    fun macSign(providers: ProviderFactory): Provider<Boolean> = providers.valueOrNull(MAC_SIGN).toBooleanProvider(false)
+    fun macSign(providers: ProviderFactory): Provider<Boolean> =
+        providers.valueOrNull(MAC_SIGN).toBooleanProvider(false)
 
     fun macSignIdentity(providers: ProviderFactory): Provider<String> = providers.valueOrNull(MAC_SIGN_ID)
 
@@ -42,34 +45,45 @@ internal object PotassiumProperties {
     fun macSignPrefix(providers: ProviderFactory): Provider<String> = providers.valueOrNull(MAC_SIGN_PREFIX)
 
     @Suppress("MaxLineLength")
-    fun macNotarizationAppleID(providers: ProviderFactory): Provider<String> = providers.valueOrNull(MAC_NOTARIZATION_APPLE_ID)
+    fun macNotarizationAppleID(providers: ProviderFactory): Provider<String> =
+        providers.valueOrNull(MAC_NOTARIZATION_APPLE_ID)
 
     @Suppress("MaxLineLength")
-    fun macNotarizationPassword(providers: ProviderFactory): Provider<String> = providers.valueOrNull(MAC_NOTARIZATION_PASSWORD)
+    fun macNotarizationPassword(providers: ProviderFactory): Provider<String> =
+        providers.valueOrNull(MAC_NOTARIZATION_PASSWORD)
 
     @Suppress("MaxLineLength")
-    fun macNotarizationTeamID(providers: ProviderFactory): Provider<String> = providers.valueOrNull(MAC_NOTARIZATION_TEAM_ID_PROVIDER)
+    fun macNotarizationTeamID(providers: ProviderFactory): Provider<String> =
+        providers.valueOrNull(MAC_NOTARIZATION_TEAM_ID_PROVIDER)
 
     @Suppress("MaxLineLength")
-    fun macNotarizationKeychainProfile(providers: ProviderFactory): Provider<String> = providers.valueOrNull(MAC_NOTARIZATION_KEYCHAIN_PROFILE)
+    fun macNotarizationKeychainProfile(providers: ProviderFactory): Provider<String> =
+        providers.valueOrNull(MAC_NOTARIZATION_KEYCHAIN_PROFILE)
 
     @Suppress("MaxLineLength")
-    fun macNotarizationKeychainPath(providers: ProviderFactory): Provider<String> = providers.valueOrNull(MAC_NOTARIZATION_KEYCHAIN_PATH)
+    fun macNotarizationKeychainPath(providers: ProviderFactory): Provider<String> =
+        providers.valueOrNull(MAC_NOTARIZATION_KEYCHAIN_PATH)
 
     @Suppress("MaxLineLength")
-    fun macNotarizationApiKey(providers: ProviderFactory): Provider<String> = providers.valueOrNull(MAC_NOTARIZATION_API_KEY)
+    fun macNotarizationApiKey(providers: ProviderFactory): Provider<String> =
+        providers.valueOrNull(MAC_NOTARIZATION_API_KEY)
 
     @Suppress("MaxLineLength")
-    fun macNotarizationApiKeyId(providers: ProviderFactory): Provider<String> = providers.valueOrNull(MAC_NOTARIZATION_API_KEY_ID)
+    fun macNotarizationApiKeyId(providers: ProviderFactory): Provider<String> =
+        providers.valueOrNull(MAC_NOTARIZATION_API_KEY_ID)
 
     @Suppress("MaxLineLength")
-    fun macNotarizationApiIssuer(providers: ProviderFactory): Provider<String> = providers.valueOrNull(MAC_NOTARIZATION_API_ISSUER)
+    fun macNotarizationApiIssuer(providers: ProviderFactory): Provider<String> =
+        providers.valueOrNull(MAC_NOTARIZATION_API_ISSUER)
 
-    fun checkJdkVendor(providers: ProviderFactory): Provider<Boolean> = providers.valueOrNull(CHECK_JDK_VENDOR).toBooleanProvider(true)
+    fun checkJdkVendor(providers: ProviderFactory): Provider<Boolean> =
+        providers.valueOrNull(CHECK_JDK_VENDOR).toBooleanProvider(true)
 
     @Suppress("MaxLineLength")
-    fun electronBuilderNodePath(providers: ProviderFactory): Provider<String> = providers.valueOrNull(ELECTRON_BUILDER_NODE_PATH)
+    fun electronBuilderNodePath(providers: ProviderFactory): Provider<String> =
+        providers.valueOrNull(ELECTRON_BUILDER_NODE_PATH)
 
     @Suppress("MaxLineLength")
-    fun electronBuilderPublishMode(providers: ProviderFactory): Provider<String> = providers.valueOrNull(ELECTRON_BUILDER_PUBLISH_MODE)
+    fun electronBuilderPublishMode(providers: ProviderFactory): Provider<String> =
+        providers.valueOrNull(ELECTRON_BUILDER_PUBLISH_MODE)
 }

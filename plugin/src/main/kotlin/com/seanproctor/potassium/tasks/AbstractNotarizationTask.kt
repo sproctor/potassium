@@ -17,7 +17,13 @@ import com.seanproctor.potassium.internal.validation.ValidatedMacOSNotarizationS
 import com.seanproctor.potassium.internal.validation.toNotaryToolArgs
 import com.seanproctor.potassium.internal.validation.validate
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import java.io.File
 import java.security.MessageDigest
@@ -241,7 +247,8 @@ abstract class AbstractNotarizationTask
                 return lines.joinToString("\n")
             }
 
-            private fun isUrlEntry(trimmed: String): Boolean = trimmed.startsWith("- url:") || trimmed.startsWith("-url:")
+            private fun isUrlEntry(trimmed: String): Boolean =
+                trimmed.startsWith("- url:") || trimmed.startsWith("-url:")
 
             private fun extractUrl(trimmed: String): String =
                 trimmed

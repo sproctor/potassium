@@ -29,7 +29,10 @@ class LaunchAgentSettings : Serializable {
      *
      * @param label unique reverse-DNS identifier (e.g. `"com.myapp.background-sync"`)
      */
-    fun agent(label: String, fn: Action<LaunchAgentDefinition>) {
+    fun agent(
+        label: String,
+        fn: Action<LaunchAgentDefinition>,
+    ) {
         val definition = LaunchAgentDefinition(label)
         fn.execute(definition)
         agents.add(definition)

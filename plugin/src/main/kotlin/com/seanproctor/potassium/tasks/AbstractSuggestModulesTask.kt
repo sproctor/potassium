@@ -9,14 +9,25 @@ import com.seanproctor.potassium.dsl.DEFAULT_RUNTIME_MODULES
 import com.seanproctor.potassium.internal.ExternalToolRunner
 import com.seanproctor.potassium.internal.PotassiumProperties
 import com.seanproctor.potassium.internal.files.normalizedPath
-import com.seanproctor.potassium.internal.utils.*
+import com.seanproctor.potassium.internal.utils.clearDirs
+import com.seanproctor.potassium.internal.utils.delete
+import com.seanproctor.potassium.internal.utils.ioFile
+import com.seanproctor.potassium.internal.utils.jvmToolFile
+import com.seanproctor.potassium.internal.utils.notNullProperty
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Classpath
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.LocalState
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault(because = "Depends on external jdeps tool")

@@ -8,15 +8,15 @@ import com.seanproctor.potassium.dsl.PackagingBackend
 import com.seanproctor.potassium.internal.InfoPlistBuilder.InfoPlistValue.InfoPlistListValue
 import com.seanproctor.potassium.internal.InfoPlistBuilder.InfoPlistValue.InfoPlistMapValue
 import com.seanproctor.potassium.internal.InfoPlistBuilder.InfoPlistValue.InfoPlistStringValue
-import com.seanproctor.potassium.tasks.AbstractElectronBuilderPackageTask
-import com.seanproctor.potassium.tasks.AbstractNotarizationTask
-import com.seanproctor.potassium.tasks.AbstractUnpackDefaultApplicationResourcesTask
 import com.seanproctor.potassium.internal.utils.Arch
 import com.seanproctor.potassium.internal.utils.OS
 import com.seanproctor.potassium.internal.utils.currentArch
 import com.seanproctor.potassium.internal.utils.currentOS
 import com.seanproctor.potassium.internal.utils.executableName
 import com.seanproctor.potassium.internal.utils.uppercaseFirstChar
+import com.seanproctor.potassium.tasks.AbstractElectronBuilderPackageTask
+import com.seanproctor.potassium.tasks.AbstractNotarizationTask
+import com.seanproctor.potassium.tasks.AbstractUnpackDefaultApplicationResourcesTask
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.Delete
@@ -71,115 +71,121 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
 
     val agentTempDir = appTmpDir.map { it.dir("graalvm/agentOutput") }
 
-        tasks.register<JavaExec>(
-            taskNameAction = "run",
-            taskNameObject = "withNativeAgent",
-        ) {
-            description = "Run the app with the GraalVM native-image-agent to collect reflection metadata"
+    tasks.register<JavaExec>(
+        taskNameAction = "run",
+        taskNameObject = "withNativeAgent",
+    ) {
+        description = "Run the app with the GraalVM native-image-agent to collect reflection metadata"
 
-            mainClass.set(app.mainClass)
-            setExecutable(
-                graalvmLauncher
-                    .get()
-                    .executablePath.asFile.absolutePath,
+        mainClass.set(app.mainClass)
+        setExecutable(
+            graalvmLauncher
+                .get()
+                .executablePath.asFile.absolutePath,
+        )
+
+        useAppRuntimeFiles { (runtimeJars, _) ->
+            classpath = runtimeJars
+        }
+
+        jvmArgs =
+            buildList {
+                addAll(graalvmDefaultJvmArgs)
+                addAll(
+                    app.jvmArgs.filter { arg ->
+                        // Exclude jpackage-specific artificial args
+                        !arg.startsWith("-splash:\$APPDIR/") &&
+                            !arg.startsWith("-D$APP_RESOURCES_DIR=")
+                    },
+                )
+
+                if (currentOS == OS.MacOS) {
+                    val dockName =
+                        app.nativeDistributions.appName
+                            ?: app.nativeDistributions.packageName
+                            ?: project.name
+                    add("-Dapple.awt.application.name=$dockName")
+                }
+
+                val tempDir =
+                    agentTempDir
+                        .get()
+                        .asFile
+                        .apply { mkdirs() }
+                        .absolutePath
+                add("-agentlib:native-image-agent=config-output-dir=$tempDir")
+            }
+
+        args = app.args
+
+        // Capture all values at configuration time to avoid serializing
+        // JvmApplicationContext into the configuration cache.
+        val resolvedTargetDir: File =
+            if (nativeImageConfigDir.isPresent) {
+                nativeImageConfigDir.get().asFile
+            } else {
+                project.layout.projectDirectory
+                    .dir("graalvm")
+                    .asFile
+            }
+        val resolvedAgentDir: File = agentTempDir.get().asFile
+        val resolvedPlatform: String =
+            when (currentOS) {
+                OS.Windows -> "windows"
+                OS.MacOS -> "macos"
+                OS.Linux -> "linux"
+            }
+        val resolvedMainClass: String? = mainClassName
+        val resolvedRepoDirsFile: File = appTmpDir.get().file("graalvm/metadataRepoDirs.txt").asFile
+        val resolvedStaticDir: File = appTmpDir.get().dir("graalvm/staticAnalysis").asFile
+        val resolvedLibraryMetadataDir: File = appTmpDir.get().dir("graalvm/libraryMetadata").asFile
+
+        // After the agent finishes, merge results into the real config
+        doLast {
+            mergeReachabilityMetadata(resolvedAgentDir, resolvedTargetDir)
+
+            // Also merge individual config files the agent may produce
+            listOf(
+                "reflect-config.json",
+                "jni-config.json",
+                "resource-config.json",
+                "proxy-config.json",
+                "serialization-config.json",
+            ).forEach { fileName ->
+                mergeJsonArrayConfig(
+                    agentFile = File(resolvedAgentDir, fileName),
+                    targetFile = File(resolvedTargetDir, fileName),
+                )
+            }
+
+            // Deduplicate: remove entries already provided by library JARs (L1),
+            // plugin platform metadata (L3), Oracle repo (L2), static analysis,
+            // and native-image.properties resource patterns.
+            val runtimeClasspath = classpath.files
+
+            // Collect extra metadata directories: Oracle repo (L2), static analysis, library metadata (L1)
+            val extraDirs = mutableListOf<File>()
+            if (resolvedRepoDirsFile.exists()) {
+                resolvedRepoDirsFile.readLines().filter { it.isNotBlank() }.forEach { extraDirs.add(File(it)) }
+            }
+            if (resolvedStaticDir.isDirectory) {
+                extraDirs.add(resolvedStaticDir)
+            }
+            if (resolvedLibraryMetadataDir.isDirectory) {
+                extraDirs.add(resolvedLibraryMetadataDir)
+            }
+
+            deduplicateAgainstLibraryMetadata(
+                runtimeClasspath,
+                resolvedTargetDir,
+                resolvedPlatform,
+                resolvedMainClass,
+                extraDirs,
             )
 
-            useAppRuntimeFiles { (runtimeJars, _) ->
-                classpath = runtimeJars
-            }
-
-            jvmArgs =
-                buildList {
-                    addAll(graalvmDefaultJvmArgs)
-                    addAll(
-                        app.jvmArgs.filter { arg ->
-                            // Exclude jpackage-specific artificial args
-                            !arg.startsWith("-splash:\$APPDIR/") &&
-                                !arg.startsWith("-D$APP_RESOURCES_DIR=")
-                        },
-                    )
-
-                    if (currentOS == OS.MacOS) {
-                        val dockName =
-                            app.nativeDistributions.appName
-                                ?: app.nativeDistributions.packageName
-                                ?: project.name
-                        add("-Dapple.awt.application.name=$dockName")
-                    }
-
-                    val tempDir =
-                        agentTempDir
-                            .get()
-                            .asFile
-                            .apply { mkdirs() }
-                            .absolutePath
-                    add("-agentlib:native-image-agent=config-output-dir=$tempDir")
-                }
-
-            args = app.args
-
-            // Capture all values at configuration time to avoid serializing
-            // JvmApplicationContext into the configuration cache.
-            val resolvedTargetDir: File =
-                if (nativeImageConfigDir.isPresent) {
-                    nativeImageConfigDir.get().asFile
-                } else {
-                    project.layout.projectDirectory
-                        .dir("graalvm")
-                        .asFile
-                }
-            val resolvedAgentDir: File = agentTempDir.get().asFile
-            val resolvedPlatform: String =
-                when (currentOS) {
-                    OS.Windows -> "windows"
-                    OS.MacOS -> "macos"
-                    OS.Linux -> "linux"
-                }
-            val resolvedMainClass: String? = mainClassName
-            val resolvedRepoDirsFile: File = appTmpDir.get().file("graalvm/metadataRepoDirs.txt").asFile
-            val resolvedStaticDir: File = appTmpDir.get().dir("graalvm/staticAnalysis").asFile
-            val resolvedLibraryMetadataDir: File = appTmpDir.get().dir("graalvm/libraryMetadata").asFile
-
-            // After the agent finishes, merge results into the real config
-            doLast {
-                mergeReachabilityMetadata(resolvedAgentDir, resolvedTargetDir)
-
-                // Also merge individual config files the agent may produce
-                listOf(
-                    "reflect-config.json",
-                    "jni-config.json",
-                    "resource-config.json",
-                    "proxy-config.json",
-                    "serialization-config.json",
-                ).forEach { fileName ->
-                    mergeJsonArrayConfig(
-                        agentFile = File(resolvedAgentDir, fileName),
-                        targetFile = File(resolvedTargetDir, fileName),
-                    )
-                }
-
-                // Deduplicate: remove entries already provided by library JARs (L1),
-                // plugin platform metadata (L3), Oracle repo (L2), static analysis,
-                // and native-image.properties resource patterns.
-                val runtimeClasspath = classpath.files
-
-                // Collect extra metadata directories: Oracle repo (L2), static analysis, library metadata (L1)
-                val extraDirs = mutableListOf<File>()
-                if (resolvedRepoDirsFile.exists()) {
-                    resolvedRepoDirsFile.readLines().filter { it.isNotBlank() }.forEach { extraDirs.add(File(it)) }
-                }
-                if (resolvedStaticDir.isDirectory) {
-                    extraDirs.add(resolvedStaticDir)
-                }
-                if (resolvedLibraryMetadataDir.isDirectory) {
-                    extraDirs.add(resolvedLibraryMetadataDir)
-                }
-
-                deduplicateAgainstLibraryMetadata(runtimeClasspath, resolvedTargetDir, resolvedPlatform, resolvedMainClass, extraDirs)
-
-                logger.lifecycle("Native-image agent config merged into: $resolvedTargetDir")
-            }
+            logger.lifecycle("Native-image agent config merged into: $resolvedTargetDir")
         }
+    }
 
     // ── Platform-specific pre-compile tasks ──
 
@@ -264,7 +270,8 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
                 taskNameObject = "graalvmWindowsResources",
             ) {
                 dependsOn(unpackDefaultResources)
-                description = "Generate and compile Windows resource file (.rc -> .res) for native image icon and version info"
+                description =
+                    "Generate and compile Windows resource file (.rc -> .res) for native image icon and version info"
 
                 val rcFile = appTmpDir.map { it.file("graalvm/icon.rc") }
                 val resFile = appTmpDir.map { it.file("graalvm/icon.res") }
@@ -785,7 +792,8 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
 // macOS packaging
 // ═══════════════════════════════════════════════════════════════════
 
-@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod") // Inherent to macOS GraalVM packaging configuration.
+// Inherent to macOS GraalVM packaging configuration.
+@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
 private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
     graalvm: GraalvmSettings,
     graalvmHome: org.gradle.api.provider.Provider<String>,
@@ -1144,7 +1152,11 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
 
             // Create Base.lproj so macOS uses the system language for auto-added menu items
             doLast {
-                appBundleDir.get().dir("Resources/Base.lproj").asFile.mkdirs()
+                appBundleDir
+                    .get()
+                    .dir("Resources/Base.lproj")
+                    .asFile
+                    .mkdirs()
             }
         }
 

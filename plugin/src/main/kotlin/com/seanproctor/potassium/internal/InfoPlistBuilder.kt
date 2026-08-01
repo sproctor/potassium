@@ -50,7 +50,9 @@ internal class InfoPlistBuilder(
                         prefix = "${indentForLevel(nestingLevel)}<dict>\n",
                         postfix = "\n${indentForLevel(nestingLevel)}</dict>",
                     ) { (key, value) ->
-                        "${indentForLevel(nestingLevel + 1)}<key>${key.name}</key>\n${value.asPlistEntry(nestingLevel + 1)}"
+                        "${indentForLevel(nestingLevel + 1)}<key>${key.name}</key>\n${value.asPlistEntry(
+                            nestingLevel + 1,
+                        )}"
                     }
                 }
 
@@ -119,7 +121,9 @@ internal class InfoPlistBuilder(
         file.writer().buffered().use { writer ->
             writer.run {
                 appendLine("<?xml version=\"1.0\" ?>")
-                appendLine("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"https://www.apple.com/DTDs/PropertyList-1.0.dtd\">")
+                appendLine(
+                    "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"https://www.apple.com/DTDs/PropertyList-1.0.dtd\">",
+                )
                 appendLine("<plist version=\"1.0\">")
                 appendLine("${indentForLevel(1)}<dict>")
                 for ((k, v) in values) {

@@ -218,7 +218,11 @@ class DmgBackgroundPaddingTest {
         val dims = readImageDimensions(result)!!
 
         val expectedWindowHeight = dims.second + MACOS_DMG_TITLE_BAR_HEIGHT
-        assertEquals("Window height = imageHeight + titleBarHeight", 400 + MACOS_DMG_TITLE_BAR_HEIGHT, expectedWindowHeight)
+        assertEquals(
+            "Window height = imageHeight + titleBarHeight",
+            400 + MACOS_DMG_TITLE_BAR_HEIGHT,
+            expectedWindowHeight,
+        )
     }
 
     // ---- Issue regressions ----
@@ -309,10 +313,16 @@ class DmgBackgroundPaddingTest {
 
         // Convert to TIFF using sips (preserves Apple metadata)
         val sourceTiff = tmpDir.newFile("header.tiff")
-        val exitCode = ProcessBuilder(
-            "/usr/bin/sips", "-s", "format", "tiff",
-            headerPng.absolutePath, "--out", sourceTiff.absolutePath,
-        ).start().waitFor()
+        val exitCode =
+            ProcessBuilder(
+                "/usr/bin/sips",
+                "-s",
+                "format",
+                "tiff",
+                headerPng.absolutePath,
+                "--out",
+                sourceTiff.absolutePath,
+            ).start().waitFor()
         Assume.assumeTrue("sips conversion succeeded", exitCode == 0)
 
         val originalBytes = sourceTiff.readBytes()
@@ -331,7 +341,11 @@ class DmgBackgroundPaddingTest {
 
         // Verify the window override computation
         val expectedWindowHeight = dims.second + MACOS_DMG_TITLE_BAR_HEIGHT
-        assertEquals("Window height = 1024 + $MACOS_DMG_TITLE_BAR_HEIGHT", 1024 + MACOS_DMG_TITLE_BAR_HEIGHT, expectedWindowHeight)
+        assertEquals(
+            "Window height = 1024 + $MACOS_DMG_TITLE_BAR_HEIGHT",
+            1024 + MACOS_DMG_TITLE_BAR_HEIGHT,
+            expectedWindowHeight,
+        )
     }
 
     @Test
@@ -345,18 +359,51 @@ class DmgBackgroundPaddingTest {
 
         // Build 1x TIFF
         val tiff1x = tmpDir.newFile("header.tiff")
-        val exit1 = ProcessBuilder("/usr/bin/sips", "-s", "format", "tiff", headerPng.absolutePath, "--out", tiff1x.absolutePath).start().waitFor()
+        val exit1 =
+            ProcessBuilder(
+                "/usr/bin/sips",
+                "-s",
+                "format",
+                "tiff",
+                headerPng.absolutePath,
+                "--out",
+                tiff1x.absolutePath,
+            ).start().waitFor()
         Assume.assumeTrue("sips 1x succeeded", exit1 == 0)
 
         // Build 2x TIFF (scale up)
         val scaled2x = tmpDir.newFile("header_2x_scaled.png")
-        ProcessBuilder("/usr/bin/sips", "-z", "2048", "3072", headerPng.absolutePath, "--out", scaled2x.absolutePath).start().waitFor()
+        ProcessBuilder(
+            "/usr/bin/sips",
+            "-z",
+            "2048",
+            "3072",
+            headerPng.absolutePath,
+            "--out",
+            scaled2x.absolutePath,
+        ).start().waitFor()
         val tiff2x = tmpDir.newFile("header@2x.tiff")
-        ProcessBuilder("/usr/bin/sips", "-s", "format", "tiff", scaled2x.absolutePath, "--out", tiff2x.absolutePath).start().waitFor()
+        ProcessBuilder(
+            "/usr/bin/sips",
+            "-s",
+            "format",
+            "tiff",
+            scaled2x.absolutePath,
+            "--out",
+            tiff2x.absolutePath,
+        ).start().waitFor()
 
         // Combine into Apple multi-resolution TIFF
         val multiResTiff = tmpDir.newFile("header_hires.tiff")
-        val exitMerge = ProcessBuilder("/usr/bin/tiffutil", "-cathidpicheck", tiff1x.absolutePath, tiff2x.absolutePath, "-out", multiResTiff.absolutePath).start().waitFor()
+        val exitMerge =
+            ProcessBuilder(
+                "/usr/bin/tiffutil",
+                "-cathidpicheck",
+                tiff1x.absolutePath,
+                tiff2x.absolutePath,
+                "-out",
+                multiResTiff.absolutePath,
+            ).start().waitFor()
         Assume.assumeTrue("tiffutil merge succeeded", exitMerge == 0)
 
         val originalBytes = multiResTiff.readBytes()

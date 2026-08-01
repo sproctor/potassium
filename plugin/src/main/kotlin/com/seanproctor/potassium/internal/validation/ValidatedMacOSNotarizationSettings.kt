@@ -27,7 +27,9 @@ internal sealed class NotarizationAuth {
     ) : NotarizationAuth()
 }
 
-internal data class ValidatedMacOSNotarizationSettings(val auth: NotarizationAuth)
+internal data class ValidatedMacOSNotarizationSettings(
+    val auth: NotarizationAuth,
+)
 
 /**
  * Builds the `notarytool` authentication arguments and an optional stdin payload
@@ -48,9 +50,12 @@ internal fun NotarizationAuth.toNotaryToolArgs(): Pair<List<String>, String?> =
             } to null
         is NotarizationAuth.ApiKey ->
             listOf(
-                "--key", keyPath,
-                "--key-id", keyId,
-                "--issuer", issuerId,
+                "--key",
+                keyPath,
+                "--key-id",
+                keyId,
+                "--issuer",
+                issuerId,
             ) to null
     }
 

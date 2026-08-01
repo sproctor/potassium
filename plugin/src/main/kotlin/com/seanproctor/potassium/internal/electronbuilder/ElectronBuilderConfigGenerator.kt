@@ -230,7 +230,8 @@ internal class ElectronBuilderConfigGenerator {
         dmg.shrink?.let { yaml.appendLine("  shrink: $it") }
 
         val w = dmg.window
-        val hasWindowConfig = w.x != null || w.y != null || w.width != null || w.height != null || windowOverride != null
+        val hasWindowConfig =
+            w.x != null || w.y != null || w.width != null || w.height != null || windowOverride != null
         if (hasWindowConfig) {
             yaml.appendLine("  window:")
             w.x?.let { yaml.appendLine("    x: $it") }

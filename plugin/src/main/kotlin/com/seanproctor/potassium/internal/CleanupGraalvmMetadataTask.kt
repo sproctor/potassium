@@ -59,8 +59,9 @@ abstract class CleanupGraalvmMetadataTask : DefaultTask() {
     @get:Input
     abstract val configDir: Property<File>
 
+    // Known-complex GraalVM metadata cleanup; candidate for future refactor.
     @TaskAction
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "NestedBlockDepth") // Known-complex GraalVM metadata cleanup; candidate for future refactor.
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "NestedBlockDepth")
     fun cleanup() {
         val targetDir = configDir.get()
         val targetFile = File(targetDir, "reachability-metadata.json")
@@ -91,7 +92,14 @@ abstract class CleanupGraalvmMetadataTask : DefaultTask() {
                         ) {
                             val text = jar.getInputStream(entry).bufferedReader().readText()
                             val before = countBaselineTypes(libraryEntries)
-                            collectBaseline(slurper, text, libraryEntries, libraryProxies, libraryResourceJsons, libraryResourceGlobs)
+                            collectBaseline(
+                                slurper,
+                                text,
+                                libraryEntries,
+                                libraryProxies,
+                                libraryResourceJsons,
+                                libraryResourceGlobs,
+                            )
                             l1Count += countBaselineTypes(libraryEntries) - before
                         }
 
@@ -270,7 +278,14 @@ abstract class CleanupGraalvmMetadataTask : DefaultTask() {
                     val sectionMap = libraryEntries[baselineSection] ?: continue
                     val libEntry = sectionMap[typeName] ?: continue
                     if (libraryCoversProjectEntry(libEntry, projectEntry)) {
-                        val source = if (baselineSection == projectSection) baselineSection else "$projectSection via $baselineSection"
+                        val source =
+                            if (baselineSection ==
+                                projectSection
+                            ) {
+                                baselineSection
+                            } else {
+                                "$projectSection via $baselineSection"
+                            }
                         removedEntries.add("  [$source] $typeName")
                         return@removeAll true
                     }
@@ -351,7 +366,10 @@ abstract class CleanupGraalvmMetadataTask : DefaultTask() {
         logger.lifecycle("Remaining manual entries: $remaining")
     }
 
-    private fun countBaselineTypes(entries: Map<String, Map<String, MutableMap<String, Any?>>>): Int = entries.values.sumOf { it.size }
+    private fun countBaselineTypes(entries: Map<String, Map<String, MutableMap<String, Any?>>>): Int =
+        entries.values.sumOf {
+            it.size
+        }
 
     /** Extract a canonical key for proxy entries, or null if not a proxy. */
     @Suppress("UNCHECKED_CAST")

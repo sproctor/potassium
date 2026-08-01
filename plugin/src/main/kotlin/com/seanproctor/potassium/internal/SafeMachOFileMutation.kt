@@ -53,8 +53,9 @@ internal fun mutateMachOFileSafely(
     mutate: (copy: File, commandRunner: MachOCommandRunner) -> MachOCommandResult,
     validateExtra: ((copy: File, commandRunner: MachOCommandRunner) -> String?)? = null,
 ): Boolean {
-    val parent = binary.parentFile?.toPath()
-        ?: throw IOException("Cannot create temporary copy for ${binary.absolutePath}: missing parent directory")
+    val parent =
+        binary.parentFile?.toPath()
+            ?: throw IOException("Cannot create temporary copy for ${binary.absolutePath}: missing parent directory")
     val binaryPath = binary.toPath()
     val tempPath = createSiblingTempCopy(binaryPath, parent)
 
@@ -62,13 +63,14 @@ internal fun mutateMachOFileSafely(
         val tempFile = tempPath.toFile()
         runCodesignRemoveSignatureBestEffort(tempFile, commandRunner, logger, operation)
 
-        val mutationResult = runCatching { mutate(tempFile, commandRunner) }
-            .getOrElse { error ->
-                logger.warn(
-                    "Skipping $operation for ${binary.name}: mutation step failed unexpectedly: ${error.message}",
-                )
-                return false
-            }
+        val mutationResult =
+            runCatching { mutate(tempFile, commandRunner) }
+                .getOrElse { error ->
+                    logger.warn(
+                        "Skipping $operation for ${binary.name}: mutation step failed unexpectedly: ${error.message}",
+                    )
+                    return false
+                }
         if (mutationResult.exitCode != 0) {
             logger.warn(
                 "Skipping $operation for ${binary.name}: tool exit=${mutationResult.exitCode}. " +
@@ -87,10 +89,11 @@ internal fun mutateMachOFileSafely(
         }
 
         validateExtra?.let { validator ->
-            val validationError = runCatching { validator(tempFile, commandRunner) }
-                .getOrElse { error ->
-                    "extra validation threw ${error::class.java.simpleName}: ${error.message}"
-                }
+            val validationError =
+                runCatching { validator(tempFile, commandRunner) }
+                    .getOrElse { error ->
+                        "extra validation threw ${error::class.java.simpleName}: ${error.message}"
+                    }
             if (validationError != null) {
                 logger.warn(
                     "Skipping $operation for ${binary.name}: $validationError. Original file kept.",

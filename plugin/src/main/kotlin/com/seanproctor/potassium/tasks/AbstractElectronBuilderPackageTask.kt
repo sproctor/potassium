@@ -9,13 +9,25 @@ import com.seanproctor.potassium.dsl.CompressionLevel
 import com.seanproctor.potassium.dsl.JvmApplicationDistributions
 import com.seanproctor.potassium.dsl.MacOSSigningSettings
 import com.seanproctor.potassium.dsl.TargetFormat
-import com.seanproctor.potassium.internal.*
+import com.seanproctor.potassium.internal.MACOS_DMG_TITLE_BAR_HEIGHT
+import com.seanproctor.potassium.internal.MacSigner
+import com.seanproctor.potassium.internal.MacSignerImpl
+import com.seanproctor.potassium.internal.NoCertificateSigner
+import com.seanproctor.potassium.internal.WindowsKitsLocator
 import com.seanproctor.potassium.internal.electronbuilder.ElectronBuilderConfigGenerator
 import com.seanproctor.potassium.internal.electronbuilder.ElectronBuilderInvocation
 import com.seanproctor.potassium.internal.electronbuilder.ElectronBuilderToolManager
 import com.seanproctor.potassium.internal.electronbuilder.NodeJsDetector
 import com.seanproctor.potassium.internal.files.isDylibPath
-import com.seanproctor.potassium.internal.utils.*
+import com.seanproctor.potassium.internal.padDmgBackgroundForTitleBar
+import com.seanproctor.potassium.internal.readImageDimensions
+import com.seanproctor.potassium.internal.utils.Arch
+import com.seanproctor.potassium.internal.utils.OS
+import com.seanproctor.potassium.internal.utils.currentArch
+import com.seanproctor.potassium.internal.utils.currentOS
+import com.seanproctor.potassium.internal.utils.ioFile
+import com.seanproctor.potassium.internal.utils.notNullProperty
+import com.seanproctor.potassium.internal.utils.nullableProperty
 import com.seanproctor.potassium.internal.validation.ValidatedMacOSSigningSettings
 import com.seanproctor.potassium.internal.validation.validate
 import net.coobird.thumbnailator.Thumbnails
@@ -26,13 +38,27 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.Logger
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Nested
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.nio.file.*
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.Locale
 import javax.imageio.ImageIO
@@ -349,20 +375,24 @@ abstract class AbstractElectronBuilderPackageTask
             val configGenerator = ElectronBuilderConfigGenerator()
             val resolvedArch = Arch.entries.first { it.id == targetArch.get() }
 
-            val (dmgBackgroundOverride, dmgWindowOverride) = if (TargetFormat.Dmg in targetFormats) {
-                val bgFile = distributions.macOS.dmg.background.orNull?.asFile
-                if (bgFile != null) {
-                    val processedBg = padDmgBackgroundForTitleBar(bgFile, outputDir.resolve("dmg-assets"), logger)
-                    val windowOverride = readImageDimensions(processedBg)?.let { (w, h) ->
-                        ElectronBuilderConfigGenerator.DmgWindowOverride(w, h + MACOS_DMG_TITLE_BAR_HEIGHT)
+            val (dmgBackgroundOverride, dmgWindowOverride) =
+                if (TargetFormat.Dmg in targetFormats) {
+                    val bgFile =
+                        distributions.macOS.dmg.background.orNull
+                            ?.asFile
+                    if (bgFile != null) {
+                        val processedBg = padDmgBackgroundForTitleBar(bgFile, outputDir.resolve("dmg-assets"), logger)
+                        val windowOverride =
+                            readImageDimensions(processedBg)?.let { (w, h) ->
+                                ElectronBuilderConfigGenerator.DmgWindowOverride(w, h + MACOS_DMG_TITLE_BAR_HEIGHT)
+                            }
+                        processedBg to windowOverride
+                    } else {
+                        null to null
                     }
-                    processedBg to windowOverride
                 } else {
                     null to null
                 }
-            } else {
-                null to null
-            }
 
             if (TargetFormat.AppImage in targetFormats && distributions.compressionLevel == CompressionLevel.Maximum) {
                 logger.warn(
@@ -882,8 +912,8 @@ abstract class AbstractElectronBuilderPackageTask
             return ImageIO.read(file)
         }
 
-        private fun isToolAvailableFor(targetFormat: TargetFormat): Boolean {
-            return when (targetFormat) {
+        private fun isToolAvailableFor(targetFormat: TargetFormat): Boolean =
+            when (targetFormat) {
                 TargetFormat.Snap -> {
                     when {
                         !isCommandAvailable("snapcraft") -> {
@@ -913,7 +943,6 @@ abstract class AbstractElectronBuilderPackageTask
                 }
                 else -> true
             }
-        }
 
         private fun isCommandAvailable(command: String): Boolean {
             val stdout = ByteArrayOutputStream()
