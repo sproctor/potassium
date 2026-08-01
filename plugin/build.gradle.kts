@@ -1,4 +1,3 @@
-import org.gradle.language.jvm.tasks.ProcessResources
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -227,28 +226,6 @@ kotlin {
         // The plugin's own code freely uses APIs marked @PotassiumInternal (e.g. TargetFormat);
         // consumers must opt in explicitly.
         optIn.add("com.seanproctor.potassium.PotassiumInternal")
-    }
-}
-
-// Build a minimal runnable jar from JdkVersionProbe.java and bundle it as a plugin resource.
-// AbstractCheckNativeDistributionRuntime extracts and runs it against the target JDK to read
-// its major version and vendor (replaces JetBrains' gradle-plugin-internal-jdk-version-probe jar).
-val jdkVersionProbeJar =
-    tasks.register<Jar>("jdkVersionProbeJar") {
-        archiveBaseName.set("jdk-version-probe")
-        destinationDirectory.set(layout.buildDirectory.dir("generated/jdk-version-probe"))
-        from(sourceSets.main.map { it.output.classesDirs }) {
-            include("com/seanproctor/potassium/internal/JdkVersionProbe.class")
-        }
-        manifest {
-            attributes("Main-Class" to "com.seanproctor.potassium.internal.JdkVersionProbe")
-        }
-    }
-
-tasks.named<ProcessResources>("processResources") {
-    from(jdkVersionProbeJar) {
-        into("potassium")
-        rename { "jdk-version-probe.jar" }
     }
 }
 

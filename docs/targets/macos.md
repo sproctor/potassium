@@ -4,10 +4,10 @@ Potassium supports two macOS installer formats and universal (fat) binaries.
 
 ## Formats
 
-| Format | Extension | Auto-Update | Sandboxed |
-|--------|-----------|-------------|-----------|
-| DMG | `.dmg` | Yes | No |
-| PKG | `.pkg` | Yes | Yes (App Sandbox) |
+| Format | Extension | Auto-Update | Sandboxed         |
+|--------|-----------|-------------|-------------------|
+| DMG    | `.dmg`    | Yes         | No                |
+| PKG    | `.pkg`    | Yes         | Yes (App Sandbox) |
 
 ```kotlin
 macOS {
@@ -113,11 +113,11 @@ dmg {
 
 Each `content()` call adds an entry with an `(x, y)` position and a `DmgContentType`:
 
-| Type | Description |
-|------|-------------|
+| Type                  | Description                                                                         |
+|-----------------------|-------------------------------------------------------------------------------------|
 | `DmgContentType.File` | An existing file in the DMG (e.g. the `.app` bundle). Set `name` to match the file. |
-| `DmgContentType.Link` | A symlink. Set `path` to the link target (usually `/Applications`). |
-| `DmgContentType.Dir` | A directory inside the DMG. |
+| `DmgContentType.Link` | A symlink. Set `path` to the link target (usually `/Applications`).                 |
+| `DmgContentType.Dir`  | A directory inside the DMG.                                                         |
 
 !!! tip "Mapping from `create-dmg`"
     If you are migrating from a `create-dmg` shell script, the `content()` DSL maps directly to the `--icon` and `--app-drop-link` flags:
@@ -186,12 +186,13 @@ potassium {
 
 **What gets patched:**
 
-| Task | How |
-|------|-----|
+| Task                                                   | How                                               |
+|--------------------------------------------------------|---------------------------------------------------|
 | `createDistributable` / `createSandboxedDistributable` | Launcher patched in the app bundle before signing |
-| `packageMacOS` / `packagePkg` | Derived from the patched distributable |
-| `runDistributable` | Runs the patched app bundle |
-| `run` | Uses a cached patched copy of the JVM binary |
+| `packageMacOS` / `packagePkg`                          | Derived from the patched distributable            |
+| `runDistributable`                                     | Runs the patched app bundle                       |
+
+`run` launches the configured JDK directly (not the bundled distributable) and is not patched — it always shows the pre-Liquid-Glass window chrome, regardless of `macOsSdkVersion`. Use `runDistributable` to preview Liquid Glass locally.
 
 **Requirements:**
 
@@ -199,7 +200,7 @@ potassium {
 - Only effective on macOS; ignored on other platforms.
 
 !!! note "How it works"
-    `vtool` modifies the `LC_BUILD_VERSION` load command in the Mach-O binary, setting the SDK version to 26.0. This is the same header that the linker writes when you compile with `-sdk_version 26.0`. The modification only affects metadata — no code is changed. For distributable builds, the launcher is patched before signing, so the code signature covers the patched binary. For the `run` task, a patched copy of the JVM is produced by the `potassiumPatchMacJvm` task into `build/potassium/patched-jvm/` and reused across runs. JavaExec forks the patched binary directly, so IntelliJ's debugger attaches normally (breakpoints, stop button) with Liquid Glass active.
+    `vtool` modifies the `LC_BUILD_VERSION` load command in the Mach-O binary, setting the SDK version to 26.0. This is the same header that the linker writes when you compile with `-sdk_version 26.0`. The modification only affects metadata — no code is changed. The launcher is patched before signing, so the code signature covers the patched binary.
 
 ### GraalVM Native Image
 
@@ -294,55 +295,55 @@ macOS {
 
 ### `macOS { }`
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `iconFile` | `RegularFileProperty` | — | `.icns` icon file |
-| `bundleID` | `String?` | `null` | macOS bundle identifier |
-| `dockName` | `String?` | `null` | Name displayed in the Dock |
-| `setDockNameSameAsPackageName` | `Boolean` | `true` | Use `packageName` as dock name |
-| `appCategory` | `String?` | `null` | App Store / Finder category |
-| `appStore` | `Boolean` | `false` | **Deprecated** — PKG is always built for the App Store. This property is ignored. |
-| `minimumSystemVersion` | `String?` | `null` | Minimum macOS version |
-| `layeredIconDir` | `DirectoryProperty` | — | `.icon` directory for macOS 26+ |
-| `packageName` | `String?` | `null` | Override package name |
-| `entitlementsFile` | `RegularFileProperty` | — | Entitlements plist |
-| `runtimeEntitlementsFile` | `RegularFileProperty` | — | Runtime entitlements plist |
-| `provisioningProfile` | `RegularFileProperty` | — | Provisioning profile |
-| `runtimeProvisioningProfile` | `RegularFileProperty` | — | Runtime provisioning profile |
-| `installationPath` | `String?` | `/Applications` | The install location used by PKG installers and as the DMG symlink target (see [below](#installation-path)) |
+| Property                       | Type                  | Default         | Description                                                                                                 |
+|--------------------------------|-----------------------|-----------------|-------------------------------------------------------------------------------------------------------------|
+| `iconFile`                     | `RegularFileProperty` | —               | `.icns` icon file                                                                                           |
+| `bundleID`                     | `String?`             | `null`          | macOS bundle identifier                                                                                     |
+| `dockName`                     | `String?`             | `null`          | Name displayed in the Dock                                                                                  |
+| `setDockNameSameAsPackageName` | `Boolean`             | `true`          | Use `packageName` as dock name                                                                              |
+| `appCategory`                  | `String?`             | `null`          | App Store / Finder category                                                                                 |
+| `appStore`                     | `Boolean`             | `false`         | **Deprecated** — PKG is always built for the App Store. This property is ignored.                           |
+| `minimumSystemVersion`         | `String?`             | `null`          | Minimum macOS version                                                                                       |
+| `layeredIconDir`               | `DirectoryProperty`   | —               | `.icon` directory for macOS 26+                                                                             |
+| `packageName`                  | `String?`             | `null`          | Override package name                                                                                       |
+| `entitlementsFile`             | `RegularFileProperty` | —               | Entitlements plist                                                                                          |
+| `runtimeEntitlementsFile`      | `RegularFileProperty` | —               | Runtime entitlements plist                                                                                  |
+| `provisioningProfile`          | `RegularFileProperty` | —               | Provisioning profile                                                                                        |
+| `runtimeProvisioningProfile`   | `RegularFileProperty` | —               | Runtime provisioning profile                                                                                |
+| `installationPath`             | `String?`             | `/Applications` | The install location used by PKG installers and as the DMG symlink target (see [below](#installation-path)) |
 
 ### `macOS { signing { } }`
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `sign` | `Property<Boolean>` | `false` | Enable code signing |
-| `identity` | `Property<String>` | — | Signing identity |
-| `keychain` | `Property<String>` | — | Keychain path |
-| `prefix` | `Property<String>` | — | Signing prefix |
+| Property   | Type                | Default | Description         |
+|------------|---------------------|---------|---------------------|
+| `sign`     | `Property<Boolean>` | `false` | Enable code signing |
+| `identity` | `Property<String>`  | —       | Signing identity    |
+| `keychain` | `Property<String>`  | —       | Keychain path       |
+| `prefix`   | `Property<String>`  | —       | Signing prefix      |
 
 ### `macOS { notarization { } }`
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `appleID` | `Property<String>` | — | Apple ID email |
-| `password` | `Property<String>` | — | App-specific password |
-| `teamID` | `Property<String>` | — | Developer Team ID |
+| Property   | Type               | Default | Description           |
+|------------|--------------------|---------|-----------------------|
+| `appleID`  | `Property<String>` | —       | Apple ID email        |
+| `password` | `Property<String>` | —       | App-specific password |
+| `teamID`   | `Property<String>` | —       | Developer Team ID     |
 
 ### `macOS { dmg { } }`
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `title` | `String?` | `null` | DMG window title |
-| `iconSize` | `Int?` | `null` | Icon size in DMG window |
-| `iconTextSize` | `Int?` | `null` | Icon text size |
-| `format` | `DmgFormat?` | `null` | DMG format enum (`UDZO`, `UDBZ`, etc.) |
-| `size` | `String?` | `null` | DMG size |
-| `shrink` | `Boolean?` | `null` | Shrink DMG |
-| `sign` | `Boolean` | `false` | Sign the DMG |
-| `background` | `RegularFileProperty` | — | Background image |
-| `backgroundColor` | `String?` | `null` | Background color (hex) |
-| `icon` | `RegularFileProperty` | — | DMG volume icon |
-| `badgeIcon` | `RegularFileProperty` | — | Badge overlay icon |
+| Property          | Type                  | Default | Description                            |
+|-------------------|-----------------------|---------|----------------------------------------|
+| `title`           | `String?`             | `null`  | DMG window title                       |
+| `iconSize`        | `Int?`                | `null`  | Icon size in DMG window                |
+| `iconTextSize`    | `Int?`                | `null`  | Icon text size                         |
+| `format`          | `DmgFormat?`          | `null`  | DMG format enum (`UDZO`, `UDBZ`, etc.) |
+| `size`            | `String?`             | `null`  | DMG size                               |
+| `shrink`          | `Boolean?`            | `null`  | Shrink DMG                             |
+| `sign`            | `Boolean`             | `false` | Sign the DMG                           |
+| `background`      | `RegularFileProperty` | —       | Background image                       |
+| `backgroundColor` | `String?`             | `null`  | Background color (hex)                 |
+| `icon`            | `RegularFileProperty` | —       | DMG volume icon                        |
+| `badgeIcon`       | `RegularFileProperty` | —       | Badge overlay icon                     |
 
 #### `DmgFormat` Enum
 
@@ -350,12 +351,12 @@ macOS {
 
 #### `dmg { window { } }`
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `x` | `Int?` | `null` | Window x position on screen |
-| `y` | `Int?` | `null` | Window y position on screen |
-| `width` | `Int?` | `null` | Window width |
-| `height` | `Int?` | `null` | Window height |
+| Property | Type   | Default | Description                 |
+|----------|--------|---------|-----------------------------|
+| `x`      | `Int?` | `null`  | Window x position on screen |
+| `y`      | `Int?` | `null`  | Window y position on screen |
+| `width`  | `Int?` | `null`  | Window width                |
+| `height` | `Int?` | `null`  | Window height               |
 
 #### `dmg { content() }`
 
@@ -371,18 +372,18 @@ fun content(
 )
 ```
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `x` | `Int` | Yes | Horizontal position inside the DMG window |
-| `y` | `Int` | Yes | Vertical position inside the DMG window |
-| `type` | `DmgContentType?` | No | Kind of content entry (`File`, `Link`, or `Dir`) |
-| `name` | `String?` | No | File name to match (used with `File` / `Dir`) |
-| `path` | `String?` | No | Target path (used with `Link`, e.g. `/Applications`) |
+| Parameter | Type              | Required | Description                                          |
+|-----------|-------------------|----------|------------------------------------------------------|
+| `x`       | `Int`             | Yes      | Horizontal position inside the DMG window            |
+| `y`       | `Int`             | Yes      | Vertical position inside the DMG window              |
+| `type`    | `DmgContentType?` | No       | Kind of content entry (`File`, `Link`, or `Dir`)     |
+| `name`    | `String?`         | No       | File name to match (used with `File` / `Dir`)        |
+| `path`    | `String?`         | No       | Target path (used with `Link`, e.g. `/Applications`) |
 
 #### `DmgContentType` Enum
 
-| Value | Serialized ID | Description |
-|-------|---------------|-------------|
-| `Link` | `link` | A symlink to a target path |
-| `File` | `file` | An existing file in the DMG |
-| `Dir` | `dir` | A directory in the DMG |
+| Value  | Serialized ID | Description                 |
+|--------|---------------|-----------------------------|
+| `Link` | `link`        | A symlink to a target path  |
+| `File` | `file`        | An existing file in the DMG |
+| `Dir`  | `dir`         | A directory in the DMG      |

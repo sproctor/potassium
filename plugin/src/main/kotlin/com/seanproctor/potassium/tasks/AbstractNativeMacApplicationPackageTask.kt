@@ -5,8 +5,9 @@
 
 package com.seanproctor.potassium.tasks
 
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
-import com.seanproctor.potassium.internal.utils.*
+import com.seanproctor.potassium.internal.utils.clearDirs
+import com.seanproctor.potassium.internal.utils.ioFile
+import com.seanproctor.potassium.internal.utils.notNullProperty
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property

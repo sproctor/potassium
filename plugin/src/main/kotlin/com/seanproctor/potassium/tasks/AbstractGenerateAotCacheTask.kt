@@ -6,20 +6,12 @@
 package com.seanproctor.potassium.tasks
 
 import com.seanproctor.potassium.internal.JvmRuntimeProperties
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import com.seanproctor.potassium.internal.utils.notNullProperty
 import org.gradle.api.GradleException
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.work.DisableCachingByDefault
 import java.io.File
 import java.io.IOException
@@ -458,8 +450,8 @@ abstract class AbstractGenerateAotCacheTask : AbstractPotassiumTask() {
             val javaLauncherArgs =
                 try {
                     argFile = createAotTempFileWithFallback("potassium-aot-", ".args", candidateDirs)
-                    writeJavaArgFile(requireNotNull(argFile), javaArgs)
-                    listOf(javaExe, "@${requireNotNull(argFile).absolutePath}")
+                    writeJavaArgFile(argFile, javaArgs)
+                    listOf(javaExe, "@${argFile.absolutePath}")
                 } catch (e: GradleException) {
                     if (isWindows()) {
                         throw GradleException(

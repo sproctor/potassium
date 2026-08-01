@@ -9,7 +9,6 @@ import com.seanproctor.potassium.dsl.DEFAULT_RUNTIME_MODULES
 import com.seanproctor.potassium.internal.ExternalToolRunner
 import com.seanproctor.potassium.internal.PotassiumProperties
 import com.seanproctor.potassium.internal.files.normalizedPath
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import com.seanproctor.potassium.internal.utils.*
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.Directory

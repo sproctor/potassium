@@ -831,20 +831,18 @@ private class FilesMapping : Serializable {
         private const val serialVersionUID: Long = 1L
     }
 
-    // Reassigned in readObject during deserialization; cannot be `val`.
     @Suppress("DoubleMutabilityForCollection")
     private var mapping = HashMap<File, List<File>>()
 
-    operator fun get(key: File): List<File>? = mapping[key]
+    operator fun get(key: File): List<File>? =
+        mapping[key]
 
-    operator fun set(
-        key: File,
-        value: List<File>,
-    ) {
+    operator fun set(key: File, value: List<File>) {
         mapping[key] = value
     }
 
-    fun remove(key: File): List<File>? = mapping.remove(key)
+    fun remove(key: File): List<File>? =
+        mapping.remove(key)
 
     fun loadFrom(mappingFile: File) {
         mappingFile.readLines().forEach { line ->
@@ -873,7 +871,6 @@ private class FilesMapping : Serializable {
         stream.writeObject(mapping)
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun readObject(stream: ObjectInputStream) {
         mapping = stream.readObject() as HashMap<File, List<File>>
     }

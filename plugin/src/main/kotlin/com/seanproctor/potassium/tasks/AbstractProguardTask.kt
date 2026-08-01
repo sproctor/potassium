@@ -5,20 +5,18 @@
 
 package com.seanproctor.potassium.tasks
 
-import com.seanproctor.potassium.internal.*
+import com.seanproctor.potassium.internal.ExternalToolRunner
+import com.seanproctor.potassium.internal.cliArg
 import com.seanproctor.potassium.internal.files.mangledName
 import com.seanproctor.potassium.internal.files.normalizedPath
-import com.seanproctor.potassium.tasks.AbstractPotassiumTask
 import com.seanproctor.potassium.internal.utils.*
 import org.gradle.api.file.*
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.*
-import org.gradle.api.tasks.Optional
 import org.gradle.work.DisableCachingByDefault
 import java.io.File
 import java.io.Writer
-import kotlin.collections.LinkedHashMap
 
 @DisableCachingByDefault(because = "Depends on external ProGuard tool")
 abstract class AbstractProguardTask : AbstractPotassiumTask() {
@@ -153,7 +151,7 @@ abstract class AbstractProguardTask : AbstractPotassiumTask() {
                     jarsConfigurationFile.ioFile,
                     defaultProguardRulesFile.ioFile,
                 ) + configurationFiles.files.asSequence()
-            for (configFile in includeFiles.filterNotNull()) {
+            for (configFile in includeFiles) {
                 writer.writeLn("-include '${configFile.normalizedPath()}'")
             }
         }
