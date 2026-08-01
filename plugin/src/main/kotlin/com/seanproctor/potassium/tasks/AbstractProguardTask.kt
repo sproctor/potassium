@@ -59,7 +59,7 @@ abstract class AbstractProguardTask : AbstractPotassiumTask() {
     @get:Optional
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
-    val defaultComposeRulesFile: RegularFileProperty = objects.fileProperty()
+    val defaultProguardRulesFile: RegularFileProperty = objects.fileProperty()
 
     @get:Input
     val proguardVersion: Property<String> = objects.notNullProperty()
@@ -151,7 +151,7 @@ abstract class AbstractProguardTask : AbstractPotassiumTask() {
             val includeFiles =
                 sequenceOf(
                     jarsConfigurationFile.ioFile,
-                    defaultComposeRulesFile.ioFile,
+                    defaultProguardRulesFile.ioFile,
                 ) + configurationFiles.files.asSequence()
             for (configFile in includeFiles.filterNotNull()) {
                 writer.writeLn("-include '${configFile.normalizedPath()}'")

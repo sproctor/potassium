@@ -101,7 +101,7 @@ internal data class JvmApplicationContext(
                         isJvmTargetConfigured = true
                     } else {
                         project.logger.error(
-                            "w: Default configuration for Compose Desktop Application is disabled: " +
+                            "w: Default configuration for Potassium application is disabled: " +
                                 "multiple Kotlin JVM targets definitions are detected. " +
                                 "Specify which target to use via `potassium.from(kotlinMppTarget)`",
                         )

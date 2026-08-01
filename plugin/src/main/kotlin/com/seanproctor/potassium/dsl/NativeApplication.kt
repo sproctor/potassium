@@ -42,7 +42,7 @@ abstract class NativeApplication
 
             check(nonNativeTargets.isEmpty() && nonMacOSTargets.isEmpty()) {
                 buildString {
-                    appendLine("compose.nativeApplication.targets supports only Kotlin/Native macOS targets for now:")
+                    appendLine("potassium.nativeApplication.targets supports only Kotlin/Native macOS targets for now:")
                     nonNativeTargets.forEach { appendLine("* '${it.name}' is not a native target;") }
                     nonMacOSTargets.forEach { appendLine("* '${it.name}' is not a macOS target;") }
                 }

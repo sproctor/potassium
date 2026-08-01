@@ -17,7 +17,7 @@ internal class JvmTasks(
     private val taskGroup: String? = POTASSIUM_TASK_GROUP,
 ) {
     /**
-     * Registers new Compose/Desktop tasks.
+     * Registers new Potassium tasks.
      * Naming pattern for tasks is: [taskNameAction][taskNameClassifier][taskNameObject]
      * Where:
      *   [taskNameAction] -- name for a task's action (e.g. 'run' or 'package')

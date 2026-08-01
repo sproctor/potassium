@@ -96,7 +96,7 @@ private fun JvmApplicationContext.configureCommonJvmDesktopTasks(): CommonJvmDes
     val unpackDefaultResources =
         tasks.register<AbstractUnpackDefaultApplicationResourcesTask>(
             taskNameAction = "unpack",
-            taskNameObject = "DefaultComposeDesktopJvmApplicationResources",
+            taskNameObject = "DefaultPotassiumJvmApplicationResources",
         ) {}
 
     val checkRuntime =
@@ -595,7 +595,7 @@ private fun JvmApplicationContext.configureProguardTask(
         joinOutputJars.set(settings.joinOutputJars)
 
         dependsOn(unpackDefaultResources)
-        defaultComposeRulesFile.set(unpackDefaultResources.flatMap { it.resources.defaultComposeProguardRules })
+        defaultProguardRulesFile.set(unpackDefaultResources.flatMap { it.resources.defaultProguardRules })
 
         maxHeapSize.set(settings.maxHeapSize)
         destinationDir.set(appTmpDir.dir("proguard"))

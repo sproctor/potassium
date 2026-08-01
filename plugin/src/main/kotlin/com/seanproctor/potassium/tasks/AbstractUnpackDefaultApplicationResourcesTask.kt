@@ -16,7 +16,7 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
-private const val DEFAULT_COMPOSE_PROGUARD_RULES_FILE_NAME = "default-compose-desktop-rules.pro"
+private const val DEFAULT_PROGUARD_RULES_FILE_NAME = "default-potassium-rules.pro"
 private const val DEFAULT_ENTITLEMENTS_FILE_NAME = "default-entitlements.plist"
 private const val DEFAULT_SANDBOX_ENTITLEMENTS_FILE_NAME = "default-sandbox-entitlements.plist"
 private const val DEFAULT_SANDBOX_RUNTIME_ENTITLEMENTS_FILE_NAME = "default-sandbox-runtime-entitlements.plist"
@@ -29,7 +29,7 @@ abstract class AbstractUnpackDefaultApplicationResourcesTask : AbstractPotassium
         val macIcon: Provider<RegularFile> = resourcesRootDir.map { it.file("default-icon-mac.icns") }
         val windowsIcon: Provider<RegularFile> = resourcesRootDir.map { it.file("default-icon-windows.ico") }
         val linuxIcon: Provider<RegularFile> = resourcesRootDir.map { it.file("default-icon-linux.png") }
-        val defaultComposeProguardRules: Provider<RegularFile> = resourcesRootDir.map { it.file(DEFAULT_COMPOSE_PROGUARD_RULES_FILE_NAME) }
+        val defaultProguardRules: Provider<RegularFile> = resourcesRootDir.map { it.file(DEFAULT_PROGUARD_RULES_FILE_NAME) }
         val defaultEntitlements: Provider<RegularFile> = resourcesRootDir.map { it.file(DEFAULT_ENTITLEMENTS_FILE_NAME) }
         val defaultSandboxEntitlements: Provider<RegularFile> =
             resourcesRootDir.map { it.file(DEFAULT_SANDBOX_ENTITLEMENTS_FILE_NAME) }
@@ -51,7 +51,7 @@ abstract class AbstractUnpackDefaultApplicationResourcesTask : AbstractPotassium
         unpack(iconSourcePath("mac", "icns"), resources.macIcon)
         unpack(iconSourcePath("windows", "ico"), resources.windowsIcon)
         unpack(iconSourcePath("linux", "png"), resources.linuxIcon)
-        unpack(DEFAULT_COMPOSE_PROGUARD_RULES_FILE_NAME, resources.defaultComposeProguardRules)
+        unpack(DEFAULT_PROGUARD_RULES_FILE_NAME, resources.defaultProguardRules)
         unpack(DEFAULT_ENTITLEMENTS_FILE_NAME, resources.defaultEntitlements)
         unpack(DEFAULT_SANDBOX_ENTITLEMENTS_FILE_NAME, resources.defaultSandboxEntitlements)
         unpack(DEFAULT_SANDBOX_RUNTIME_ENTITLEMENTS_FILE_NAME, resources.defaultSandboxRuntimeEntitlements)
@@ -60,7 +60,7 @@ abstract class AbstractUnpackDefaultApplicationResourcesTask : AbstractPotassium
     private fun iconSourcePath(
         platformName: String,
         iconExt: String,
-    ): String = "default-compose-desktop-icon-$platformName.$iconExt"
+    ): String = "default-potassium-icon-$platformName.$iconExt"
 
     private fun unpack(
         from: String,

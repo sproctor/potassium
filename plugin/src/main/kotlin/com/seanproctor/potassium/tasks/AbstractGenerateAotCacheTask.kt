@@ -130,7 +130,7 @@ internal fun createAotTempFileWithFallback(
 }
 
 /**
- * Generates a JDK 25+ AOT cache for a Compose Desktop distributable.
+ * Generates a JDK 25+ AOT cache for a JVM distributable.
  *
  * This task:
  * 1. Locates the distributable app directory (platform-specific layout)
