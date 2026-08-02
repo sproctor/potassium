@@ -6,11 +6,8 @@ import com.seanproctor.potassium.updater.exception.NetworkException
 import com.seanproctor.potassium.updater.exception.UpdateException
 import com.seanproctor.potassium.updater.provider.UpdateProvider
 import java.io.File
-import java.net.URI
 import java.net.http.HttpClient
-import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.nio.ByteBuffer
 
 /**
  * Decides whether a differential download is possible for an update and, when it is,
@@ -51,8 +48,9 @@ internal class DifferentialUpdatePreparer(
 
             installType == InstallType.ZIP && fileName.endsWith(".zip") -> Mode.SIDECAR
 
-            (installType == InstallType.NSIS || installType == InstallType.EXE) &&
-                fileName.endsWith(".exe") -> Mode.SIDECAR
+            // NSIS_WEB is included because nsis-web installs update via the full NSIS
+            // installer (see FileSelector), which has a published sidecar blockmap too.
+            installType in NSIS_FAMILY && fileName.endsWith(".exe") -> Mode.SIDECAR
 
             else -> null
         }
@@ -75,6 +73,9 @@ internal class DifferentialUpdatePreparer(
         val blockMapSize =
             target.blockMapSize
                 ?: throw UpdateException("Manifest has no blockMapSize for ${target.fileName}")
+        if (blockMapSize > BlockMapCodec.MAX_BLOCKMAP_BYTES) {
+            throw UpdateException("Manifest blockMapSize $blockMapSize exceeds the supported maximum")
+        }
         val oldFile = resolveRunningAppImage()
         val oldBlockMap = BlockMapCodec.readEmbedded(oldFile)
 
@@ -118,11 +119,7 @@ internal class DifferentialUpdatePreparer(
         if (trailer.size.toLong() != trailerLength) {
             return "Blockmap trailer request returned ${trailer.size} bytes, expected $trailerLength"
         }
-        val declaredSize =
-            ByteBuffer
-                .wrap(trailer, trailer.size - BlockMapCodec.TRAILER_LENGTH, BlockMapCodec.TRAILER_LENGTH)
-                .int
-                .toLong() and UINT_MASK
+        val declaredSize = BlockMapCodec.declaredEmbeddedSize(trailer)
         if (declaredSize != blockMapSize) {
             return "Embedded blockmap declares $declaredSize bytes, manifest says $blockMapSize"
         }
@@ -133,11 +130,17 @@ internal class DifferentialUpdatePreparer(
         target: UpdateFile,
         destination: File,
     ): Prepared {
+        // Cheap existence check first, then the small new-blockmap fetch: hosts that never
+        // publish sidecars fail fast, before the expensive integrity hash of the cached
+        // artifact in cache.read().
+        if (!cache.hasEntry()) {
+            throw UpdateException("No previously downloaded artifact to diff against")
+        }
+        val newBlockMapBytes = getBytes(UpdaterHttp.blockMapUrl(target.url))
+        val newBlockMap = BlockMapCodec.decodeGzip(newBlockMapBytes)
         val cached =
             cache.read()
-                ?: throw UpdateException("No previously downloaded artifact to diff against")
-        val newBlockMapBytes = getBytes("${target.url}$BLOCKMAP_SUFFIX")
-        val newBlockMap = BlockMapCodec.decodeGzip(newBlockMapBytes)
+                ?: throw UpdateException("Cached artifact is missing or corrupt")
         val oldBlockMap = cache.readBlockMap() ?: fetchOldBlockMap(target, cached)
 
         val plan = DownloadPlanBuilder.build(oldBlockMap, newBlockMap)
@@ -153,8 +156,8 @@ internal class DifferentialUpdatePreparer(
         target: UpdateFile,
         cached: UpdateCache.Entry,
     ): BlockMap {
-        val url = "${provider.getDownloadUrl(cached.fileName, cached.version)}$BLOCKMAP_SUFFIX"
-        if (url == "${target.url}$BLOCKMAP_SUFFIX") {
+        val url = UpdaterHttp.blockMapUrl(provider.getDownloadUrl(cached.fileName, cached.version))
+        if (url == UpdaterHttp.blockMapUrl(target.url)) {
             throw UpdateException("Old and new blockmap URLs are identical ($url); cannot fetch the old blockmap")
         }
         return BlockMapCodec.decodeGzip(getBytes(url))
@@ -173,46 +176,40 @@ internal class DifferentialUpdatePreparer(
         }
     }
 
-    private fun getBytes(url: String): ByteArray {
-        val response = send(url) { }
-        if (response.statusCode() != HTTP_OK) {
-            throw NetworkException("HTTP ${response.statusCode()} fetching $url")
-        }
-        return response.body()
-    }
+    private fun getBytes(url: String): ByteArray = fetch(url, range = null, expectedStatus = UpdaterHttp.HTTP_OK)
 
     private fun getRange(
         url: String,
         start: Long,
         endInclusive: Long,
-    ): ByteArray {
-        val response = send(url) { it.header("Range", "bytes=$start-$endInclusive") }
-        if (response.statusCode() != HTTP_PARTIAL) {
-            throw NetworkException(
-                "HTTP ${response.statusCode()} fetching range $start-$endInclusive of $url (no partial-content support?)",
-            )
-        }
-        return response.body()
-    }
+    ): ByteArray = fetch(url, "bytes=$start-$endInclusive", UpdaterHttp.HTTP_PARTIAL)
 
-    private inline fun send(
+    private fun fetch(
         url: String,
-        configure: (HttpRequest.Builder) -> Unit,
-    ): HttpResponse<ByteArray> {
-        val builder =
-            HttpRequest
-                .newBuilder()
-                .uri(URI.create(url))
-                .GET()
-        provider.authHeaders().forEach { (key, value) -> builder.header(key, value) }
-        configure(builder)
-        return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray())
+        range: String?,
+        expectedStatus: Int,
+    ): ByteArray {
+        val request = UpdaterHttp.request(url, provider.authHeaders(), range)
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream())
+        response.body().use { body ->
+            // Status is checked before the body is consumed; closing without draining aborts
+            // the transfer, so a 200-with-full-artifact answer to a range request is never
+            // buffered into memory.
+            if (response.statusCode() != expectedStatus) {
+                throw NetworkException(
+                    "HTTP ${response.statusCode()} fetching $url (expected $expectedStatus${
+                        if (range != null) ", range $range" else ""
+                    })",
+                )
+            }
+            return UpdaterHttp.readBounded(body, MAX_FETCH_BYTES)
+        }
     }
 
     private companion object {
-        const val HTTP_OK = 200
-        const val HTTP_PARTIAL = 206
-        const val UINT_MASK = 0xFFFFFFFFL
-        const val BLOCKMAP_SUFFIX = ".blockmap"
+        /** These fetches only ever carry blockmaps or trailers; anything larger is a misbehaving server. */
+        const val MAX_FETCH_BYTES = BlockMapCodec.MAX_BLOCKMAP_BYTES + BlockMapCodec.TRAILER_LENGTH
+
+        val NSIS_FAMILY = setOf(InstallType.NSIS, InstallType.EXE, InstallType.NSIS_WEB)
     }
 }

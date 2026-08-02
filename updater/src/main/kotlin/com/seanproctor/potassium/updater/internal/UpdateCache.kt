@@ -28,6 +28,12 @@ internal class UpdateCache(
     )
 
     /**
+     * Cheap check that a complete-looking generation exists, without the integrity hash
+     * [read] performs. Callers can use this to fail fast before other inexpensive work.
+     */
+    fun hasEntry(): Boolean = File(dir, INFO_FILE_NAME).isFile && File(dir, ARTIFACT_FILE_NAME).isFile
+
+    /**
      * Returns the cached artifact after verifying it against the recorded SHA-512,
      * or null (clearing the cache) when missing, incomplete, or corrupt.
      */
@@ -68,12 +74,13 @@ internal class UpdateCache(
         sha512: String,
     ) {
         dir.mkdirs()
+        // Both metadata files go first so any torn state reads as invalid (or at worst
+        // blockmap-less) rather than pairing a blockmap with the wrong artifact generation.
         File(dir, INFO_FILE_NAME).delete()
+        File(dir, BLOCKMAP_FILE_NAME).delete()
 
         replace(ARTIFACT_FILE_NAME) { Files.copy(artifact.toPath(), it.toPath()) }
-        if (blockMapBytes == null) {
-            File(dir, BLOCKMAP_FILE_NAME).delete()
-        } else {
+        if (blockMapBytes != null) {
             replace(BLOCKMAP_FILE_NAME) { it.writeBytes(blockMapBytes) }
         }
         replace(INFO_FILE_NAME) {
@@ -82,7 +89,11 @@ internal class UpdateCache(
     }
 
     fun clear() {
-        listOf(INFO_FILE_NAME, ARTIFACT_FILE_NAME, BLOCKMAP_FILE_NAME).forEach { File(dir, it).delete() }
+        listOf(INFO_FILE_NAME, ARTIFACT_FILE_NAME, BLOCKMAP_FILE_NAME).forEach { name ->
+            File(dir, name).delete()
+            // Also reclaim staging files a crash mid-store may have stranded.
+            File(dir, "$name.tmp").delete()
+        }
     }
 
     private fun invalid(): Entry? {

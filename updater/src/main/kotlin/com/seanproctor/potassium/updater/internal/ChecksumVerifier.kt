@@ -1,5 +1,6 @@
 package com.seanproctor.potassium.updater.internal
 
+import com.seanproctor.potassium.updater.exception.ChecksumException
 import java.io.File
 import java.security.MessageDigest
 import java.util.Base64
@@ -11,6 +12,17 @@ internal object ChecksumVerifier {
     ): Boolean {
         val actual = computeSha512Base64(file)
         return actual == expectedSha512Base64
+    }
+
+    /** Hashes [file] once and throws [ChecksumException] on mismatch. */
+    fun verifyOrThrow(
+        file: File,
+        expectedSha512Base64: String,
+    ) {
+        val actual = computeSha512Base64(file)
+        if (actual != expectedSha512Base64) {
+            throw ChecksumException(expectedSha512Base64, actual)
+        }
     }
 
     private const val BUFFER_SIZE = 8192

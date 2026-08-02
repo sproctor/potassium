@@ -1,5 +1,6 @@
 package com.seanproctor.potassium.updater
 
+import com.seanproctor.potassium.updater.internal.BlockMapFixtures
 import com.seanproctor.potassium.updater.internal.RangeHttpHandler
 import com.seanproctor.potassium.updater.internal.UpdateCache
 import com.seanproctor.potassium.updater.provider.GenericProvider
@@ -11,18 +12,15 @@ import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.InetSocketAddress
-import java.security.MessageDigest
-import java.util.Base64
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.zip.GZIPOutputStream
 
 /**
  * End-to-end tests of the differential download path through the public API, against a
@@ -36,6 +34,7 @@ class PotassiumUpdaterDifferentialTest {
     private lateinit var server: HttpServer
     private lateinit var zipHandler: RangeHttpHandler
     private lateinit var serverBaseUrl: String
+    private lateinit var originalTmpDir: String
 
     private val oldBlockMapRequests = AtomicInteger(0)
     private val newBlockMapRequests = AtomicInteger(0)
@@ -51,8 +50,9 @@ class PotassiumUpdaterDifferentialTest {
     private val oldBytes = segmentA + segmentB
     private val newBytes = segmentA + segmentX + segmentB
 
-    private val oldBlockMapGzip = gzip(blockMapJson(listOf(segmentA, segmentB)))
-    private val newBlockMapGzip = gzip(blockMapJson(listOf(segmentA, segmentX, segmentB)))
+    private val oldBlockMapGzip = BlockMapFixtures.gzip(BlockMapFixtures.blockMapJson(listOf(segmentA, segmentB)))
+    private val newBlockMapGzip =
+        BlockMapFixtures.gzip(BlockMapFixtures.blockMapJson(listOf(segmentA, segmentX, segmentB)))
 
     private val manifest: String
         get() =
@@ -60,13 +60,18 @@ class PotassiumUpdaterDifferentialTest {
             version: 2.0.0
             files:
               - url: app-2.0.0.zip
-                sha512: ${base64Sha512(newBytes)}
+                sha512: ${BlockMapFixtures.base64Sha512(newBytes)}
                 size: ${newBytes.size}
             releaseDate: '2026-08-01T10:00:00.000Z'
             """.trimIndent()
 
     @Before
     fun startServer() {
+        // Isolate downloads from the machine-global tmpdir: parallel test JVMs would race
+        // on the fixed artifact names the updater writes there.
+        originalTmpDir = System.getProperty("java.io.tmpdir")
+        System.setProperty("java.io.tmpdir", tempFolder.newFolder("downloads").absolutePath)
+
         oldBlockMapRequests.set(0)
         newBlockMapRequests.set(0)
         newBlockMapStatus = 200
@@ -96,8 +101,7 @@ class PotassiumUpdaterDifferentialTest {
     @After
     fun stopServer() {
         server.stop(0)
-        File(System.getProperty("java.io.tmpdir"), "app-2.0.0.zip").delete()
-        File(System.getProperty("java.io.tmpdir"), "app-2.0.0.zip.download").delete()
+        System.setProperty("java.io.tmpdir", originalTmpDir)
     }
 
     @Test
@@ -189,7 +193,13 @@ class PotassiumUpdaterDifferentialTest {
         val cacheDir = tempFolder.newFolder()
         val oldArtifact = tempFolder.newFile()
         oldArtifact.writeBytes(oldBytes)
-        UpdateCache(cacheDir).store(oldArtifact, null, "1.0.0", "app-2.0.0.zip", base64Sha512(oldBytes))
+        UpdateCache(cacheDir).store(
+            oldArtifact,
+            null,
+            "1.0.0",
+            "app-2.0.0.zip",
+            BlockMapFixtures.base64Sha512(oldBytes),
+        )
 
         val downloaded = download(newUpdater(cacheDir))
 
@@ -198,7 +208,7 @@ class PotassiumUpdaterDifferentialTest {
     }
 
     @Test
-    fun `disableDifferentialDownload skips blockmaps and caching entirely`() {
+    fun `disableDifferentialDownload skips blockmaps and clears the cache`() {
         val cacheDir = seededCacheDir(withBlockMap = true)
 
         val downloaded =
@@ -207,8 +217,9 @@ class PotassiumUpdaterDifferentialTest {
         assertArrayEquals(newBytes, downloaded.readBytes())
         assertEquals(0, newBlockMapRequests.get())
         assertEquals(0, zipHandler.rangeRequests.size)
-        // The cache still holds the old generation — nothing was stored.
-        assertEquals("1.0.0", UpdateCache(cacheDir).read()?.version)
+        // Disabling also reclaims the previously stored generation.
+        assertNull(UpdateCache(cacheDir).read())
+        assertTrue(cacheDir.listFiles().orEmpty().isEmpty())
     }
 
     @Test
@@ -239,8 +250,9 @@ class PotassiumUpdaterDifferentialTest {
             currentVersion = "1.0.0"
             provider = GenericProvider(serverBaseUrl)
             executableType = InstallType.ZIP
+            updateCacheDir = cacheDir
             configure()
-        }.apply { cacheDirOverride = cacheDir }
+        }
 
     private fun download(updater: PotassiumUpdater): File =
         runBlocking {
@@ -265,7 +277,7 @@ class PotassiumUpdaterDifferentialTest {
             blockMapBytes = if (withBlockMap) oldBlockMapGzip else null,
             version = "1.0.0",
             fileName = "app-1.0.0.zip",
-            sha512 = base64Sha512(oldBytes),
+            sha512 = BlockMapFixtures.base64Sha512(oldBytes),
         )
         return cacheDir
     }
@@ -282,26 +294,5 @@ class PotassiumUpdaterDifferentialTest {
             exchange.sendResponseHeaders(status, body.size.toLong())
             exchange.responseBody.use { it.write(body) }
         }
-    }
-
-    private fun blockMapJson(segments: List<ByteArray>): String {
-        val checksums = segments.joinToString(",") { "\"${fakeChecksum(it)}\"" }
-        val sizes = segments.joinToString(",") { it.size.toString() }
-        return """{"version":"2","files":[{"name":"file","offset":0,"checksums":[$checksums],"sizes":[$sizes]}]}"""
-    }
-
-    private fun fakeChecksum(segment: ByteArray): String =
-        Base64
-            .getEncoder()
-            .encodeToString(MessageDigest.getInstance("SHA-256").digest(segment))
-            .take(24)
-
-    private fun base64Sha512(bytes: ByteArray): String =
-        Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-512").digest(bytes))
-
-    private fun gzip(text: String): ByteArray {
-        val out = ByteArrayOutputStream()
-        GZIPOutputStream(out).use { it.write(text.toByteArray()) }
-        return out.toByteArray()
     }
 }

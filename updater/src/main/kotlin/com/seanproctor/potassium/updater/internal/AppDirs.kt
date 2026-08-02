@@ -21,9 +21,12 @@ internal object AppDirs {
         val os = System.getProperty("os.name", "").lowercase()
         val home = System.getProperty("user.home")
 
+        // Empty-but-set variables are treated as unset (the XDG spec requires it, and an
+        // empty APPDATA would resolve relative to the working directory).
         return when {
             os.contains("win") -> {
-                val appData = System.getenv("APPDATA") ?: "$home\\AppData\\Roaming"
+                val appData =
+                    System.getenv("APPDATA")?.takeIf { it.isNotEmpty() } ?: "$home\\AppData\\Roaming"
                 File(appData, appId)
             }
 
@@ -32,7 +35,8 @@ internal object AppDirs {
             }
 
             else -> {
-                val xdgData = System.getenv("XDG_DATA_HOME") ?: "$home/.local/share"
+                val xdgData =
+                    System.getenv("XDG_DATA_HOME")?.takeIf { it.isNotEmpty() } ?: "$home/.local/share"
                 File(xdgData, appId)
             }
         }

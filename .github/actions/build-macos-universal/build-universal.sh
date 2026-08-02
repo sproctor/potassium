@@ -308,17 +308,27 @@ ditto -c -k --keepParent "$UNIVERSAL_APP" "$ZIP_OUT"
 # universal updates differentially. Gzip sidecar mode does NOT modify the .zip,
 # so the sha512/size written to latest-mac.yml later stay correct. The .zip is
 # also never stapled (see the notarization docs), so the blockmap stays valid.
-echo "==> Generating blockmap: $ZIP_OUT.blockmap"
-BLOCKMAP_WORK="$WORK/app-builder-bin"
-mkdir -p "$BLOCKMAP_WORK"
-(cd "$BLOCKMAP_WORK" && npm install --no-save --silent app-builder-bin@4.2.0)
-APP_BUILDER="$(cd "$BLOCKMAP_WORK" && node -p "require('app-builder-bin').appBuilderPath")"
-chmod +x "$APP_BUILDER"
-BLOCKMAP_INFO="$("$APP_BUILDER" blockmap --input "$ZIP_OUT" --output "$ZIP_OUT.blockmap")" || {
-  echo "::error::blockmap generation failed for $ZIP_OUT"
-  exit 1
+#
+# The blockmap is a pure optimization — updaters fall back to full downloads
+# without it — so a failure here (e.g. a transient npm-registry error) must
+# not abort the whole signed release: warn and continue instead.
+generate_blockmap() {
+  local workdir="$WORK/app-builder-bin"
+  local app_builder
+  mkdir -p "$workdir" || return 1
+  (cd "$workdir" && npm install --no-save --silent app-builder-bin@4.2.0) >&2 || return 1
+  app_builder="$(cd "$workdir" && node -p "require('app-builder-bin').appBuilderPath")" || return 1
+  chmod +x "$app_builder" || return 1
+  "$app_builder" blockmap --input "$ZIP_OUT" --output "$ZIP_OUT.blockmap" || return 1
 }
-echo "==> Blockmap written: $BLOCKMAP_INFO"
+
+echo "==> Generating blockmap: $ZIP_OUT.blockmap"
+if generate_blockmap; then
+  echo "==> Blockmap written: $ZIP_OUT.blockmap"
+else
+  echo "::warning::Blockmap generation failed for $ZIP_OUT; updaters will fall back to full downloads"
+  rm -f "$ZIP_OUT.blockmap"
+fi
 
 # ── Read packaging metadata from build artifacts ─────────────────────────
 METADATA_FILE="$(find "$ARM64_PATH" -name 'packaging-metadata.json' -type f | head -1)"
@@ -632,6 +642,8 @@ echo "==> Universal artifacts created:"
 ls -lh "$OUTPUT_DIR"
 
 echo "zip=$ZIP_OUT" >> "$GITHUB_OUTPUT"
-echo "blockmap=$ZIP_OUT.blockmap" >> "$GITHUB_OUTPUT"
+if [[ -f "$ZIP_OUT.blockmap" ]]; then
+  echo "blockmap=$ZIP_OUT.blockmap" >> "$GITHUB_OUTPUT"
+fi
 echo "dmg=$DMG_OUT" >> "$GITHUB_OUTPUT"
 echo "pkg=$PKG_OUT" >> "$GITHUB_OUTPUT"

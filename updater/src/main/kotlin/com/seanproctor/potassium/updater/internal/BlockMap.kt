@@ -75,8 +75,10 @@ internal data class BlockMap(
 internal data class BlockMapFileEntry(
     val name: String = "file",
     val offset: Long = 0,
-    val checksums: List<String> = emptyList(),
-    val sizes: List<Long> = emptyList(),
+    // Required: a truncated map like {"files":[{}]} must fail parsing loudly instead of
+    // yielding zero blocks and a misleading plan-size-invariant error later.
+    val checksums: List<String>,
+    val sizes: List<Long>,
 )
 
 /** One chunk of the mapped file at an absolute [offset]. */

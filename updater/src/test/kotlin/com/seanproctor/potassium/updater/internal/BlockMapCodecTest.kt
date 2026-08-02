@@ -6,10 +6,6 @@ import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
-import java.util.zip.Deflater
-import java.util.zip.GZIPOutputStream
 
 class BlockMapCodecTest {
     @get:Rule
@@ -20,14 +16,14 @@ class BlockMapCodecTest {
 
     @Test
     fun `decodes gzip sidecar blockmap`() {
-        val blockMap = BlockMapCodec.decodeGzip(gzip(sampleJson.toByteArray()))
+        val blockMap = BlockMapCodec.decodeGzip(BlockMapFixtures.gzip(sampleJson))
 
         assertEquals(listOf(10L, 20L), blockMap.file.sizes)
     }
 
     @Test
     fun `decodes raw-deflate embedded blockmap`() {
-        val blockMap = BlockMapCodec.decodeDeflateRaw(deflateRaw(sampleJson.toByteArray()))
+        val blockMap = BlockMapCodec.decodeDeflateRaw(BlockMapFixtures.deflateRaw(sampleJson.toByteArray()))
 
         assertEquals(listOf("a", "b"), blockMap.file.checksums)
     }
@@ -41,7 +37,7 @@ class BlockMapCodecTest {
 
     @Test
     fun `rejects truncated deflate data`() {
-        val compressed = deflateRaw(sampleJson.toByteArray())
+        val compressed = BlockMapFixtures.deflateRaw(sampleJson.toByteArray())
 
         assertThrows(ParseException::class.java) {
             BlockMapCodec.decodeDeflateRaw(compressed.copyOf(compressed.size / 2))
@@ -52,7 +48,7 @@ class BlockMapCodecTest {
     fun `reads embedded blockmap from file tail`() {
         val content = ByteArray(1000) { (it % 251).toByte() }
         val file = tempFolder.newFile("app.AppImage")
-        file.writeBytes(content + embeddedTrailer(sampleJson))
+        file.writeBytes(content + BlockMapFixtures.embeddedTail(sampleJson))
 
         val blockMap = BlockMapCodec.readEmbedded(file)
 
@@ -76,28 +72,15 @@ class BlockMapCodecTest {
         assertThrows(ParseException::class.java) { BlockMapCodec.readEmbedded(file) }
     }
 
-    private fun gzip(data: ByteArray): ByteArray {
-        val out = ByteArrayOutputStream()
-        GZIPOutputStream(out).use { it.write(data) }
-        return out.toByteArray()
+    @Test
+    fun `declaredEmbeddedSize reads the trailing uint32`() {
+        val tail = BlockMapFixtures.embeddedTail(sampleJson)
+
+        assertEquals((tail.size - BlockMapCodec.TRAILER_LENGTH).toLong(), BlockMapCodec.declaredEmbeddedSize(tail))
     }
 
-    private fun deflateRaw(data: ByteArray): ByteArray {
-        val deflater = Deflater(Deflater.BEST_COMPRESSION, true)
-        deflater.setInput(data)
-        deflater.finish()
-        val out = ByteArrayOutputStream()
-        val buffer = ByteArray(8192)
-        while (!deflater.finished()) {
-            out.write(buffer, 0, deflater.deflate(buffer))
-        }
-        deflater.end()
-        return out.toByteArray()
-    }
-
-    /** `[deflateRaw(json)][uint32 BE length]` as electron-builder appends it. */
-    private fun embeddedTrailer(json: String): ByteArray {
-        val compressed = deflateRaw(json.toByteArray())
-        return compressed + ByteBuffer.allocate(4).putInt(compressed.size).array()
+    @Test
+    fun `declaredEmbeddedSize rejects short input`() {
+        assertThrows(ParseException::class.java) { BlockMapCodec.declaredEmbeddedSize(byteArrayOf(1, 2)) }
     }
 }

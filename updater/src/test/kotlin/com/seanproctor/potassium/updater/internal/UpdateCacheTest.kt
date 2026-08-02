@@ -8,9 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.ByteArrayOutputStream
 import java.io.File
-import java.util.zip.GZIPOutputStream
 
 class UpdateCacheTest {
     @get:Rule
@@ -111,7 +109,7 @@ class UpdateCacheTest {
     }
 
     @Test
-    fun `clear removes everything`() {
+    fun `clear removes everything including stranded staging files`() {
         val dir = tempFolder.newFolder()
         val cache = UpdateCache(dir)
         val artifact = artifactFile("data")
@@ -122,11 +120,24 @@ class UpdateCacheTest {
             "app.zip",
             ChecksumVerifier.computeSha512Base64(artifact),
         )
+        // A crash mid-store can leave a .tmp behind; clear() must reclaim it too.
+        File(dir, "current-artifact.tmp").writeText("stranded partial copy")
 
         cache.clear()
 
         assertNull(cache.read())
         assertTrue(dir.listFiles().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun `hasEntry is a cheap existence check`() {
+        val cache = newCache()
+        assertFalse(cache.hasEntry())
+
+        val artifact = artifactFile("data")
+        cache.store(artifact, null, "1.0.0", "app.zip", ChecksumVerifier.computeSha512Base64(artifact))
+
+        assertTrue(cache.hasEntry())
     }
 
     private fun newCache(): UpdateCache = UpdateCache(tempFolder.newFolder())
@@ -137,9 +148,5 @@ class UpdateCacheTest {
         return file
     }
 
-    private fun gzip(text: String): ByteArray {
-        val out = ByteArrayOutputStream()
-        GZIPOutputStream(out).use { it.write(text.toByteArray()) }
-        return out.toByteArray()
-    }
+    private fun gzip(text: String): ByteArray = BlockMapFixtures.gzip(text)
 }

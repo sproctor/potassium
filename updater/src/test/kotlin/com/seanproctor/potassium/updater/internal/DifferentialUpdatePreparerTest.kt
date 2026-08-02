@@ -17,14 +17,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
-import java.nio.ByteBuffer
-import java.security.MessageDigest
-import java.util.Base64
-import java.util.zip.Deflater
 
 class DifferentialUpdatePreparerTest {
     @get:Rule
@@ -73,7 +68,7 @@ class DifferentialUpdatePreparerTest {
     }
 
     @Test
-    fun `modeFor selects sidecar for zip and nsis exe`() {
+    fun `modeFor selects sidecar for zip and the nsis family`() {
         assertEquals(
             DifferentialUpdatePreparer.Mode.SIDECAR,
             preparer().modeFor(InstallType.ZIP, updateFile("app-2.0.0-mac.zip")),
@@ -85,6 +80,11 @@ class DifferentialUpdatePreparerTest {
         assertEquals(
             DifferentialUpdatePreparer.Mode.SIDECAR,
             preparer().modeFor(InstallType.EXE, updateFile("app-2.0.0.exe")),
+        )
+        // nsis-web installs update via the full NSIS installer, which has a blockmap too.
+        assertEquals(
+            DifferentialUpdatePreparer.Mode.SIDECAR,
+            preparer().modeFor(InstallType.NSIS_WEB, updateFile("app-2.0.0-nsis.exe")),
         )
     }
 
@@ -138,6 +138,17 @@ class DifferentialUpdatePreparerTest {
     }
 
     @Test
+    fun `embedded prepare rejects an absurd manifest blockMapSize before any fetch`() {
+        val preparer = preparer(appImagePath = oldAppImageFile().absolutePath)
+        val target = appImageTarget(blockMapSizeOverride = BlockMapCodec.MAX_BLOCKMAP_BYTES + 1)
+
+        assertThrows(UpdateException::class.java) {
+            preparer.prepare(DifferentialUpdatePreparer.Mode.EMBEDDED, target, tempFolder.newFile())
+        }
+        assertEquals(0, handler.requests.size)
+    }
+
+    @Test
     fun `sidecar prepare fails without a cached artifact`() {
         assertThrows(UpdateException::class.java) {
             preparer().prepare(
@@ -146,6 +157,8 @@ class DifferentialUpdatePreparerTest {
                 tempFolder.newFile(),
             )
         }
+        // The empty-cache check runs before any network request.
+        assertEquals(0, handler.requests.size)
     }
 
     private fun preparer(appImagePath: String? = null): DifferentialUpdatePreparer =
@@ -167,7 +180,7 @@ class DifferentialUpdatePreparerTest {
             fileName = "app-2.0.0.AppImage",
             blockMapSize = blockMapSizeOverride ?: newAppImage.blockMapSize,
             size = newAppImage.bytes.size.toLong(),
-            sha512 = base64Sha512(newAppImage.bytes),
+            sha512 = BlockMapFixtures.base64Sha512(newAppImage.bytes),
         )
 
     private fun updateFile(
@@ -192,38 +205,8 @@ class DifferentialUpdatePreparerTest {
     /** Builds `[segments][deflateRaw(blockmap json)][uint32 BE length]` like electron-builder. */
     private fun embeddedBlockMapFile(segments: List<ByteArray>): EmbeddedFile {
         val content = segments.reduce(ByteArray::plus)
-        val compressed = deflateRaw(blockMapJson(segments).toByteArray())
-        val trailer = ByteBuffer.allocate(4).putInt(compressed.size).array()
-        return EmbeddedFile(content + compressed + trailer, compressed.size.toLong())
-    }
-
-    private fun blockMapJson(segments: List<ByteArray>): String {
-        val checksums = segments.joinToString(",") { "\"${fakeChecksum(it)}\"" }
-        val sizes = segments.joinToString(",") { it.size.toString() }
-        return """{"version":"2","files":[{"name":"file","offset":0,"checksums":[$checksums],"sizes":[$sizes]}]}"""
-    }
-
-    /** Content-derived stand-in for BLAKE2b — the consumer only ever compares these as strings. */
-    private fun fakeChecksum(segment: ByteArray): String =
-        Base64
-            .getEncoder()
-            .encodeToString(MessageDigest.getInstance("SHA-256").digest(segment))
-            .take(24)
-
-    private fun base64Sha512(bytes: ByteArray): String =
-        Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-512").digest(bytes))
-
-    private fun deflateRaw(data: ByteArray): ByteArray {
-        val deflater = Deflater(Deflater.BEST_COMPRESSION, true)
-        deflater.setInput(data)
-        deflater.finish()
-        val out = ByteArrayOutputStream()
-        val buffer = ByteArray(8192)
-        while (!deflater.finished()) {
-            out.write(buffer, 0, deflater.deflate(buffer))
-        }
-        deflater.end()
-        return out.toByteArray()
+        val tail = BlockMapFixtures.embeddedTail(BlockMapFixtures.blockMapJson(segments))
+        return EmbeddedFile(content + tail, (tail.size - BlockMapCodec.TRAILER_LENGTH).toLong())
     }
 
     private class FakeEnv(

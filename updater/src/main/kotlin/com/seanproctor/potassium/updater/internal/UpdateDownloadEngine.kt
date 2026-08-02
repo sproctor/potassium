@@ -5,30 +5,27 @@ import com.seanproctor.potassium.updater.InstallType
 import com.seanproctor.potassium.updater.UpdateFile
 import com.seanproctor.potassium.updater.UpdateInfo
 import com.seanproctor.potassium.updater.UpdaterConfig
-import com.seanproctor.potassium.updater.exception.ChecksumException
 import com.seanproctor.potassium.updater.exception.NetworkException
 import java.io.File
-import java.net.URI
 import java.net.http.HttpClient
-import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Downloads an update artifact: differentially (blockmap + HTTP ranges) when possible,
  * with a full download as the universal fallback. Verifies the SHA-512, moves the file
- * into place, and caches it so the *next* update can be differential too.
+ * into place, caches it so the *next* update can be differential too, and emits the
+ * terminal [DownloadProgress] carrying the finished file.
  */
 internal class UpdateDownloadEngine(
     private val httpClient: HttpClient,
     private val config: UpdaterConfig,
     private val resolveInstallType: () -> InstallType?,
-    private val cacheFactory: () -> UpdateCache,
+    private val cache: UpdateCache,
 ) {
-    class Result(
-        val bytesDownloaded: Long,
-        val totalBytes: Long,
-    )
+    private val preparer = DifferentialUpdatePreparer(httpClient, config.provider, cache)
 
     private class Outcome(
         val bytesDownloaded: Long,
@@ -42,24 +39,28 @@ internal class UpdateDownloadEngine(
         tempFile: File,
         finalFile: File,
         emit: suspend (DownloadProgress) -> Unit,
-    ): Result {
+    ) {
         val outcome =
             tryDifferentialDownload(targetFile, tempFile, emit)
                 ?: downloadFullFile(targetFile, tempFile, emit)
 
-        // Rename to final file
-        if (finalFile.exists()) finalFile.delete()
-        tempFile.renameTo(finalFile)
+        // Throws on failure (locked target file, cross-device issues) instead of silently
+        // handing the caller a stale finalFile that never passed the checksum.
+        Files.move(tempFile.toPath(), finalFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
 
+        // Cache before the terminal emission: the documented usage installs (and exits the
+        // process) from inside the collector as soon as file != null arrives.
         cacheForNextUpdate(finalFile, info, targetFile, outcome.newBlockMapBytes)
 
-        return Result(outcome.bytesDownloaded, outcome.totalBytes)
+        emit(DownloadProgress(outcome.bytesDownloaded, outcome.totalBytes, PERCENT_MAX, finalFile))
     }
 
     /**
      * Attempts a blockmap-based differential download into [tempFile], verifying the
      * result against the manifest SHA-512. Returns null on any failure — differential
      * downloads are an optimization, so every error falls back to the full download.
+     * Exceptions thrown by the downstream collector (via [emit]) are rethrown as-is:
+     * a consumer bug must not masquerade as a differential-download failure.
      */
     private suspend fun tryDifferentialDownload(
         targetFile: UpdateFile,
@@ -67,9 +68,9 @@ internal class UpdateDownloadEngine(
         emit: suspend (DownloadProgress) -> Unit,
     ): Outcome? {
         if (config.disableDifferentialDownload) return null
-        val preparer = DifferentialUpdatePreparer(httpClient, config.provider, cacheFactory())
         val mode = preparer.modeFor(resolveInstallType(), targetFile) ?: return null
 
+        var emitFailure: Throwable? = null
         return try {
             val prepared = preparer.prepare(mode, targetFile, tempFile)
             val plan = prepared.request.plan
@@ -79,18 +80,15 @@ internal class UpdateDownloadEngine(
                     "for ${targetFile.fileName}",
             )
             DifferentialDownloader(httpClient, config.provider.authHeaders())
-                .download(prepared.request) { bytesDownloaded, totalBytes ->
-                    emit(DownloadProgress(bytesDownloaded, totalBytes, percentOf(bytesDownloaded, totalBytes)))
-                }
-            if (!ChecksumVerifier.verify(tempFile, targetFile.sha512)) {
-                throw ChecksumException(targetFile.sha512, ChecksumVerifier.computeSha512Base64(tempFile))
-            }
+                .download(prepared.request, progressCallback(emit) { emitFailure = it })
+            ChecksumVerifier.verifyOrThrow(tempFile, targetFile.sha512)
             Outcome(plan.downloadSize, plan.downloadSize, prepared.newBlockMapBytes)
         } catch (e: CancellationException) {
             throw e
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception,
         ) {
+            if (e === emitFailure) throw e
             tempFile.delete()
             logger.log(
                 System.Logger.Level.INFO,
@@ -100,20 +98,32 @@ internal class UpdateDownloadEngine(
         }
     }
 
+    /** Wraps [emit], recording collector failures via [onEmitFailure] so they are never misread as download errors. */
+    private fun progressCallback(
+        emit: suspend (DownloadProgress) -> Unit,
+        onEmitFailure: (Throwable) -> Unit,
+    ): suspend (Long, Long) -> Unit =
+        { bytesDownloaded, totalBytes ->
+            try {
+                emit(DownloadProgress(bytesDownloaded, totalBytes, percentOf(bytesDownloaded, totalBytes)))
+            } catch (
+                @Suppress("TooGenericExceptionCaught") t: Throwable,
+            ) {
+                onEmitFailure(t)
+                throw t
+            }
+        }
+
     private suspend fun downloadFullFile(
         targetFile: UpdateFile,
         tempFile: File,
         emit: suspend (DownloadProgress) -> Unit,
     ): Outcome {
-        val requestBuilder =
-            HttpRequest
-                .newBuilder()
-                .uri(URI.create(targetFile.url))
-                .GET()
-        applyAuthHeaders(requestBuilder)
-        val response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream())
+        val request = UpdaterHttp.request(targetFile.url, config.provider.authHeaders())
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream())
 
-        if (response.statusCode() != HTTP_OK) {
+        if (response.statusCode() != UpdaterHttp.HTTP_OK) {
+            response.body().close()
             throw NetworkException("HTTP ${response.statusCode()} downloading ${targetFile.url}")
         }
 
@@ -132,12 +142,8 @@ internal class UpdateDownloadEngine(
             }
         }
 
-        // Verify checksum
-        if (!ChecksumVerifier.verify(tempFile, targetFile.sha512)) {
-            val actual = ChecksumVerifier.computeSha512Base64(tempFile)
-            tempFile.delete()
-            throw ChecksumException(targetFile.sha512, actual)
-        }
+        // Throws ChecksumException on mismatch; the caller's catch removes tempFile.
+        ChecksumVerifier.verifyOrThrow(tempFile, targetFile.sha512)
 
         return Outcome(bytesDownloaded, totalBytes, newBlockMapBytes = null)
     }
@@ -153,11 +159,22 @@ internal class UpdateDownloadEngine(
         targetFile: UpdateFile,
         newBlockMapBytes: ByteArray?,
     ) {
-        if (config.disableDifferentialDownload) return
-        if (resolveInstallType() !in CACHED_ARTIFACT_TYPES) return
+        if (config.disableDifferentialDownload) {
+            // Keep the documented promise that disabling differential downloads also
+            // disables the cache: reclaim any artifact a previous configuration stored.
+            try {
+                cache.clear()
+            } catch (
+                @Suppress("TooGenericExceptionCaught") _: Exception,
+            ) {
+                // Best-effort cleanup only.
+            }
+            return
+        }
+        if (preparer.modeFor(resolveInstallType(), targetFile) != DifferentialUpdatePreparer.Mode.SIDECAR) return
         try {
             val blockMapBytes = newBlockMapBytes ?: fetchBlockMapBytesOrNull(targetFile.url)
-            cacheFactory().store(finalFile, blockMapBytes, info.version, targetFile.fileName, targetFile.sha512)
+            cache.store(finalFile, blockMapBytes, info.version, targetFile.fileName, targetFile.sha512)
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception,
         ) {
@@ -168,25 +185,20 @@ internal class UpdateDownloadEngine(
 
     private fun fetchBlockMapBytesOrNull(url: String): ByteArray? =
         try {
-            val requestBuilder =
-                HttpRequest
-                    .newBuilder()
-                    .uri(URI.create("$url.blockmap"))
-                    .GET()
-            applyAuthHeaders(requestBuilder)
-            val response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray())
-            if (response.statusCode() == HTTP_OK) response.body() else null
+            val request = UpdaterHttp.request(UpdaterHttp.blockMapUrl(url), config.provider.authHeaders())
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream())
+            response.body().use { body ->
+                if (response.statusCode() == UpdaterHttp.HTTP_OK) {
+                    UpdaterHttp.readBounded(body, BlockMapCodec.MAX_BLOCKMAP_BYTES)
+                } else {
+                    null
+                }
+            }
         } catch (
             @Suppress("TooGenericExceptionCaught") _: Exception,
         ) {
             null
         }
-
-    private fun applyAuthHeaders(builder: HttpRequest.Builder) {
-        config.provider.authHeaders().forEach { (key, value) ->
-            builder.header(key, value)
-        }
-    }
 
     private fun percentOf(
         bytesDownloaded: Long,
@@ -199,17 +211,8 @@ internal class UpdateDownloadEngine(
         }
 
     private companion object {
-        const val HTTP_OK = 200
         const val PERCENT_MAX = 100.0
 
         val logger: System.Logger = System.getLogger("com.seanproctor.potassium.updater")
-
-        /** Install types whose downloaded artifact is kept for the next differential update. */
-        val CACHED_ARTIFACT_TYPES =
-            setOf(
-                InstallType.ZIP,
-                InstallType.NSIS,
-                InstallType.EXE,
-            )
     }
 }

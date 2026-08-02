@@ -42,9 +42,6 @@ public class PotassiumUpdater(
 
     private val installTypeDetector = InstallTypeDetector()
 
-    /** Test seam: relocates the differential-update artifact cache (default: [UpdateCache]'s app data dir). */
-    internal var cacheDirOverride: File? = null
-
     public fun isUpdateSupported(): Boolean {
         val type = resolveExecutableType() ?: return false
         return type in SELF_UPDATABLE_TYPES
@@ -68,6 +65,13 @@ public class PotassiumUpdater(
         }
     }
 
+    /**
+     * Downloads the update, emitting progress; the terminal emission carries the finished
+     * [DownloadProgress.file]. Downloads are differential (blockmap-based) when possible,
+     * so [DownloadProgress.totalBytes] reflects the planned transfer size — which may be
+     * `0` when the artifact can be assembled entirely from local data. Rely on
+     * `file != null` for completion and guard divisions by `totalBytes`.
+     */
     public fun downloadUpdate(info: UpdateInfo): Flow<DownloadProgress> =
         flow {
             pendingUpdateVersion = info.version
@@ -82,11 +86,9 @@ public class PotassiumUpdater(
                         httpClient = httpClient,
                         config = config,
                         resolveInstallType = ::resolveExecutableType,
-                        cacheFactory = ::updateCache,
+                        cache = updateCache(),
                     )
-                val result = engine.execute(info, targetFile, tempFile, finalFile) { emit(it) }
-
-                emit(DownloadProgress(result.bytesDownloaded, result.totalBytes, PERCENT_MAX, finalFile))
+                engine.execute(info, targetFile, tempFile, finalFile) { emit(it) }
             } catch (e: UpdateException) {
                 tempFile.delete()
                 throw e
@@ -227,7 +229,7 @@ public class PotassiumUpdater(
 
     private fun resolveExecutableType(): InstallType? = config.executableType ?: installTypeDetector.detect()
 
-    private fun updateCache(): UpdateCache = cacheDirOverride?.let { UpdateCache(it) } ?: UpdateCache()
+    private fun updateCache(): UpdateCache = config.updateCacheDir?.let { UpdateCache(it) } ?: UpdateCache()
 
     private fun applyAuthHeaders(builder: HttpRequest.Builder) {
         config.provider.authHeaders().forEach { (key, value) ->
@@ -244,7 +246,6 @@ public class PotassiumUpdater(
 
     public companion object {
         private const val HTTP_OK = 200
-        private const val PERCENT_MAX = 100.0
 
         private val SELF_UPDATABLE_TYPES =
             setOf(

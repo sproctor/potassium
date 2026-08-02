@@ -8,7 +8,6 @@ import java.io.OutputStream
 import java.io.RandomAccessFile
 import java.net.URI
 import java.net.http.HttpClient
-import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 
 /** Inputs for one differential download; [trailer] is appended verbatim (embedded-blockmap formats). */
@@ -77,23 +76,16 @@ internal class DifferentialDownloader(
         out: OutputStream,
         onChunk: suspend (Int) -> Unit,
     ): URI {
-        val builder =
-            HttpRequest
-                .newBuilder()
-                .uri(uri)
-                .GET()
-                .header("Range", "bytes=${operation.start}-${operation.end - 1}")
-        if (uri.host == originalHost) {
-            // Auth is only meant for the original host; forwarding e.g. a GitHub token to the
-            // pre-signed CDN URL a redirect resolved to gets the request rejected.
-            authHeaders.forEach { (key, value) -> builder.header(key, value) }
-        }
-        val response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofInputStream())
+        // Auth is only meant for the original host; forwarding e.g. a GitHub token to the
+        // pre-signed CDN URL a redirect resolved to gets the request rejected.
+        val headers = if (uri.host == originalHost) authHeaders else emptyMap()
+        val request = UpdaterHttp.request(uri, headers, "bytes=${operation.start}-${operation.end - 1}")
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream())
 
-        if (response.statusCode() != HTTP_PARTIAL) {
+        if (response.statusCode() != UpdaterHttp.HTTP_PARTIAL) {
             response.body().close()
             throw NetworkException(
-                if (response.statusCode() == HTTP_OK) {
+                if (response.statusCode() == UpdaterHttp.HTTP_OK) {
                     "Server ignored the Range header (no partial-content support) for $uri"
                 } else {
                     "HTTP ${response.statusCode()} downloading range ${operation.start}-${operation.end - 1} from $uri"
@@ -138,8 +130,6 @@ internal class DifferentialDownloader(
     }
 
     private companion object {
-        const val HTTP_OK = 200
-        const val HTTP_PARTIAL = 206
         const val RANGE_REQUEST_BATCH = 100
         const val RANGE_REQUEST_PAUSE_MS = 1000L
     }

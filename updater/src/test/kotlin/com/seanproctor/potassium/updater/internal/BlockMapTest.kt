@@ -91,4 +91,13 @@ class BlockMapTest {
         assertThrows(ParseException::class.java) { BlockMap.parse("{not json") }
         assertThrows(ParseException::class.java) { BlockMap.parse("""{"files":"nope"}""") }
     }
+
+    @Test
+    fun `rejects file entries missing checksums or sizes`() {
+        // A truncated map must fail parsing loudly, not decode to zero blocks.
+        assertThrows(ParseException::class.java) { BlockMap.parse("""{"version":"2","files":[{}]}""") }
+        assertThrows(ParseException::class.java) {
+            BlockMap.parse("""{"version":"2","files":[{"name":"file","offset":0,"checksums":["a"]}]}""")
+        }
+    }
 }

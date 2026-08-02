@@ -68,8 +68,8 @@ A GitHub Release created by Potassium contains:
 ```
 v1.0.0 (Release)
 ├── MyApp-1.0.0-macos-universal.dmg   ← one binary runs on both arches
-├── MyApp-1.0.0-windows-amd64.exe
-├── MyApp-1.0.0-windows-arm64.exe
+├── MyApp-1.0.0-windows-amd64-nsis.exe
+├── MyApp-1.0.0-windows-arm64-nsis.exe
 ├── MyApp-1.0.0-windows.msixbundle
 ├── MyApp-1.0.0-linux-amd64.deb
 ├── MyApp-1.0.0-linux-arm64.deb
@@ -129,8 +129,8 @@ A complete multi-architecture release looks like:
 ```
 s3://my-updates-bucket/releases/myapp/
 ├── MyApp-1.0.0-macos-universal.dmg
-├── MyApp-1.0.0-windows-amd64.exe
-├── MyApp-1.0.0-windows-arm64.exe
+├── MyApp-1.0.0-windows-amd64-nsis.exe
+├── MyApp-1.0.0-windows-arm64-nsis.exe
 ├── MyApp-1.0.0-linux-amd64.deb
 ├── MyApp-1.0.0-linux-arm64.deb
 ├── latest-mac.yml             # macOS (both arches)
@@ -244,8 +244,8 @@ https://updates.example.com/releases/
 ├── MyApp-1.0.0-macos-arm64.dmg
 ├── MyApp-1.0.0-macos-arm64.zip
 ├── MyApp-1.0.0-macos-arm64.zip.blockmap   # enables differential updates
-├── MyApp-1.0.0-windows-amd64.exe
-├── MyApp-1.0.0-windows-amd64.exe.blockmap
+├── MyApp-1.0.0-windows-amd64-nsis.exe
+├── MyApp-1.0.0-windows-amd64-nsis.exe.blockmap
 ├── MyApp-1.0.0-linux-amd64.deb
 ├── latest-mac.yml
 ├── latest.yml

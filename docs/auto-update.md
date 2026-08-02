@@ -58,15 +58,15 @@ The updater downloads updates **differentially** whenever it can: instead of fet
 |----------|--------|---------------------------|-------------------|
 | Linux | AppImage | The running AppImage (`$APPIMAGE`) | Embedded in the AppImage tail |
 | macOS | ZIP | Previous download, cached by the updater | `<artifact>.zip.blockmap` sidecar |
-| Windows | EXE/NSIS | Previous download, cached by the updater | `<artifact>.exe.blockmap` sidecar |
+| Windows | EXE/NSIS, NSIS Web | Previous download, cached by the updater | `<artifact>.exe.blockmap` sidecar |
 
-Everything else (DEB, RPM, MSI, NSIS Web) always downloads in full — electron-builder produces no blockmaps for those formats.
+NSIS Web installs are included because they update via the full NSIS installer, which has a blockmap. Everything else (DEB, RPM, MSI) always downloads in full — electron-builder produces no blockmaps for those formats.
 
 How it behaves:
 
 - **Fully automatic with graceful fallback.** Any problem — a missing `.blockmap` on the server, a host without HTTP `Range` support, a checksum mismatch, a missing cached old file — silently falls back to a full download. Differential downloading is purely an optimization; integrity always comes from the whole-file SHA-512 check, which runs on every download either way.
 - **AppImage works immediately**: the old file is the running AppImage itself and its blockmap is embedded in it, so even the first update after install is differential.
-- **macOS/Windows need one prior download**: the updater keeps the last downloaded artifact (plus its blockmap) in an `update-cache/` directory inside the per-app data directory (`%APPDATA%/<appId>`, `~/Library/Application Support/<appId>`, or `$XDG_DATA_HOME/<appId>`). The *first* update after a fresh install is therefore a full download; subsequent ones are differential. The cache holds a single artifact (roughly the size of your installer); disabling differential downloads also disables the cache.
+- **macOS/Windows need one prior download**: the updater keeps the last downloaded artifact (plus its blockmap) in an `update-cache/` directory inside the per-app data directory (`%APPDATA%/<appId>`, `~/Library/Application Support/<appId>`, or `$XDG_DATA_HOME/<appId>`). The *first* update after a fresh install is therefore a full download; subsequent ones are differential. The cache holds a single artifact (roughly the size of your installer); disabling differential downloads disables the cache and clears any previously stored artifact on the next update.
 - **Progress reflects actual transfer**: during a differential download, `DownloadProgress.totalBytes` is the number of bytes being downloaded, not the full artifact size. If the differential attempt fails midway, progress restarts against the full size.
 - **Hosting requirements**: publish the `.blockmap` files next to your installers (electron-builder and the reference CI pipeline already emit and upload them), and serve artifacts from a host that supports HTTP range requests (GitHub Releases, S3, and standard static file servers all do). Keeping the previous release's files online lets the updater re-fetch the old blockmap when its local cache is missing.
 
@@ -127,7 +127,7 @@ releaseDate: '2025-06-15T10:30:00.000Z'
 ```yaml
 version: 1.2.3
 files:
-  - url: MyApp-1.2.3-windows-amd64.exe
+  - url: MyApp-1.2.3-windows-amd64-nsis.exe
     sha512: abc123...
     size: 85000000
 releaseDate: '2025-06-15T10:30:00.000Z'
