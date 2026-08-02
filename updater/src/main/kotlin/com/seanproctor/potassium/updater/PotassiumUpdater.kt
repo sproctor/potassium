@@ -1,14 +1,14 @@
 package com.seanproctor.potassium.updater
 
-import com.seanproctor.potassium.updater.exception.ChecksumException
 import com.seanproctor.potassium.updater.exception.NetworkException
 import com.seanproctor.potassium.updater.exception.NoMatchingFileException
 import com.seanproctor.potassium.updater.exception.UpdateException
-import com.seanproctor.potassium.updater.internal.ChecksumVerifier
 import com.seanproctor.potassium.updater.internal.FileSelector
 import com.seanproctor.potassium.updater.internal.InstallTypeDetector
 import com.seanproctor.potassium.updater.internal.PlatformInfo
 import com.seanproctor.potassium.updater.internal.PlatformInstaller
+import com.seanproctor.potassium.updater.internal.UpdateCache
+import com.seanproctor.potassium.updater.internal.UpdateDownloadEngine
 import com.seanproctor.potassium.updater.internal.UpdateMarker
 import com.seanproctor.potassium.updater.internal.YamlParser
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +42,9 @@ public class PotassiumUpdater(
 
     private val installTypeDetector = InstallTypeDetector()
 
+    /** Test seam: relocates the differential-update artifact cache (default: [UpdateCache]'s app data dir). */
+    internal var cacheDirOverride: File? = null
+
     public fun isUpdateSupported(): Boolean {
         val type = resolveExecutableType() ?: return false
         return type in SELF_UPDATABLE_TYPES
@@ -74,51 +77,16 @@ public class PotassiumUpdater(
             val finalFile = File(tempDir, targetFile.fileName)
 
             try {
-                val requestBuilder =
-                    HttpRequest
-                        .newBuilder()
-                        .uri(URI.create(targetFile.url))
-                        .GET()
-                applyAuthHeaders(requestBuilder)
-                val response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream())
+                val engine =
+                    UpdateDownloadEngine(
+                        httpClient = httpClient,
+                        config = config,
+                        resolveInstallType = ::resolveExecutableType,
+                        cacheFactory = ::updateCache,
+                    )
+                val result = engine.execute(info, targetFile, tempFile, finalFile) { emit(it) }
 
-                if (response.statusCode() != HTTP_OK) {
-                    throw NetworkException("HTTP ${response.statusCode()} downloading ${targetFile.url}")
-                }
-
-                val totalBytes = targetFile.size
-                var bytesDownloaded = 0L
-
-                response.body().use { inputStream ->
-                    tempFile.outputStream().use { outputStream ->
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                        var bytesRead: Int
-                        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                            outputStream.write(buffer, 0, bytesRead)
-                            bytesDownloaded += bytesRead
-                            val percent =
-                                if (totalBytes > 0) {
-                                    (bytesDownloaded.toDouble() / totalBytes * PERCENT_MAX).coerceAtMost(PERCENT_MAX)
-                                } else {
-                                    0.0
-                                }
-                            emit(DownloadProgress(bytesDownloaded, totalBytes, percent))
-                        }
-                    }
-                }
-
-                // Verify checksum
-                if (!ChecksumVerifier.verify(tempFile, targetFile.sha512)) {
-                    val actual = ChecksumVerifier.computeSha512Base64(tempFile)
-                    tempFile.delete()
-                    throw ChecksumException(targetFile.sha512, actual)
-                }
-
-                // Rename to final file
-                if (finalFile.exists()) finalFile.delete()
-                tempFile.renameTo(finalFile)
-
-                emit(DownloadProgress(bytesDownloaded, totalBytes, PERCENT_MAX, finalFile))
+                emit(DownloadProgress(result.bytesDownloaded, result.totalBytes, PERCENT_MAX, finalFile))
             } catch (e: UpdateException) {
                 tempFile.delete()
                 throw e
@@ -258,6 +226,8 @@ public class PotassiumUpdater(
     }
 
     private fun resolveExecutableType(): InstallType? = config.executableType ?: installTypeDetector.detect()
+
+    private fun updateCache(): UpdateCache = cacheDirOverride?.let { UpdateCache(it) } ?: UpdateCache()
 
     private fun applyAuthHeaders(builder: HttpRequest.Builder) {
         config.provider.authHeaders().forEach { (key, value) ->

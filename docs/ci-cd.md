@@ -240,7 +240,7 @@ potassium {
 
 ## Universal macOS Binaries
 
-Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then optionally sign and notarize. `build-macos-universal` also writes a `latest-mac.yml` referencing the universal `.zip`/`.dmg`, so auto-update works from a single download on both architectures. Potassium includes reusable composite actions (`setup-macos-signing` and `build-macos-universal`):
+Merge arm64 and x64 builds into a universal (fat) binary using `lipo`, then optionally sign and notarize. `build-macos-universal` also writes a `latest-mac.yml` referencing the universal `.zip`/`.dmg`, so auto-update works from a single download on both architectures, and generates a `.zip.blockmap` sidecar so those updates can be downloaded differentially. Potassium includes reusable composite actions (`setup-macos-signing` and `build-macos-universal`):
 
 > Shipping per-arch macOS packages instead of a universal binary? Skip this job entirely — see [Multi-architecture update manifests](#multi-architecture-update-manifests).
 

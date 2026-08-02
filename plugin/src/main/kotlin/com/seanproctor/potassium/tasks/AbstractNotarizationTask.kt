@@ -55,8 +55,11 @@ abstract class AbstractNotarizationTask
             val packageFile = findOutputFileOrDir(inputDir.ioFile, targetFormat).checkExistingFile()
 
             notarize(notarization, packageFile)
-            staple(packageFile)
+            val stapled = staple(packageFile)
             updateMetadataFiles(packageFile)
+            if (stapled && deleteStaleBlockMap(packageFile)) {
+                logger.lifecycle("Deleted stale ${packageFile.name}.blockmap (invalidated by stapling)")
+            }
         }
 
         private fun notarize(
@@ -164,18 +167,20 @@ abstract class AbstractNotarizationTask
             }
         }
 
-        private fun staple(packageFile: File) {
+        /** Returns true when the file was stapled (and therefore rewritten). */
+        private fun staple(packageFile: File): Boolean {
             if (packageFile.extension.equals("zip", ignoreCase = true)) {
                 // ZIP files used for auto-update are not stapled: re-zipping after stapling
                 // would invalidate the blockmap and break differential updates.
                 // Notarization is still verified online by Gatekeeper without stapling.
                 logger.lifecycle("Skipping staple for ${packageFile.name} (ZIP auto-update artifact)")
-                return
+                return false
             }
             runExternalTool(
                 tool = MacUtils.xcrun,
                 args = listOf("stapler", "staple", packageFile.absolutePath),
             )
+            return true
         }
 
         private fun updateMetadataFiles(packageFile: File) {
@@ -213,6 +218,18 @@ abstract class AbstractNotarizationTask
         companion object {
             private const val DEFAULT_BUFFER_SIZE = 8192
             private val SUBMISSION_ID_REGEX = Regex("""^\s*id:\s*([0-9a-fA-F-]+)\s*$""", RegexOption.MULTILINE)
+
+            /**
+             * Stapling rewrites the package, so a `.blockmap` sidecar generated from the
+             * pre-staple bytes no longer matches the published artifact. Nothing consumes
+             * dmg/pkg blockmaps for auto-update (macOS updates use the ZIP, which is never
+             * stapled), so the stale sidecar is dropped instead of being published.
+             * Returns true when a sidecar existed and was deleted.
+             */
+            internal fun deleteStaleBlockMap(packageFile: File): Boolean {
+                val blockMapFile = File(packageFile.parentFile, "${packageFile.name}.blockmap")
+                return blockMapFile.isFile && blockMapFile.delete()
+            }
 
             internal fun updateYamlEntry(
                 yaml: String,

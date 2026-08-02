@@ -50,6 +50,35 @@ PKG (macOS), AppX/MSIX (Windows), Snap, and Flatpak are not supported by the aut
 
     Both the DMG and ZIP artifacts must be uploaded to the same release (GitHub, S3, or HTTP server). The generated `latest-mac.yml` will reference both files.
 
+## Differential (Delta) Updates
+
+The updater downloads updates **differentially** whenever it can: instead of fetching the whole installer, it compares electron-builder *blockmaps* (content-defined chunk indexes) of the old and new artifacts and downloads only the changed chunks via HTTP range requests. For a typical release that changes a small part of the app, this cuts the transfer to a fraction of the full size.
+
+| Platform | Format | Old file used for diffing | Blockmap location |
+|----------|--------|---------------------------|-------------------|
+| Linux | AppImage | The running AppImage (`$APPIMAGE`) | Embedded in the AppImage tail |
+| macOS | ZIP | Previous download, cached by the updater | `<artifact>.zip.blockmap` sidecar |
+| Windows | EXE/NSIS | Previous download, cached by the updater | `<artifact>.exe.blockmap` sidecar |
+
+Everything else (DEB, RPM, MSI, NSIS Web) always downloads in full — electron-builder produces no blockmaps for those formats.
+
+How it behaves:
+
+- **Fully automatic with graceful fallback.** Any problem — a missing `.blockmap` on the server, a host without HTTP `Range` support, a checksum mismatch, a missing cached old file — silently falls back to a full download. Differential downloading is purely an optimization; integrity always comes from the whole-file SHA-512 check, which runs on every download either way.
+- **AppImage works immediately**: the old file is the running AppImage itself and its blockmap is embedded in it, so even the first update after install is differential.
+- **macOS/Windows need one prior download**: the updater keeps the last downloaded artifact (plus its blockmap) in an `update-cache/` directory inside the per-app data directory (`%APPDATA%/<appId>`, `~/Library/Application Support/<appId>`, or `$XDG_DATA_HOME/<appId>`). The *first* update after a fresh install is therefore a full download; subsequent ones are differential. The cache holds a single artifact (roughly the size of your installer); disabling differential downloads also disables the cache.
+- **Progress reflects actual transfer**: during a differential download, `DownloadProgress.totalBytes` is the number of bytes being downloaded, not the full artifact size. If the differential attempt fails midway, progress restarts against the full size.
+- **Hosting requirements**: publish the `.blockmap` files next to your installers (electron-builder and the reference CI pipeline already emit and upload them), and serve artifacts from a host that supports HTTP range requests (GitHub Releases, S3, and standard static file servers all do). Keeping the previous release's files online lets the updater re-fetch the old blockmap when its local cache is missing.
+
+Opting out:
+
+```kotlin
+PotassiumUpdater {
+    // ...
+    disableDifferentialDownload = true  // always download full installers
+}
+```
+
 ## Update Metadata (YML Files)
 
 The auto-updater relies on the `latest-*.yml` manifests electron-builder writes next to each installer — each lists the available files with their SHA-512 checksums and sizes. Because a Compose/JVM app can't cross-compile its bundled runtime image, every architecture is built on its own machine, so producing the final manifests is partly a matter of **combining per-arch outputs**.
@@ -257,6 +286,10 @@ PotassiumUpdater {
 
     // Force a specific installer format (auto-detected if null)
     executableType = null
+
+    // Disable blockmap-based differential downloads (see "Differential (Delta) Updates");
+    // every update is then downloaded in full and no artifact cache is kept.
+    disableDifferentialDownload = false
 }
 ```
 
@@ -289,15 +322,19 @@ provider = GenericProvider(
 )
 ```
 
-Host your YML files and installers at:
+Host your YML files, installers, and blockmaps at:
 ```
 https://updates.example.com/latest-mac.yml          # macOS (both arches)
 https://updates.example.com/latest.yml               # Windows (both arches)
 https://updates.example.com/latest-linux.yml         # Linux x64
 https://updates.example.com/latest-linux-arm64.yml   # Linux arm64
 https://updates.example.com/MyApp-1.2.3-macos-universal.dmg
+https://updates.example.com/MyApp-1.2.3-macos-universal.zip
+https://updates.example.com/MyApp-1.2.3-macos-universal.zip.blockmap   # differential updates
 https://updates.example.com/MyApp-1.2.3-linux-arm64.AppImage
 ```
+
+The server must support HTTP `Range` requests for differential downloads (any standard static file server does); without them the updater simply downloads full installers.
 
 ### API Reference
 
@@ -570,5 +607,6 @@ The marker file is stored in the platform-specific app data directory (resolved 
 ### Security
 
 - All downloads are verified with **SHA-512** checksums (base64-encoded)
+- Differential downloads are verified against the same whole-file SHA-512 after reassembly; a mismatch discards the file and falls back to a full download
 - If verification fails, the downloaded file is deleted and an error is returned
 - GitHub token is transmitted via `Authorization` header (not URL params) for private repos

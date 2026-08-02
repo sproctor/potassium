@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     kotlin("jvm")
+    alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.vanniktechMavenPublish)
 }
 
@@ -10,6 +11,8 @@ plugins {
 
 dependencies {
     api(libs.coroutines.core)
+    // Internal use only (blockmap JSON parsing) — deliberately not part of the public API surface.
+    implementation(libs.serialization.json)
     testImplementation(libs.junit)
 }
 

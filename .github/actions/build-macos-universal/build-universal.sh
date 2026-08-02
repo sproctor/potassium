@@ -301,6 +301,25 @@ ZIP_OUT="$OUTPUT_DIR/${UNIVERSAL_PREFIX}.zip"
 echo "==> Creating ZIP: $ZIP_OUT"
 ditto -c -k --keepParent "$UNIVERSAL_APP" "$ZIP_OUT"
 
+# ── Generate blockmap for differential updates ────────────────────────────
+# The universal .zip is built with ditto, so electron-builder never sees it and
+# would not emit a .blockmap sidecar. Generate one with app-builder (the same
+# tool electron-builder uses for its own blockmaps) so updaters can download
+# universal updates differentially. Gzip sidecar mode does NOT modify the .zip,
+# so the sha512/size written to latest-mac.yml later stay correct. The .zip is
+# also never stapled (see the notarization docs), so the blockmap stays valid.
+echo "==> Generating blockmap: $ZIP_OUT.blockmap"
+BLOCKMAP_WORK="$WORK/app-builder-bin"
+mkdir -p "$BLOCKMAP_WORK"
+(cd "$BLOCKMAP_WORK" && npm install --no-save --silent app-builder-bin@4.2.0)
+APP_BUILDER="$(cd "$BLOCKMAP_WORK" && node -p "require('app-builder-bin').appBuilderPath")"
+chmod +x "$APP_BUILDER"
+BLOCKMAP_INFO="$("$APP_BUILDER" blockmap --input "$ZIP_OUT" --output "$ZIP_OUT.blockmap")" || {
+  echo "::error::blockmap generation failed for $ZIP_OUT"
+  exit 1
+}
+echo "==> Blockmap written: $BLOCKMAP_INFO"
+
 # ── Read packaging metadata from build artifacts ─────────────────────────
 METADATA_FILE="$(find "$ARM64_PATH" -name 'packaging-metadata.json' -type f | head -1)"
 if [[ -z "$METADATA_FILE" ]]; then
@@ -457,9 +476,10 @@ generate_package_json() {
 # ── Write the electron-updater manifest for the universal artifacts ────────
 # macOS auto-update (Squirrel.Mac) pulls the .zip, and electron-updater fetches
 # latest-mac.yml regardless of CPU arch — so a single manifest pointing at the
-# universal .zip serves both architectures. The .zip is built with ditto (no
-# .blockmap), so differential download is unavailable; a full .zip download is
-# used instead, which is correct, just larger.
+# universal .zip serves both architectures. A .blockmap sidecar is generated
+# above for the ditto-built .zip, so updaters can download differentially; the
+# manifest needs no extra field for that (sidecar blockmaps carry no
+# blockMapSize entry — only embedded ones do).
 write_update_manifest() {
   local out="$OUTPUT_DIR/latest-mac.yml"
   local zip_name zip_sha zip_size rel
@@ -612,5 +632,6 @@ echo "==> Universal artifacts created:"
 ls -lh "$OUTPUT_DIR"
 
 echo "zip=$ZIP_OUT" >> "$GITHUB_OUTPUT"
+echo "blockmap=$ZIP_OUT.blockmap" >> "$GITHUB_OUTPUT"
 echo "dmg=$DMG_OUT" >> "$GITHUB_OUTPUT"
 echo "pkg=$PKG_OUT" >> "$GITHUB_OUTPUT"

@@ -19,6 +19,13 @@ public class UpdaterConfig {
      */
     public var httpClient: HttpClient? = null
 
+    /**
+     * Disables blockmap-based differential (delta) downloads and the local artifact caching
+     * that supports them; every update is downloaded in full. Differential downloads are
+     * enabled by default and fall back to a full download automatically on any failure.
+     */
+    public var disableDifferentialDownload: Boolean = false
+
     internal fun isDevMode(): Boolean = currentVersion == DEV_VERSION
 
     public companion object {

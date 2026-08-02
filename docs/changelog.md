@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### New Features
+
+- **Differential (delta) updates** — `potassium-updater` now downloads updates differentially using electron-builder blockmaps and HTTP range requests, fetching only the chunks that changed. Supported for AppImage (embedded blockmap, diffs against the running AppImage), macOS ZIP, and Windows NSIS (sidecar blockmaps, diffing against the previously downloaded artifact kept in a per-app cache). Any failure falls back automatically to a full download, and every download — differential or full — is still verified against the manifest's whole-file SHA-512. Opt out with `disableDifferentialDownload = true`.
+- **Universal macOS ZIP blockmap** — `build-macos-universal` now generates an electron-builder-compatible `.zip.blockmap` for the ditto-built universal ZIP (via `app-builder`), so universal macOS updates can also be downloaded differentially.
+
+### Bug Fixes
+
+- **Stale DMG blockmap after notarization** — stapling rewrites the DMG, invalidating the `.dmg.blockmap` electron-builder generated before notarization; the stale sidecar is now deleted instead of being published.
+
 ## v1.11.0
 
 **Released: 2026-04-13**

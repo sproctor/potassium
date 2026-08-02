@@ -23,4 +23,5 @@ public class NoMatchingFileException(
 
 public class ParseException(
     message: String,
-) : UpdateException(message)
+    cause: Throwable? = null,
+) : UpdateException(message, cause)
