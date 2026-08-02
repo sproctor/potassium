@@ -91,6 +91,26 @@ abstract class AbstractElectronBuilderPackageTask
             private const val APPX_SQUARE150_LOGO_SIZE = 150
             private const val APPX_WIDE_LOGO_WIDTH = 310
             private const val APPX_WIDE_LOGO_HEIGHT = 150
+
+            /** Resources marker read by potassium-updater to locate the NSIS-seeded installer copy. */
+            internal const val UPDATER_CACHE_DIR_FILE = "updater-cache-dir"
+
+            /** The npm-safe package name written to the generated package.json's `name` field. */
+            internal fun npmPackageName(raw: String): String =
+                raw
+                    .lowercase(Locale.ROOT)
+                    .replace(Regex("[^a-z0-9._-]"), "-")
+                    .trim('-')
+                    .ifBlank { "app" }
+
+            /**
+             * The updater cache directory name electron-builder derives for the app:
+             * `AppInfo.updaterCacheDirName = sanitizeFileName(name).toLowerCase() + "-updater"`,
+             * where `name` is the package.json name this plugin generates. [npmPackageName]
+             * output is already lowercase and filename-safe (a fixed point of electron-builder's
+             * sanitization), so the derivation reduces to appending the suffix.
+             */
+            internal fun updaterCacheDirName(appName: String): String = "${npmPackageName(appName)}-updater"
         }
 
         @get:InputDirectory
@@ -561,6 +581,14 @@ abstract class AbstractElectronBuilderPackageTask
             val resourcesDir = appDir.resolve("resources")
             if (!resourcesDir.exists()) {
                 resourcesDir.mkdirs()
+            }
+            if (currentOS == OS.Windows) {
+                // electron-builder's NSIS installer copies itself to
+                // %LOCALAPPDATA%\<updaterCacheDirName>\installer.exe at install time. Publish
+                // that directory name so potassium-updater can diff the *first* update on a
+                // machine against the seeded installer copy.
+                val appName = executableName.orNull ?: packageName.get()
+                resourcesDir.resolve(UPDATER_CACHE_DIR_FILE).writeText(updaterCacheDirName(appName))
             }
         }
 
@@ -1176,11 +1204,7 @@ abstract class AbstractElectronBuilderPackageTask
             logger.info("Generated package metadata for electron-builder: ${packageJson.absolutePath}")
         }
 
-        private fun String.toNpmPackageName(): String =
-            lowercase(Locale.ROOT)
-                .replace(Regex("[^a-z0-9._-]"), "-")
-                .trim('-')
-                .ifBlank { "app" }
+        private fun String.toNpmPackageName(): String = npmPackageName(this)
 
         private fun String.escapeForJson(): String =
             replace("\\", "\\\\")

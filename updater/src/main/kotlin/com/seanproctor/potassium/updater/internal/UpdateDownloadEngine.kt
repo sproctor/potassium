@@ -25,7 +25,7 @@ internal class UpdateDownloadEngine(
     private val resolveInstallType: () -> InstallType?,
     private val cache: UpdateCache,
 ) {
-    private val preparer = DifferentialUpdatePreparer(httpClient, config.provider, cache)
+    private val preparer = DifferentialUpdatePreparer(httpClient, config.provider, cache, config.currentVersion)
 
     private class Outcome(
         val bytesDownloaded: Long,
@@ -41,7 +41,7 @@ internal class UpdateDownloadEngine(
         emit: suspend (DownloadProgress) -> Unit,
     ) {
         val outcome =
-            tryDifferentialDownload(targetFile, tempFile, emit)
+            tryDifferentialDownload(info, targetFile, tempFile, emit)
                 ?: downloadFullFile(targetFile, tempFile, emit)
 
         // Throws on failure (locked target file, cross-device issues) instead of silently
@@ -63,6 +63,7 @@ internal class UpdateDownloadEngine(
      * a consumer bug must not masquerade as a differential-download failure.
      */
     private suspend fun tryDifferentialDownload(
+        info: UpdateInfo,
         targetFile: UpdateFile,
         tempFile: File,
         emit: suspend (DownloadProgress) -> Unit,
@@ -72,7 +73,7 @@ internal class UpdateDownloadEngine(
 
         var emitFailure: Throwable? = null
         return try {
-            val prepared = preparer.prepare(mode, targetFile, tempFile)
+            val prepared = preparer.prepare(mode, targetFile, info.version, tempFile)
             val plan = prepared.request.plan
             logger.log(
                 System.Logger.Level.INFO,

@@ -5,6 +5,7 @@ import com.seanproctor.potassium.updater.UpdateFile
 import com.seanproctor.potassium.updater.exception.NetworkException
 import com.seanproctor.potassium.updater.exception.UpdateException
 import com.seanproctor.potassium.updater.provider.UpdateProvider
+import com.seanproctor.potassium.updater.runtime.Platform
 import java.io.File
 import java.net.http.HttpClient
 import java.net.http.HttpResponse
@@ -19,6 +20,7 @@ internal class DifferentialUpdatePreparer(
     private val httpClient: HttpClient,
     private val provider: UpdateProvider,
     private val cache: UpdateCache,
+    private val currentVersion: String,
     private val env: InstallEnvironment = SystemInstallEnvironment,
 ) {
     enum class Mode {
@@ -59,11 +61,12 @@ internal class DifferentialUpdatePreparer(
     fun prepare(
         mode: Mode,
         target: UpdateFile,
+        newVersion: String,
         destination: File,
     ): Prepared =
         when (mode) {
             Mode.EMBEDDED -> prepareEmbedded(target, destination)
-            Mode.SIDECAR -> prepareSidecar(target, destination)
+            Mode.SIDECAR -> prepareSidecar(target, newVersion, destination)
         }
 
     private fun prepareEmbedded(
@@ -128,35 +131,75 @@ internal class DifferentialUpdatePreparer(
 
     private fun prepareSidecar(
         target: UpdateFile,
+        newVersion: String,
         destination: File,
     ): Prepared {
-        // Cheap existence check first, then the small new-blockmap fetch: hosts that never
-        // publish sidecars fail fast, before the expensive integrity hash of the cached
-        // artifact in cache.read().
-        if (!cache.hasEntry()) {
+        // Cheap old-artifact discovery first, then the small new-blockmap fetch: hosts that
+        // never publish sidecars fail fast, before the expensive integrity hash in cache.read().
+        val hasCache = cache.hasEntry()
+        val seededInstaller = if (hasCache) null else findSeededInstaller()
+        if (!hasCache && seededInstaller == null) {
             throw UpdateException("No previously downloaded artifact to diff against")
         }
         val newBlockMapBytes = getBytes(UpdaterHttp.blockMapUrl(target.url))
         val newBlockMap = BlockMapCodec.decodeGzip(newBlockMapBytes)
-        val cached =
-            cache.read()
-                ?: throw UpdateException("Cached artifact is missing or corrupt")
-        val oldBlockMap = cache.readBlockMap() ?: fetchOldBlockMap(target, cached)
+
+        val (oldFile, oldBlockMap) =
+            if (hasCache) {
+                val cached =
+                    cache.read()
+                        ?: throw UpdateException("Cached artifact is missing or corrupt")
+                cached.artifact to
+                    (cache.readBlockMap() ?: fetchOldBlockMap(cached.fileName, cached.version, target))
+            } else {
+                // First update on this machine: diff against the installer the NSIS install
+                // seeded; its blockmap must come from the server for the running version.
+                val oldFileName = substituteVersion(target.fileName, newVersion)
+                checkNotNull(seededInstaller) to fetchOldBlockMap(oldFileName, currentVersion, target)
+            }
 
         val plan = DownloadPlanBuilder.build(oldBlockMap, newBlockMap)
         checkSizeInvariant(plan, trailerLength = 0, target = target)
-        return Prepared(DifferentialRequest(target.url, plan, cached.artifact, destination), newBlockMapBytes)
+        return Prepared(DifferentialRequest(target.url, plan, oldFile, destination), newBlockMapBytes)
     }
 
     /**
-     * Fetches the cached artifact's blockmap from the server using the version and file name
-     * recorded when it was downloaded. Only useful while the host still serves the old release.
+     * The previous installer that electron-builder's NSIS template copies to
+     * `%LOCALAPPDATA%\<updaterCacheDirName>\installer.exe` at install time (and refreshes on
+     * every install, including this updater's own silent update installs). Available from the
+     * very first install onward, so Windows first updates can be differential before this
+     * updater has cached anything itself. The directory name is published by the packaging
+     * plugin as the `resources/updater-cache-dir` marker.
+     */
+    private fun findSeededInstaller(): File? {
+        if (env.platform != Platform.Windows) return null
+        val cacheDirName = AppResources.read(env, UPDATER_CACHE_DIR_FILE) ?: return null
+        val localAppData = env.getenv("LOCALAPPDATA")?.takeIf { it.isNotEmpty() } ?: return null
+        return File(localAppData, "$cacheDirName/$SEEDED_INSTALLER_NAME").takeIf { it.isFile && it.length() > 0 }
+    }
+
+    /** The old artifact's file name, derived by substituting the new version for the running one. */
+    private fun substituteVersion(
+        fileName: String,
+        newVersion: String,
+    ): String {
+        val oldFileName = fileName.replace(newVersion, currentVersion)
+        if (oldFileName == fileName) {
+            throw UpdateException("Cannot derive the old artifact name: '$fileName' does not contain $newVersion")
+        }
+        return oldFileName
+    }
+
+    /**
+     * Fetches the old artifact's blockmap from the server. Only useful while the host still
+     * serves the old release; a 404 simply falls back to a full download.
      */
     private fun fetchOldBlockMap(
+        oldFileName: String,
+        oldVersion: String,
         target: UpdateFile,
-        cached: UpdateCache.Entry,
     ): BlockMap {
-        val url = UpdaterHttp.blockMapUrl(provider.getDownloadUrl(cached.fileName, cached.version))
+        val url = UpdaterHttp.blockMapUrl(provider.getDownloadUrl(oldFileName, oldVersion))
         if (url == UpdaterHttp.blockMapUrl(target.url)) {
             throw UpdateException("Old and new blockmap URLs are identical ($url); cannot fetch the old blockmap")
         }
@@ -211,5 +254,11 @@ internal class DifferentialUpdatePreparer(
         const val MAX_FETCH_BYTES = BlockMapCodec.MAX_BLOCKMAP_BYTES + BlockMapCodec.TRAILER_LENGTH
 
         val NSIS_FAMILY = setOf(InstallType.NSIS, InstallType.EXE, InstallType.NSIS_WEB)
+
+        /** Plugin-written resources marker holding electron-builder's updaterCacheDirName. */
+        const val UPDATER_CACHE_DIR_FILE = "updater-cache-dir"
+
+        /** electron-builder's CURRENT_APP_INSTALLER_FILE_NAME — the NSIS-seeded installer copy. */
+        const val SEEDED_INSTALLER_NAME = "installer.exe"
     }
 }

@@ -20,6 +20,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
+import java.util.concurrent.atomic.AtomicInteger
 
 class DifferentialUpdatePreparerTest {
     @get:Rule
@@ -27,7 +28,11 @@ class DifferentialUpdatePreparerTest {
 
     private lateinit var server: HttpServer
     private lateinit var handler: RangeHttpHandler
+    private lateinit var exeHandler: RangeHttpHandler
     private lateinit var serverBaseUrl: String
+
+    private val oldExeBlockMapRequests = AtomicInteger(0)
+    private val newExeBlockMapRequests = AtomicInteger(0)
 
     // Segment-structured contents: shared segments are reused, fresh ones must be downloaded.
     private val segmentA = ByteArray(2000) { (it % 13).toByte() }
@@ -40,11 +45,32 @@ class DifferentialUpdatePreparerTest {
     private val oldAppImage = embeddedBlockMapFile(oldSegments)
     private val newAppImage = embeddedBlockMapFile(newSegments)
 
+    // Plain sidecar-style artifacts for the Windows seeded-installer path.
+    private val oldExeBytes = segmentA + segmentB
+    private val newExeBytes = segmentA + segmentX + segmentB
+
     @Before
     fun startServer() {
+        oldExeBlockMapRequests.set(0)
+        newExeBlockMapRequests.set(0)
+
         handler = RangeHttpHandler(newAppImage.bytes)
+        exeHandler = RangeHttpHandler(newExeBytes)
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/app-2.0.0.AppImage", handler)
+        server.createContext("/app-2.0.0.exe", exeHandler)
+        server.createContext("/app-2.0.0.exe.blockmap") { exchange ->
+            newExeBlockMapRequests.incrementAndGet()
+            val body = BlockMapFixtures.gzip(BlockMapFixtures.blockMapJson(newSegments))
+            exchange.sendResponseHeaders(200, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        server.createContext("/app-1.0.0.exe.blockmap") { exchange ->
+            oldExeBlockMapRequests.incrementAndGet()
+            val body = BlockMapFixtures.gzip(BlockMapFixtures.blockMapJson(oldSegments))
+            exchange.sendResponseHeaders(200, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
         server.start()
         serverBaseUrl = "http://127.0.0.1:${server.address.port}"
     }
@@ -103,7 +129,7 @@ class DifferentialUpdatePreparerTest {
         val destination = tempFolder.newFile()
         val target = appImageTarget()
 
-        val prepared = preparer.prepare(DifferentialUpdatePreparer.Mode.EMBEDDED, target, destination)
+        val prepared = preparer.prepare(DifferentialUpdatePreparer.Mode.EMBEDDED, target, "2.0.0", destination)
         runBlocking {
             DifferentialDownloader(HttpClient.newHttpClient(), emptyMap())
                 .download(prepared.request) { _, _ -> }
@@ -123,7 +149,7 @@ class DifferentialUpdatePreparerTest {
     fun `embedded prepare fails without APPIMAGE env`() {
         assertThrows(UpdateException::class.java) {
             preparer(appImagePath = null)
-                .prepare(DifferentialUpdatePreparer.Mode.EMBEDDED, appImageTarget(), tempFolder.newFile())
+                .prepare(DifferentialUpdatePreparer.Mode.EMBEDDED, appImageTarget(), "2.0.0", tempFolder.newFile())
         }
     }
 
@@ -133,7 +159,7 @@ class DifferentialUpdatePreparerTest {
         val target = appImageTarget(blockMapSizeOverride = newAppImage.blockMapSize - 1)
 
         assertThrows(UpdateException::class.java) {
-            preparer.prepare(DifferentialUpdatePreparer.Mode.EMBEDDED, target, tempFolder.newFile())
+            preparer.prepare(DifferentialUpdatePreparer.Mode.EMBEDDED, target, "2.0.0", tempFolder.newFile())
         }
     }
 
@@ -143,7 +169,7 @@ class DifferentialUpdatePreparerTest {
         val target = appImageTarget(blockMapSizeOverride = BlockMapCodec.MAX_BLOCKMAP_BYTES + 1)
 
         assertThrows(UpdateException::class.java) {
-            preparer.prepare(DifferentialUpdatePreparer.Mode.EMBEDDED, target, tempFolder.newFile())
+            preparer.prepare(DifferentialUpdatePreparer.Mode.EMBEDDED, target, "2.0.0", tempFolder.newFile())
         }
         assertEquals(0, handler.requests.size)
     }
@@ -154,6 +180,7 @@ class DifferentialUpdatePreparerTest {
             preparer().prepare(
                 DifferentialUpdatePreparer.Mode.SIDECAR,
                 updateFile("app-2.0.0.zip"),
+                "2.0.0",
                 tempFolder.newFile(),
             )
         }
@@ -161,13 +188,106 @@ class DifferentialUpdatePreparerTest {
         assertEquals(0, handler.requests.size)
     }
 
+    @Test
+    fun `seeded installer enables a first-update differential on Windows`() {
+        val preparer = seededPreparer()
+        val destination = tempFolder.newFile()
+        val target = exeTarget()
+
+        val prepared = preparer.prepare(DifferentialUpdatePreparer.Mode.SIDECAR, target, "2.0.0", destination)
+        runBlocking {
+            DifferentialDownloader(HttpClient.newHttpClient(), emptyMap())
+                .download(prepared.request) { _, _ -> }
+        }
+
+        assertArrayEquals(newExeBytes, destination.readBytes())
+        // The old blockmap came from the server (version-substituted URL); the old bytes
+        // came from the NSIS-seeded installer copy.
+        assertEquals(1, oldExeBlockMapRequests.get())
+        assertTrue(
+            "served ${exeHandler.bytesServed} of ${newExeBytes.size}",
+            exeHandler.bytesServed < newExeBytes.size,
+        )
+    }
+
+    @Test
+    fun `seeded path requires a versioned file name`() {
+        // The seeded installer exists, but an unversioned artifact name means the old
+        // blockmap URL cannot be derived — the attempt must abort (and fall back).
+        val preparer = seededPreparer()
+
+        assertThrows(UpdateException::class.java) {
+            preparer.prepare(
+                DifferentialUpdatePreparer.Mode.SIDECAR,
+                updateFile("app.exe", size = newExeBytes.size.toLong()),
+                "2.0.0",
+                tempFolder.newFile(),
+            )
+        }
+    }
+
+    @Test
+    fun `seeded installer is ignored off Windows`() {
+        val preparer = seededPreparer(platform = Platform.Linux)
+
+        assertThrows(UpdateException::class.java) {
+            preparer.prepare(DifferentialUpdatePreparer.Mode.SIDECAR, exeTarget(), "2.0.0", tempFolder.newFile())
+        }
+        assertEquals(0, newExeBlockMapRequests.get())
+    }
+
+    @Test
+    fun `missing seeded installer file fails before any network request`() {
+        val preparer = seededPreparer(writeInstaller = false)
+
+        assertThrows(UpdateException::class.java) {
+            preparer.prepare(DifferentialUpdatePreparer.Mode.SIDECAR, exeTarget(), "2.0.0", tempFolder.newFile())
+        }
+        assertEquals(0, newExeBlockMapRequests.get())
+    }
+
     private fun preparer(appImagePath: String? = null): DifferentialUpdatePreparer =
         DifferentialUpdatePreparer(
             httpClient = HttpClient.newHttpClient(),
             provider = GenericProvider(serverBaseUrl),
             cache = UpdateCache(tempFolder.newFolder()),
+            currentVersion = "1.0.0",
             env = FakeEnv(if (appImagePath == null) emptyMap() else mapOf("APPIMAGE" to appImagePath)),
         )
+
+    /**
+     * A preparer whose environment mimics a Windows machine right after an NSIS install:
+     * `resources/updater-cache-dir` names the seed directory and
+     * `%LOCALAPPDATA%\<name>\installer.exe` holds the previous installer's bytes.
+     */
+    private fun seededPreparer(
+        platform: Platform = Platform.Windows,
+        writeInstaller: Boolean = true,
+    ): DifferentialUpdatePreparer {
+        val appRoot = tempFolder.newFolder()
+        File(appRoot, "resources").mkdirs()
+        File(appRoot, "resources/updater-cache-dir").writeText("myapp-updater\n")
+
+        val localAppData = tempFolder.newFolder()
+        if (writeInstaller) {
+            val seedDir = File(localAppData, "myapp-updater")
+            seedDir.mkdirs()
+            File(seedDir, "installer.exe").writeBytes(oldExeBytes)
+        }
+
+        return DifferentialUpdatePreparer(
+            httpClient = HttpClient.newHttpClient(),
+            provider = GenericProvider(serverBaseUrl),
+            cache = UpdateCache(tempFolder.newFolder()),
+            currentVersion = "1.0.0",
+            env =
+                FakeEnv(
+                    envVars = mapOf("LOCALAPPDATA" to localAppData.absolutePath),
+                    platform = platform,
+                    systemProps = mapOf("java.home" to File(appRoot, "runtime").absolutePath),
+                ),
+        )
+    }
 
     private fun oldAppImageFile(): File {
         val file = tempFolder.newFile("current.AppImage")
@@ -181,6 +301,13 @@ class DifferentialUpdatePreparerTest {
             blockMapSize = blockMapSizeOverride ?: newAppImage.blockMapSize,
             size = newAppImage.bytes.size.toLong(),
             sha512 = BlockMapFixtures.base64Sha512(newAppImage.bytes),
+        )
+
+    private fun exeTarget(): UpdateFile =
+        updateFile(
+            fileName = "app-2.0.0.exe",
+            size = newExeBytes.size.toLong(),
+            sha512 = BlockMapFixtures.base64Sha512(newExeBytes),
         )
 
     private fun updateFile(
@@ -211,16 +338,16 @@ class DifferentialUpdatePreparerTest {
 
     private class FakeEnv(
         private val envVars: Map<String, String>,
+        override val platform: Platform = Platform.Linux,
+        private val systemProps: Map<String, String> = emptyMap(),
     ) : InstallEnvironment {
-        override val platform: Platform get() = Platform.Linux
-
         override fun getenv(name: String): String? = envVars[name]
 
-        override fun systemProperty(name: String): String? = null
+        override fun systemProperty(name: String): String? = systemProps[name]
 
         override fun fileExists(path: String): Boolean = File(path).isFile
 
-        override fun readText(path: String): String? = null
+        override fun readText(path: String): String? = File(path).takeIf { it.isFile }?.readText()
 
         override fun executablePath(): String? = null
     }
