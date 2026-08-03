@@ -7,6 +7,10 @@
 - **Windows update could prompt to uninstall** — after a silent NSIS update, the relaunch step picked the first `.exe` in the install directory, which could be the NSIS uninstaller (showing "Are you sure you want to uninstall?" — and removing the app on OK). The relaunch now uses the exact path of the previously running launcher (resolved from the process itself, never by scanning the install directory), and the NSIS installer is invoked in update mode (`/S --updated`). The relaunched app receives no installer arguments.
 - **Failed installs no longer report a phantom update** — the post-update marker is written before the installer runs; if the install fails or is cancelled after the app exits, the next launch used to report `wasJustUpdated() == true` anyway. The marker is now discarded when the app still reports the version it had when the marker was written.
 
+### Improvements
+
+- **electron-builder 26.15.7** — picks up the upstream NSIS fix that pins the payload archive to an install-time-decodable 7z filter (modern 7za auto-applied `BCJ2`/`ARM64` branch filters the NSIS extractor silently skips, which could drop executables from the installed app), plus snap template extraction and `electronLanguages` locale fixes.
+
 ### Behavior Changes
 
 - **Evidence-based Windows install-type detection** — instead of assuming every Windows install is NSIS, the updater now detects portable builds (`PORTABLE_EXECUTABLE_FILE` env), AppX/MSIX (`WindowsApps` install path), and NSIS (its uninstaller present in the install root); anything else is treated as an MSI install.

@@ -42,9 +42,10 @@ internal class ElectronBuilderToolManager(
         // reproducible across builds. Left unpinned, `npx electron-builder` resolves whatever
         // version is latest at build time, so the same plugin + sources can produce different
         // artifacts on different days. See #266.
-        private const val ELECTRON_BUILDER_VERSION = "26.15.5"
+        private const val ELECTRON_BUILDER_VERSION = "26.15.7"
         private const val ELECTRON_BUILDER_SPEC = "$ELECTRON_BUILDER_PACKAGE@$ELECTRON_BUILDER_VERSION"
 
+        // Placeholder version. We aren't packaging electron, but we need to give a version to electron builder
         private const val PREPACKAGED_ELECTRON_VERSION = "33.0.0"
     }
 
