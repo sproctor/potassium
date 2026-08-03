@@ -869,13 +869,9 @@ Everything from the official plugin works unchanged:
 - [Automatic Metadata Resolution](https://github.com/sproctor/potassium/graalvm/automatic-metadata/)
 - [Runtime Bootstrap](https://github.com/sproctor/potassium/graalvm/runtime-bootstrap/)
 - [Tasks & CI/CD](https://github.com/sproctor/potassium/graalvm/tasks-ci/)
-- [Nucleus Native Access](https://github.com/sproctor/potassium/native-access/index/)
-- [Supported Types](https://github.com/sproctor/potassium/native-access/types/)
-- [Usage & Patterns](https://github.com/sproctor/potassium/native-access/usage/)
 - [CI/CD](https://github.com/sproctor/potassium/ci-cd/)
 - [Packaging](https://github.com/sproctor/potassium/comparison/packaging/)
 - [Migration from org.jetbrains.compose](https://github.com/sproctor/potassium/migration/)
-- [Roadmap](https://github.com/sproctor/potassium/roadmap/)
 
 ## Full LLM Documentation
 

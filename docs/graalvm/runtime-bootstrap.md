@@ -2,18 +2,18 @@
 
 ## `graalvm-runtime` module
 
-The `graalvm-runtime` module provides everything needed to bootstrap a Compose Desktop application in a GraalVM native image. Add it to your dependencies:
+The `graalvm-runtime` module provides everything needed to bootstrap a Compose Desktop application in a GraalVM native image. It is a runtime library from the upstream [Nucleus](https://github.com/NucleusFramework/Nucleus) project (which Potassium was forked from) and deliberately keeps its original Maven coordinates. Add it to your dependencies:
 
 ```kotlin
 dependencies {
-    implementation("io.github.kdroidfilter:potassium.graalvm-runtime:<version>")
+    implementation("io.github.kdroidfilter:nucleus.graalvm-runtime:<version>")
 }
 ```
 
 Then call `GraalVmInitializer.initialize()` as the **first line** of your `main()` function, before any AWT or Compose usage:
 
 ```kotlin
-import com.seanproctor.potassium.graalvm.GraalVmInitializer
+import io.github.kdroidfilter.nucleus.graalvm.GraalVmInitializer
 
 fun main() {
     GraalVmInitializer.initialize()
@@ -61,7 +61,7 @@ The `graalvm-runtime` module solves this automatically. It ships a `native-image
 |---------|----------------|
 | `.*\.(svg\|ttf\|otf)` | All SVG icons and font files on the classpath — Jewel, IntelliJ Platform icons, Compose resources, your own icons |
 | `composeResources/.*` | All Compose Multiplatform resources (images, strings, fonts loaded via `Res.*`) |
-| `potassium/native/.*` | All Potassium JNI native libraries (`.dll`, `.dylib`, `.so`) |
+| `nucleus/.*` | The Nucleus runtime libraries' bundled resources, including their JNI native libraries (`.dll`, `.dylib`, `.so`) |
 | `META-INF/services/.*` | All `ServiceLoader` descriptors (ktor, coil, SLF4J, etc.) |
 
 This means:
@@ -73,7 +73,3 @@ This means:
 
 !!! note "Binary size trade-off"
     The glob pattern `.*\.(svg|ttf|otf)` includes **all** SVGs and fonts from **all** JARs on the classpath. If you depend on the IntelliJ Platform icons library, this may add several megabytes of icons you don't actually use. For most applications, the convenience far outweighs the size increase. If binary size is critical, you can override with more targeted patterns in your own `resource-config.json`.
-
-## Decorated Window
-
-The JNI-based decorated-window backend was specifically designed to work with GraalVM Native Image (no JBR dependency). Use it instead of the JBR-based backend for native-image builds.

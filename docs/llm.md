@@ -23,7 +23,7 @@ Both files are **auto-generated** from the MkDocs documentation pages by the [`s
 Paste the URL directly in your prompt:
 
 ```
-Read https://potassiumframework.dev/llms-full.txt and help me configure
+Read https://sproctor.github.io/potassium/llms-full.txt and help me configure
 a Potassium project with NSIS installer, auto-update, and macOS signing.
 ```
 
@@ -32,7 +32,7 @@ a Potassium project with NSIS installer, auto-update, and macOS signing.
 Add the URL as a documentation source in your AI-powered IDE, or reference it in your project instructions:
 
 ```
-@doc https://potassiumframework.dev/llms-full.txt
+@doc https://sproctor.github.io/potassium/llms-full.txt
 ```
 
 ### Custom Agents / RAG Pipelines
@@ -40,8 +40,8 @@ Add the URL as a documentation source in your AI-powered IDE, or reference it in
 Fetch the files programmatically:
 
 ```bash
-curl -s https://potassiumframework.dev/llms.txt       # concise
-curl -s https://potassiumframework.dev/llms-full.txt   # complete
+curl -s https://sproctor.github.io/potassium/llms.txt       # concise
+curl -s https://sproctor.github.io/potassium/llms-full.txt   # complete
 ```
 
 ## What's Included
@@ -51,7 +51,6 @@ curl -s https://potassiumframework.dev/llms-full.txt   # complete
 - Project overview and key features
 - Quick start snippet
 - Getting started guide with prerequisites and installation
-- Runtime libraries summary (all libraries)
 - Migration guide from `org.jetbrains.compose`
 - Links to all documentation pages
 
@@ -62,19 +61,7 @@ curl -s https://potassiumframework.dev/llms-full.txt   # complete
 - macOS 26 Liquid Glass and SDK version patching
 - Sandboxing pipeline details
 - Code signing and notarization (Windows PFX, Azure Artifact Signing, macOS Developer ID)
-- Auto-update runtime API with Compose integration example
+- Auto-update runtime API — including differential (delta) updates — with Compose integration example
 - Publishing to GitHub Releases and S3
 - CI/CD workflows and all composite actions
-- GraalVM Native Image configuration and DSL reference
-- Native Access (Kotlin/Native bridge)
-- All runtime APIs with code examples:
-    - App metadata, executable type, single instance, deep links
-    - Decorated window (JBR and JNI backends, fullscreen controls, design system wrappers)
-    - System tray (ComposeNativeTray framework, Tray API, Menu DSL, TrayApp)
-    - Notifications (macOS, Windows, Linux)
-    - Launchers (macOS dock, Windows taskbar, Linux Unity)
-    - Taskbar progress, global hotkey, macOS menu
-    - Dark mode detector, system color, system info, energy manager
-    - Native SSL, native HTTP (java.net.http, OkHttp, Ktor)
-    - Linux HiDPI, freedesktop icons
-    - GraalVM runtime bootstrap
+- GraalVM Native Image configuration, DSL reference, and runtime bootstrap

@@ -98,7 +98,7 @@ How those manifests combine depends on the OS, because electron-updater fetches 
 - **Windows** — both arches share `latest.yml`, so `publish-github-release` unions their `files:` arrays into one.
 - **macOS** — both arches share `latest-mac.yml`. Ship a **universal** binary (one manifest, via `build-macos-universal`) or **per-arch** packages (the two manifests get merged like Windows).
 
-See [Multi-architecture update manifests](ci-cd.md#multi-architecture-update-manifests) for the full mechanics, and the [example release workflow](https://github.com/sproctor/potassium/blob/main/.github/workflows/release-desktop.yaml) for the setup.
+See [Multi-architecture update manifests](ci-cd.md#multi-architecture-update-manifests) for the full mechanics and a complete reference release pipeline.
 
 ### Building locally
 
@@ -188,7 +188,7 @@ You are responsible for uploading the installers and YML files to your chosen ho
 
 ### Option 1: GitHub Releases (recommended)
 
-The simplest approach. Use the [ready-made release CI workflow](https://github.com/kdroidFilter/Nucleus/blob/main/.github/workflows/release-desktop.yaml) which handles everything automatically:
+The simplest approach. Follow the [reference release pipeline](ci-cd.md) which handles everything:
 
 1. Builds on all platforms in parallel
 2. Generates the `latest-*.yml` files from all platform artifacts
@@ -490,15 +490,16 @@ To fix this, pass a client pre-configured with the OS trust store (for example v
 
 ```kotlin
 dependencies {
-    implementation("io.github.kdroidfilter:potassium.updater-runtime:<version>")
-    implementation("io.github.kdroidfilter:potassium.native-http:<version>")
+    implementation("com.seanproctor:potassium-updater:0.3.1")
+    // Upstream Nucleus runtime library — deliberately keeps its original coordinates.
+    implementation("io.github.kdroidfilter:nucleus.native-http:<version>")
 }
 ```
 
 **2. Inject the client in the updater config**
 
 ```kotlin
-import com.seanproctor.potassium.nativehttp.NativeHttpClient
+import io.github.kdroidfilter.nucleus.nativehttp.NativeHttpClient
 import com.seanproctor.potassium.updater.PotassiumUpdater
 import com.seanproctor.potassium.updater.provider.GitHubProvider
 
@@ -513,7 +514,7 @@ The injected client is used for **both** the metadata check and the file downloa
 You can also compose additional options via the builder extension:
 
 ```kotlin
-import com.seanproctor.potassium.nativehttp.NativeHttpClient.withNativeSsl
+import io.github.kdroidfilter.nucleus.nativehttp.NativeHttpClient.withNativeSsl
 import java.net.http.HttpClient
 import java.time.Duration
 
@@ -599,7 +600,7 @@ fun PostUpdateBanner(updater: PotassiumUpdater) {
 }
 ```
 
-The marker file is stored in the platform-specific app data directory (resolved from `PotassiumApp.appId`):
+The marker file is stored in the platform-specific app data directory (resolved from the `app.id` system property, falling back to a per-install derived id):
 
 - **Linux**: `$XDG_DATA_HOME/<appId>/` or `~/.local/share/<appId>/`
 - **macOS**: `~/Library/Application Support/<appId>/`
