@@ -57,6 +57,9 @@ outputs:
   zip:
     description: 'Path to the universal ZIP'
     value: ${{ steps.build.outputs.zip }}
+  blockmap:
+    description: 'Path to the universal ZIP blockmap (for differential updates)'
+    value: ${{ steps.build.outputs.blockmap }}
   dmg:
     description: 'Path to the universal DMG'
     value: ${{ steps.build.outputs.dmg }}

@@ -30,7 +30,7 @@ This repo is one Gradle multi-project build (`:plugin` + `:updater`) plus a stan
 ./gradlew validatePlugins               # Validate plugin task/property annotations
 ./gradlew publishToMavenLocal           # Publish both artifacts to ~/.m2 for local testing
 ./gradlew publishAndReleaseToMavenCentral  # Publish + release both artifacts to Maven Central
-./gradlew reformatAll                   # (ktlint) format all code
+./gradlew ktlintFormat                  # (ktlint) format all code
 ```
 
 ## Key Technologies

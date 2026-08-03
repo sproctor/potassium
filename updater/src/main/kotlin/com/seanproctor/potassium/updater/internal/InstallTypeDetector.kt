@@ -2,7 +2,6 @@ package com.seanproctor.potassium.updater.internal
 
 import com.seanproctor.potassium.updater.InstallType
 import com.seanproctor.potassium.updater.runtime.Platform
-import java.io.File
 
 /**
  * Detects how the running application was installed, at runtime — so the packaging plugin no
@@ -46,36 +45,7 @@ internal class InstallTypeDetector(
      * Reads electron-builder's per-target `resources/package-type` (or a plugin-written one on
      * Windows), if present and recognized.
      */
-    private fun packageType(): InstallType? {
-        val markerFile =
-            resourceDirCandidates()
-                .map { "$it/$PACKAGE_TYPE_FILE" }
-                .firstOrNull { env.fileExists(it) }
-                ?: return null
-        return InstallType.fromId(env.readText(markerFile))
-    }
-
-    /**
-     * Candidate locations for the app's `resources/` directory at runtime. electron-builder
-     * writes `package-type` into the packaged app's resources dir; under jpackage the app root
-     * is derived from `java.home` (`.../lib/runtime` → app root, or `…\runtime` on Windows) or
-     * the launcher path. Only path arithmetic happens here — existence/reads go through [env].
-     */
-    private fun resourceDirCandidates(): List<String> =
-        buildList {
-            env.systemProperty("java.home")?.let { javaHome ->
-                val runtimeDir = File(javaHome)
-                runtimeDir.parentFile?.parentFile?.let { add("${it.path}/resources") }
-                runtimeDir.parentFile?.let { add("${it.path}/resources") }
-                add("$javaHome/resources")
-            }
-            env.executablePath()?.let { exe ->
-                File(exe).parentFile?.let { dir ->
-                    add("${dir.path}/resources")
-                    dir.parentFile?.let { add("${it.path}/resources") }
-                }
-            }
-        }.distinct()
+    private fun packageType(): InstallType? = InstallType.fromId(AppResources.read(env, PACKAGE_TYPE_FILE))
 
     private companion object {
         const val PACKAGE_TYPE_FILE = "package-type"

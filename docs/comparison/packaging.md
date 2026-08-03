@@ -140,7 +140,7 @@ Potassium leads by leveraging electron-builder as its packaging backend: jpackag
     - **install4j**: [Features](https://www.ej-technologies.com/install4j/features) — built-in auto-update with configurable strategies
     - **jDeploy**: [Substack](https://jdeploy.substack.com/p/automated-deployment-and-updates) — auto-detects new versions on launch
 
-Conveyor's delta update system is a genuine differentiator: a single-line change in an Electron app results in ~31 KB (macOS) or ~115 KB (Windows) updates vs ~100 MB full downloads ([source](https://conveyor.hydraulic.dev/21.1/understanding-updates/)). Potassium uses full-file downloads but compensates with a rich runtime API (progress tracking, channel management, restart-on-update).
+Conveyor pioneered delta updates in this space: a single-line change in an Electron app results in ~31 KB (macOS) or ~115 KB (Windows) updates vs ~100 MB full downloads ([source](https://conveyor.hydraulic.dev/21.1/understanding-updates/)). Potassium also performs [differential (delta) updates](../auto-update.md#differential-delta-updates) — blockmap-based, for AppImage, macOS ZIP, and Windows NSIS, with automatic fallback to full downloads — alongside its rich runtime API (progress tracking, channel management, restart-on-update).
 
 ---
 

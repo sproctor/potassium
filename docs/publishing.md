@@ -68,8 +68,8 @@ A GitHub Release created by Potassium contains:
 ```
 v1.0.0 (Release)
 ├── MyApp-1.0.0-macos-universal.dmg   ← one binary runs on both arches
-├── MyApp-1.0.0-windows-amd64.exe
-├── MyApp-1.0.0-windows-arm64.exe
+├── MyApp-1.0.0-windows-amd64-nsis.exe
+├── MyApp-1.0.0-windows-arm64-nsis.exe
 ├── MyApp-1.0.0-windows.msixbundle
 ├── MyApp-1.0.0-linux-amd64.deb
 ├── MyApp-1.0.0-linux-arm64.deb
@@ -129,8 +129,8 @@ A complete multi-architecture release looks like:
 ```
 s3://my-updates-bucket/releases/myapp/
 ├── MyApp-1.0.0-macos-universal.dmg
-├── MyApp-1.0.0-windows-amd64.exe
-├── MyApp-1.0.0-windows-arm64.exe
+├── MyApp-1.0.0-windows-amd64-nsis.exe
+├── MyApp-1.0.0-windows-arm64-nsis.exe
 ├── MyApp-1.0.0-linux-amd64.deb
 ├── MyApp-1.0.0-linux-arm64.deb
 ├── latest-mac.yml             # macOS (both arches)
@@ -242,12 +242,17 @@ Upload the installer and YML files to your server:
 ```
 https://updates.example.com/releases/
 ├── MyApp-1.0.0-macos-arm64.dmg
-├── MyApp-1.0.0-windows-amd64.exe
+├── MyApp-1.0.0-macos-arm64.zip
+├── MyApp-1.0.0-macos-arm64.zip.blockmap   # enables differential updates
+├── MyApp-1.0.0-windows-amd64-nsis.exe
+├── MyApp-1.0.0-windows-amd64-nsis.exe.blockmap
 ├── MyApp-1.0.0-linux-amd64.deb
 ├── latest-mac.yml
 ├── latest.yml
 └── latest-linux.yml
 ```
+
+Upload the `.blockmap` sidecars electron-builder writes next to the installers — the updater uses them for [differential (delta) updates](auto-update.md#differential-delta-updates) and falls back to full downloads when they are absent. The server must support HTTP `Range` requests for differential downloads (any standard static file server does); keeping the previous release's files online helps updaters that have no local blockmap cache yet.
 
 Any static file server (Nginx, Caddy, Apache, S3 with public access, Cloudflare R2, etc.) works — the auto-updater fetches `<url>/latest-<platform>.yml` (Linux on arm64 fetches `latest-linux-arm64.yml`) and downloads the installer from the same base URL. For a multi-arch release, upload the arm64 installers and `latest-linux-arm64.yml` too — and, for Windows/macOS, merge the two per-arch `latest.yml` / `latest-mac.yml` into one first (the same consolidation as [Multi-architecture S3 releases](#multi-architecture-s3-releases)).
 
