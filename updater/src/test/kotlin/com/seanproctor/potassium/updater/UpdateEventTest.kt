@@ -71,6 +71,21 @@ class UpdateEventTest {
     }
 
     @Test
+    fun `consumeUpdateEvent discards marker when app still runs the previous version`() {
+        // Written by a 2.0.0 process whose install never completed — the app still reports 2.0.0.
+        UpdateMarker.write("2.0.0", "3.0.0")
+
+        assertNull(updater.consumeUpdateEvent())
+        assertFalse(UpdateMarker.exists())
+    }
+
+    @Test
+    fun `wasJustUpdated is false after a failed update`() {
+        UpdateMarker.write("2.0.0", "3.0.0")
+        assertFalse(updater.wasJustUpdated())
+    }
+
+    @Test
     fun `consumeUpdateEvent detects minor update level`() {
         UpdateMarker.write("1.0.0", "1.1.0")
 

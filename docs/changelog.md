@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Bug Fixes
+
+- **Windows update could prompt to uninstall** — after a silent NSIS update, the relaunch step picked the first `.exe` in the install directory, which could be the NSIS uninstaller (showing "Are you sure you want to uninstall?" — and removing the app on OK). The relaunch now uses the exact path of the previously running launcher (resolved from the process itself, never by scanning the install directory), and the NSIS installer is invoked in update mode (`/S --updated`). The relaunched app receives no installer arguments.
+- **Failed installs no longer report a phantom update** — the post-update marker is written before the installer runs; if the install fails or is cancelled after the app exits, the next launch used to report `wasJustUpdated() == true` anyway. The marker is now discarded when the app still reports the version it had when the marker was written.
+
+### Behavior Changes
+
+- **Evidence-based Windows install-type detection** — instead of assuming every Windows install is NSIS, the updater now detects portable builds (`PORTABLE_EXECUTABLE_FILE` env), AppX/MSIX (`WindowsApps` install path), and NSIS (its uninstaller present in the install root); anything else is treated as an MSI install.
+- **MSI installs no longer self-update** — a detected MSI install reports `isUpdateSupported() == false` instead of silently installing the NSIS build alongside the MSI one. electron-builder publishes no `.msi` entries in `latest.yml` and per-machine MSI upgrades require elevation, so MSI is treated as a managed-deployment format (Intune/GPO/SCCM). Opt in explicitly with `executableType = InstallType.MSI` and a manifest that lists the `.msi`.
+
 ## v0.4.0
 
 **Released: 2026-08-02**

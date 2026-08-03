@@ -43,7 +43,10 @@ public class PotassiumUpdater(
     private val installTypeDetector = InstallTypeDetector()
 
     public fun isUpdateSupported(): Boolean {
-        val type = resolveExecutableType() ?: return false
+        // An explicitly configured type is an opt-in: it also unlocks MSI, which is never
+        // self-updated when merely detected (see OPT_IN_UPDATABLE_TYPES).
+        config.executableType?.let { return it in OPT_IN_UPDATABLE_TYPES }
+        val type = installTypeDetector.detect() ?: return false
         return type in SELF_UPDATABLE_TYPES
     }
 
@@ -130,10 +133,19 @@ public class PotassiumUpdater(
      * Returns `true` if the application was launched after an update.
      * Does **not** consume the event — call [consumeUpdateEvent] to clear it.
      */
-    public fun wasJustUpdated(): Boolean = UpdateMarker.exists()
+    public fun wasJustUpdated(): Boolean = peekUpdateEvent() != null
 
     private fun peekUpdateEvent(): UpdateEvent? {
         val (previousVersion, newVersion) = UpdateMarker.read() ?: return null
+        // The marker is written before the installer runs. If the app still reports the exact
+        // version recorded then, the install never completed — drop the stale marker instead of
+        // reporting a phantom update. Both strings originate from config.currentVersion (one
+        // process generation apart), so strict equality is the right comparison; parsing would
+        // conflate differently-formatted strings and could falsely pass validation.
+        if (previousVersion == config.currentVersion) {
+            UpdateMarker.delete()
+            return null
+        }
         val level = Version.fromString(newVersion).levelFrom(Version.fromString(previousVersion))
         return UpdateEvent(previousVersion, newVersion, level)
     }
@@ -180,8 +192,9 @@ public class PotassiumUpdater(
         val executableType = resolveExecutableType()
 
         // The install format is detected at runtime (APPIMAGE/SNAP/FLATPAK env, electron-builder's
-        // resources/package-type); macOS resolves to ZIP and Windows to NSIS. A null format lets
-        // FileSelector fall back to the platform default. Users can force one via config.executableType.
+        // resources/package-type, the NSIS uninstaller / portable env / WindowsApps path on
+        // Windows); macOS resolves to ZIP. A null format lets FileSelector fall back to the
+        // platform default. Users can force one via config.executableType.
         val format = executableType?.id
 
         val selectedFile =
@@ -247,17 +260,25 @@ public class PotassiumUpdater(
     public companion object {
         private const val HTTP_OK = 200
 
+        /** Types the updater installs when they are auto-detected at runtime. */
         private val SELF_UPDATABLE_TYPES =
             setOf(
                 InstallType.EXE,
                 InstallType.NSIS,
                 InstallType.NSIS_WEB,
-                InstallType.MSI,
                 InstallType.DMG,
                 InstallType.ZIP,
                 InstallType.APPIMAGE,
                 InstallType.DEB,
                 InstallType.RPM,
             )
+
+        /**
+         * Types accepted when [UpdaterConfig.executableType] is set explicitly. MSI is opt-in
+         * only: electron-builder publishes no `.msi` entries in `latest.yml` and per-machine
+         * MSI upgrades require elevation, so MSI installs are treated as managed deployments
+         * (Intune/GPO/SCCM) unless the app opts in and serves a manifest listing the `.msi`.
+         */
+        private val OPT_IN_UPDATABLE_TYPES = SELF_UPDATABLE_TYPES + InstallType.MSI
     }
 }

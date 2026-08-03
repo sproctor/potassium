@@ -13,6 +13,7 @@ class InstallTypeDetectorTest {
         private val properties: Map<String, String> = emptyMap(),
         private val files: Map<String, String> = emptyMap(),
         private val executable: String? = null,
+        private val directories: Map<String, List<String>> = emptyMap(),
     ) : InstallEnvironment {
         override fun getenv(name: String): String? = envVars[name]
 
@@ -23,6 +24,8 @@ class InstallTypeDetectorTest {
         override fun readText(path: String): String? = files[path]
 
         override fun executablePath(): String? = executable
+
+        override fun listFileNames(dirPath: String): List<String>? = directories[dirPath]
     }
 
     private fun detect(env: InstallEnvironment) = InstallTypeDetector(env).detect()
@@ -89,17 +92,74 @@ class InstallTypeDetectorTest {
     }
 
     @Test
-    fun `windows defaults to nsis`() {
-        assertEquals(InstallType.NSIS, detect(FakeEnv(Platform.Windows)))
+    fun `windows nsis uninstaller in install root detects nsis`() {
+        val env =
+            FakeEnv(
+                Platform.Windows,
+                properties = mapOf("java.home" to "C:/Users/u/AppData/Local/Programs/App/runtime"),
+                directories =
+                    mapOf(
+                        "C:/Users/u/AppData/Local/Programs/App" to listOf("App.exe", "Uninstall App.exe"),
+                    ),
+            )
+        assertEquals(InstallType.NSIS, detect(env))
     }
 
     @Test
-    fun `windows package-type msi overrides the default`() {
+    fun `windows uninstaller found via launcher path detects nsis`() {
+        val env =
+            FakeEnv(
+                Platform.Windows,
+                executable = "C:/Programs/App/App.exe",
+                directories = mapOf("C:/Programs/App" to listOf("App.exe", "uninstall.exe")),
+            )
+        assertEquals(InstallType.NSIS, detect(env))
+    }
+
+    @Test
+    fun `windows portable env detects portable`() {
+        val env =
+            FakeEnv(
+                Platform.Windows,
+                envVars = mapOf("PORTABLE_EXECUTABLE_FILE" to "C:/Temp/App.exe"),
+            )
+        assertEquals(InstallType.PORTABLE, detect(env))
+    }
+
+    @Test
+    fun `windows WindowsApps launcher path detects appx`() {
+        val env =
+            FakeEnv(
+                Platform.Windows,
+                executable = "C:\\Program Files\\WindowsApps\\Pkg_1.0_x64__abc\\App.exe",
+            )
+        assertEquals(InstallType.APPX, detect(env))
+    }
+
+    @Test
+    fun `windows install without nsis uninstaller resolves to msi`() {
+        val env =
+            FakeEnv(
+                Platform.Windows,
+                properties = mapOf("java.home" to "C:/Program Files/App/runtime"),
+                directories = mapOf("C:/Program Files/App" to listOf("App.exe")),
+            )
+        assertEquals(InstallType.MSI, detect(env))
+    }
+
+    @Test
+    fun `windows without any install evidence resolves to msi`() {
+        assertEquals(InstallType.MSI, detect(FakeEnv(Platform.Windows)))
+    }
+
+    @Test
+    fun `windows package-type wins over uninstaller evidence`() {
         val env =
             FakeEnv(
                 Platform.Windows,
                 properties = mapOf("java.home" to "C:/Program Files/App/runtime"),
                 files = mapOf("C:/Program Files/App/resources/package-type" to "msi"),
+                directories = mapOf("C:/Program Files/App" to listOf("App.exe", "Uninstall App.exe")),
             )
         assertEquals(InstallType.MSI, detect(env))
     }

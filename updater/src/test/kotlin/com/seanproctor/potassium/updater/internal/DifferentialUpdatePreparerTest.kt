@@ -350,5 +350,7 @@ class DifferentialUpdatePreparerTest {
         override fun readText(path: String): String? = File(path).takeIf { it.isFile }?.readText()
 
         override fun executablePath(): String? = null
+
+        override fun listFileNames(dirPath: String): List<String>? = null
     }
 }

@@ -261,15 +261,19 @@ internal object PlatformInstaller {
         restart: Boolean,
     ) {
         val pid = ProcessHandle.current().pid()
-        val launcher = resolveWindowsLauncher()
         val installerCmd =
             when (extension) {
                 "msi" -> "Start-Process msiexec -ArgumentList '/i', '\"${file.absolutePath}\"', '/passive' -Wait"
+                // --updated keeps the installer in update mode (shortcut preservation,
+                // close-wait handling). --force-run is deliberately omitted: the installer's
+                // own relaunch would pass an --updated argument to the app and depends on the
+                // Start-Menu shortcut; the script relaunches the exact launcher path instead.
                 else -> "Start-Process '${file.absolutePath}' -ArgumentList '/S', '--updated' -Wait"
             }
 
+        val launcher = if (restart) resolveWindowsLauncher() else null
         val relaunchCmd =
-            if (restart && launcher != null) {
+            if (launcher != null) {
                 "\n|# Relaunch the application\n|Start-Process '${launcher.absolutePath}'"
             } else {
                 ""
@@ -307,13 +311,29 @@ internal object PlatformInstaller {
 
     /**
      * Resolves the jpackage launcher on Windows.
-     * jpackage structure: C:\...\<AppName>\<AppName>.exe with java.home = C:\...\<AppName>\runtime
+     *
+     * The running process is the launcher itself, so its command path is the authoritative
+     * source. The fallback scans the install dir (java.home = C:\...\<AppName>\runtime →
+     * parent = install dir), skipping electron-builder's NSIS uninstaller
+     * ("Uninstall <ProductName>.exe"), which also lives there.
      */
     private fun resolveWindowsLauncher(): File? {
+        ProcessHandle
+            .current()
+            .info()
+            .command()
+            .orElse(null)
+            ?.let(::File)
+            ?.takeIf { it.isFile && it.name.endsWith(".exe", ignoreCase = true) }
+            ?.let { return it }
+
         val javaHome = System.getProperty("java.home") ?: return null
-        // java.home = <install-dir>\runtime → parent = <install-dir>
         val appRoot = File(javaHome).parentFile ?: return null
         if (!appRoot.isDirectory) return null
-        return appRoot.listFiles()?.firstOrNull { it.isFile && it.name.endsWith(".exe") }
+        return appRoot.listFiles()?.firstOrNull {
+            it.isFile &&
+                it.name.endsWith(".exe", ignoreCase = true) &&
+                !it.name.startsWith("Uninstall", ignoreCase = true)
+        }
     }
 }

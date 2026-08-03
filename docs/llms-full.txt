@@ -2160,13 +2160,16 @@ Potassium provides a complete auto-update solution compatible with the [electron
 **Try it yourself:** Download an **older version** of the [potassium-sample](https://github.com/sproctor/potassium-sample) app from its [releases page](https://github.com/sproctor/potassium-sample/releases), install it, and launch it. The app will automatically detect that a newer version is available, download the update with a progress bar, and offer an "Install & Restart" button. This is the exact same flow your users will experience.
 ## Updatable Formats
 
-| Platform | Updatable Formats | Not updatable (Store-managed) |
-|----------|-------------------|-------------------------------|
+| Platform | Updatable Formats | Not auto-updated |
+|----------|-------------------|------------------|
 | macOS | DMG, ZIP | PKG |
-| Windows | EXE/NSIS, NSIS Web, MSI | AppX/MSIX |
+| Windows | EXE/NSIS, NSIS Web | MSI, AppX/MSIX, Portable |
 | Linux | DEB, RPM, AppImage | Snap, Flatpak |
 
 PKG (macOS), AppX/MSIX (Windows), Snap, and Flatpak are not supported by the auto-updater because Potassium assumes these formats are distributed through their respective app stores (Mac App Store, Microsoft Store, Snapcraft, Flathub), which handle updates natively.
+
+**MSI installs are treated as managed deployments:** A detected MSI install reports `isUpdateSupported() == false`. electron-builder publishes no `.msi` entries in `latest.yml`, and per-machine MSI upgrades require UAC elevation, so MSI is best suited for IT-managed distribution (Intune, Group Policy, SCCM) where updates are pushed centrally. To opt in to MSI self-update anyway, set `executableType = InstallType.MSI` in the updater config and serve a custom update manifest that lists the `.msi` artifact — the updater then applies it with `msiexec /i <file> /passive`.
+The install format is detected at runtime: the `APPIMAGE`/`SNAP`/`FLATPAK` environment variables and electron-builder's `resources/package-type` marker on Linux; on Windows, the `PORTABLE_EXECUTABLE_FILE` environment variable (portable), a `WindowsApps` install path (AppX/MSIX), or the `Uninstall <AppName>.exe` the NSIS installer writes into the install directory — anything else is considered an MSI install.
 
 **macOS: ZIP is required alongside DMG:** On macOS, the auto-updater uses the **ZIP** format to perform the update (extract and replace the `.app` bundle silently). The DMG is used for initial installation only. You **must** include `MacOSTargetFormat.Zip` in your macOS `targetFormats` configuration, otherwise macOS auto-update will not work:
     ```kotlin
@@ -2414,7 +2417,8 @@ PotassiumUpdater {
     // Allow installing older versions
     allowDowngrade = false
 
-    // Force a specific installer format (auto-detected if null)
+    // Force a specific installer format (auto-detected if null). Setting this is also the
+    // opt-in for MSI self-update, which is never applied on detection alone.
     executableType = null
 
     // Disable blockmap-based differential downloads (see "Differential (Delta) Updates");
@@ -2581,8 +2585,10 @@ The `installAndRestart()` method launches the platform-specific installer, exits
 | Linux | DEB | `sudo dpkg -i <file>` |
 | Linux | RPM | `sudo rpm -U <file>` |
 | macOS | DMG/PKG | `open <file>` |
-| Windows | EXE/NSIS | `<file> /S` (silent) |
-| Windows | MSI | `msiexec /i <file> /passive` |
+| Windows | EXE/NSIS | `<file> /S --updated` (silent; the updater relaunches the app afterwards) |
+| Windows | MSI (opt-in) | `msiexec /i <file> /passive` |
+
+On every platform the app is relaunched by the updater itself with no arguments — the relaunched process never receives installer-protocol flags.
 
 ### Silent Update with `installAndQuit()`
 
@@ -2680,6 +2686,8 @@ This allows you to adapt the UI — for example, force a confirmation dialog for
 ### Post-Update Detection
 
 After an update is installed (via `installAndRestart()` or `installAndQuit()`), the updater persists a marker file. On the next launch, you can detect that the app was just updated:
+
+The marker is validated against the running app: if the app still reports the version that was current when the marker was written (i.e. the install never completed — it failed or was cancelled after the app exited), the stale marker is discarded and no update event is reported.
 
 ```kotlin
 val updater = PotassiumUpdater {
