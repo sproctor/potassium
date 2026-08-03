@@ -11,12 +11,10 @@ Both publish to **Maven Central** under group `com.seanproctor` (plugin id **`co
 
 ## Project Structure
 
-This repo is one Gradle multi-project build (`:plugin` + `:updater`) plus a standalone `sample/` composite build.
+This repo is one Gradle multi-project build (`:plugin` + `:updater`). The runnable demo app lives in the separate [potassium-sample](https://github.com/sproctor/potassium-sample) repo (typically checked out as a sibling at `../potassium-sample`; it consumes the published plugin from Maven Central).
 
 - `plugin/` — the `potassium-packager` Gradle plugin (source, DSL, packaging logic, bundled GraalVM metadata)
 - `updater/` — the `potassium-updater` runtime library (a plain Kotlin/JVM library, `explicitApi()`, JVM 17)
-- `sample/` — a runnable Compose Multiplatform demo app; its own build that consumes the plugin via `includeBuild("..")` (not part of the root build)
-- `buildSrc/` — shared build logic / conventions for this repo's own build
 - `config/` — code-quality config (`config/detekt/detekt.yml`)
 - `gradle/` — Gradle wrapper and the version catalog (`gradle/libs.versions.toml`, the source of truth for dependency versions)
 - root `build.gradle.kts` / `settings.gradle.kts` — `allprojects {}` applies group/version/detekt/ktlint to every module; settings includes `:plugin` and `:updater`

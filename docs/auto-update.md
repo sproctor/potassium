@@ -23,7 +23,7 @@ flowchart LR
 ```
 
 !!! tip "Try it yourself"
-    Download an **older version** of the Potassium demo app from the [GitHub Releases page](https://github.com/kdroidFilter/Nucleus/releases), install it, and launch it. The app will automatically detect that a newer version is available, download the update with a progress bar, and offer an "Install & Restart" button. This is the exact same flow your users will experience.
+    Download an **older version** of the [potassium-sample](https://github.com/sproctor/potassium-sample) app from its [releases page](https://github.com/sproctor/potassium-sample/releases), install it, and launch it. The app will automatically detect that a newer version is available, download the update with a progress bar, and offer an "Install & Restart" button. This is the exact same flow your users will experience.
 
 ## Updatable Formats
 

@@ -73,9 +73,11 @@ A good starting point is [Getting Started](docs/getting-started.md), followed by
 
 ## Sample
 
-[`sample/`](sample/) is a runnable Compose Multiplatform desktop app packaged by this plugin. It's a
-composite build that uses the plugin from source, so `cd sample && ./gradlew run` (or
-`packageDistributionForCurrentOS`) works against your local checkout. See [`sample/README.md`](sample/README.md).
+[potassium-sample](https://github.com/sproctor/potassium-sample) is a runnable Compose Multiplatform
+desktop app packaged by this plugin, consuming the published plugin from Maven Central — so
+`./gradlew run` (or `packageDistributionForCurrentOS`) works from a fresh clone. To exercise a local
+plugin build instead, `publishToMavenLocal` from this repo and point the sample's `potassium`
+version (and a `mavenLocal()` plugin repository) at it.
 
 ## Updater
 
