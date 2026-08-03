@@ -4612,6 +4612,7 @@ This page evaluates **Potassium** against **10 competing JVM packaging tools** a
 | Tier | Tool | Score | License |
 |------|------|:-----:|---------|
 | **S** | **Potassium** | **90** | MIT (free) |
+| **S** | [Nucleus](https://github.com/NucleusFramework/Nucleus) | 88 | MIT (free) |
 | **B** | [install4j](https://www.ej-technologies.com/products/install4j/overview.html) | 65 | Proprietary ($2,199+/dev) |
 | **B-** | [Conveyor](https://conveyor.hydraulic.dev/) | 62 | Proprietary ($45/mo) |
 | **C** | [jDeploy](https://www.jdeploy.com/) | 49 | Apache 2 (free) |
@@ -4631,6 +4632,7 @@ Scoring: each of 13 dimensions rated 0–10, total = raw sum / 130 × 100. See [
 
 | Tool | Type | Version | Status | Source |
 |------|------|---------|--------|--------|
+| **Nucleus** (upstream of Potassium) | Gradle plugin + runtime modules | v2.1.10 | Active | [GitHub](https://github.com/NucleusFramework/Nucleus) |
 | **jpackage** | JDK built-in CLI | JDK 25 | Active | [Oracle docs](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) |
 | **Conveyor** (Hydraulic) | CLI + Gradle plugin | v21.1 | Active | [conveyor.hydraulic.dev](https://conveyor.hydraulic.dev/21.1/) |
 | **install4j** (ej-technologies) | IDE + Gradle/Maven plugin | v12.0.2 | Active | [ej-technologies.com](https://www.ej-technologies.com/products/install4j/overview.html) |
@@ -4663,7 +4665,7 @@ Scoring: each of 13 dimensions rated 0–10, total = raw sum / 130 × 100. See [
 ² Conveyor has `app.linux.aarch64` config keys ([docs](https://conveyor.hydraulic.dev/21.1/configs/linux/)), but Linux ARM64 is listed as planned in the FAQ ([FAQ](https://conveyor.hydraulic.dev/21.1/faq/output-formats/)).
 
 ??? info "Sources"
-    - **Potassium**: macOS universal binary via [`build-macos-universal`](https://github.com/kdroidFilter/Nucleus/tree/main/.github/actions/build-macos-universal) CI action using `lipo`
+    - **Potassium**: macOS universal binary via [`build-macos-universal`](https://github.com/sproctor/potassium/tree/main/.github/actions/build-macos-universal) CI action using `lipo`
     - **Conveyor**: [Package formats](https://conveyor.hydraulic.dev/21.1/package-formats/), [macOS config](https://conveyor.hydraulic.dev/21.1/configs/mac/), [Linux config](https://conveyor.hydraulic.dev/21.1/configs/linux/)
     - **install4j**: [Features page](https://www.ej-technologies.com/install4j/features) — "compile installers for all platforms on any of these platforms"
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — must build on target OS
@@ -4699,7 +4701,7 @@ Scoring: each of 13 dimensions rated 0–10, total = raw sum / 130 × 100. See [
 ³ jDeploy DMG requires a separate GitHub Action + macOS runner ([jdeploy-action-dmg](https://github.com/shannah/jdeploy-action-dmg)).
 
 ??? info "Sources"
-    - **Potassium**: [`TargetFormat.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/TargetFormat.kt) — 17 enum values (16 distributable + `JpackageImage` intermediate)
+    - **Potassium**: [`TargetFormat.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/dsl/TargetFormat.kt) — 17 enum values (16 distributable + `JpackageImage` intermediate)
     - **Conveyor**: [Package formats](https://conveyor.hydraulic.dev/21.1/package-formats/), [Output formats FAQ](https://conveyor.hydraulic.dev/21.1/faq/output-formats/) — MSIX, EXE, ZIP (Windows); signed .app in ZIP (macOS); DEB, tar.gz (Linux). No DMG, PKG, RPM, NSIS, AppImage, Snap, Flatpak.
     - **install4j**: [Media files](https://www.ej-technologies.com/resources/install4j/help/doc/concepts/mediaFiles.html) — EXE, MSI wrapper, DMG, .app, RPM, DEB, tar.gz, shell installer. No PKG, NSIS, AppX.
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — `--type`: app-image, dmg, pkg, exe, msi, deb, rpm
@@ -4747,7 +4749,7 @@ Conveyor pioneered delta updates in this space: a single-line change in an Elect
 ¹ jDeploy pre-signs and notarizes installers using its own certificate; optional custom signing via GitHub Action ([FAQ](https://www.jdeploy.com/docs/faq/)).
 
 ??? info "Sources"
-    - **Potassium**: [`MacOSSigningSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/MacOSSigningSettings.kt), [`WindowsSigningSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/WindowsSigningSettings.kt) — Azure Artifact Signing via `azureTenantId`, `azureEndpoint`, `azureCertificateProfileName`
+    - **Potassium**: [`MacOSSigningSettings.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/dsl/MacOSSigningSettings.kt), [`WindowsSigningSettings.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/dsl/WindowsSigningSettings.kt) — Azure Artifact Signing via `azureTenantId`, `azureEndpoint`, `azureCertificateProfileName`
     - **Conveyor**: [Keys and certificates](https://conveyor.hydraulic.dev/21.1/configs/keys-and-certificates/) — macOS notarization (App Store Connect API keys), Windows self-signing, Azure Artifact Signing, Azure Key Vault, AWS KMS, SSL.com eSigner, DigiCert ONE, Google Cloud KMS, HSMs (SafeNet, YubiKey)
     - **install4j**: [Features](https://www.ej-technologies.com/install4j/features) — cross-platform signing and notarization
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — `--mac-sign`, `--mac-signing-key-user-name`, `--mac-app-store`
@@ -4820,7 +4822,7 @@ Potassium is Gradle-only, which suits its Compose Desktop audience but limits ad
 ⁵ badass-jlink exposes no cert DSL, but its task hook (`tasks.named("jlink").doLast { … }`) gives access to the staged runtime image before jpackage consumes it — the cleanest manual workaround available.
 
 ??? info "Sources"
-    - **Potassium**: [`AbstractGenerateAotCacheTask.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/tasks/AbstractGenerateAotCacheTask.kt) — Project Leyden via `-XX:AOTCacheOutput` (JDK 25+); [`ProguardSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/ProguardSettings.kt) — ProGuard 7.9.1 default; [`AbstractJLinkTask.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/tasks/AbstractJLinkTask.kt) — jlink with strip-debug, compression; [`AbstractPatchCaCertificatesTask.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/tasks/AbstractPatchCaCertificatesTask.kt) — copies JLink runtime, runs keytool to import PEM/DER certificates into `lib/security/cacerts`; `graalvm-runtime` — GraalVM Native Image bootstrap with `GraalVmInitializer.initialize()`, platform-specific reachability metadata, font substitution, and Skiko native library extraction. Requires BellSoft Liberica NIK 25 (full). Packaging via `packageGraalvmMacOS`, `packageGraalvmWindows`, `packageGraalvmLinux` tasks.
+    - **Potassium**: [`AbstractGenerateAotCacheTask.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/tasks/AbstractGenerateAotCacheTask.kt) — Project Leyden via `-XX:AOTCacheOutput` (JDK 25+); [`ProguardSettings.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/dsl/ProguardSettings.kt) — ProGuard 7.9.1 default; [`AbstractJLinkTask.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/tasks/AbstractJLinkTask.kt) — jlink with strip-debug, compression; [`AbstractPatchCaCertificatesTask.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/tasks/AbstractPatchCaCertificatesTask.kt) — copies JLink runtime, runs keytool to import PEM/DER certificates into `lib/security/cacerts`; `graalvm-runtime` — GraalVM Native Image bootstrap with `GraalVmInitializer.initialize()`, platform-specific reachability metadata, font substitution, and Skiko native library extraction. Requires BellSoft Liberica NIK 25 (full). Packaging via `packageGraalvmMacOS`, `packageGraalvmWindows`, `packageGraalvmLinux` tasks.
     - **Conveyor**: [JVM config](https://conveyor.hydraulic.dev/21.1/configs/jvm/) — automatic jlink; `app.jvm.additional-ca-certs` key imports extra certificates into the bundled JDK's `cacerts`; [JDK stdlib](https://conveyor.hydraulic.dev/21.1/stdlib/jdks/) — 6 JDK vendors (Corretto, Zulu, Temurin, JBR, Microsoft, OpenJDK)
     - **install4j**: [JRE bundles](https://www.ej-technologies.com/resources/install4j/help/doc/concepts/jreBundles.html), [createbundle CLI](https://www.ej-technologies.com/resources/install4j/help/doc/cli/createBundle.html) — no cert patching DSL; manual via pre-patched JRE bundle
     - **jpackage**: [Override resources](https://docs.oracle.com/en/java/javase/23/jpackage/override-jpackage-resources.html) — `--resource-dir` limited to packaging templates; cert patching requires `--runtime-image` with a pre-patched jlink output
@@ -4847,7 +4849,7 @@ Only **Potassium** and **Conveyor** provide declarative, first-class CA cert pat
     - **Conveyor**: [Homepage](https://conveyor.hydraulic.dev/21.1/) — "build packages from any OS, sign and notarize Mac apps from Linux"
     - **install4j**: [Homepage](https://www.ej-technologies.com/install4j) — "compile installers for all platforms on any of these platforms"
     - **jDeploy**: [FAQ](https://www.jdeploy.com/docs/faq/) — "build native installers for Mac, Windows, and Linux on any platform"
-    - **Potassium**: [`TargetFormat.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/TargetFormat.kt) line 48 — `isCompatibleWithCurrentOS` check; packaging tasks disabled for non-matching OS
+    - **Potassium**: [`TargetFormat.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/dsl/TargetFormat.kt) line 48 — `isCompatibleWithCurrentOS` check; packaging tasks disabled for non-matching OS
 
 This is Potassium's weakest dimension. However, Potassium mitigates it with its 6-runner CI matrix — the pipeline handles cross-platform builds automatically.
 
@@ -4865,7 +4867,7 @@ This is Potassium's weakest dimension. However, Potassium mitigates it with its 
 | JavaPackager | ✅ (Inno Setup) | ✅ | ✅ | ❌ | ❌ | **4** |
 
 ??? info "Sources"
-    - **Potassium**: [`NsisSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/NsisSettings.kt) — 16 properties: `oneClick`, `allowElevation`, `perMachine`, `allowToChangeInstallationDirectory`, `createDesktopShortcut`, `createStartMenuShortcut`, `runAfterFinish`, `installerIcon`, `license`, `includeScript`, `multiLanguageInstaller`, `installerHeader`, `installerSidebar`, etc. [`DmgSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/DmgSettings.kt) — `background`, `backgroundColor`, `badgeIcon`, `icon`, `format` (6 DMG formats: UDRW, UDRO, UDCO, UDZO, UDBZ, ULFO), `window`, `contents`
+    - **Potassium**: [`NsisSettings.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/dsl/NsisSettings.kt) — 16 properties: `oneClick`, `allowElevation`, `perMachine`, `allowToChangeInstallationDirectory`, `createDesktopShortcut`, `createStartMenuShortcut`, `runAfterFinish`, `installerIcon`, `license`, `includeScript`, `multiLanguageInstaller`, `installerHeader`, `installerSidebar`, etc. [`DmgSettings.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/dsl/DmgSettings.kt) — `background`, `backgroundColor`, `badgeIcon`, `icon`, `format` (6 DMG formats: UDRW, UDRO, UDCO, UDZO, UDBZ, ULFO), `window`, `contents`
     - **install4j**: [Features](https://www.ej-technologies.com/install4j/features) — visual IDE with 80+ configurable actions
     - **Conveyor**: [Package formats](https://conveyor.hydraulic.dev/21.1/package-formats/) — MSIX is a fixed format with no installer UI customization
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — `--resource-dir` for template overrides
@@ -4887,7 +4889,7 @@ This is Potassium's weakest dimension. However, Potassium mitigates it with its 
 | Compose MP | ❌ | ❌ | ❌ | ❌ | **0** |
 
 ??? info "Sources"
-    - **Potassium**: [`TargetFormat.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/TargetFormat.kt) — `isStoreFormat` = Pkg, AppX, Flatpak; [`PlatformSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/PlatformSettings.kt) — `appStore`, `entitlementsFile`, `provisioningProfile` for MAS; [`AppXSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/AppXSettings.kt) — `identityName`, `publisher`, `capabilities`; [`FlatpakSettings.kt`](https://github.com/kdroidFilter/Nucleus/blob/main/plugin-build/plugin/src/main/kotlin/com/seanproctor/potassium/desktop/application/dsl/FlatpakSettings.kt) — `runtime`, `finishArgs`, `license`
+    - **Potassium**: [`TargetFormat.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/dsl/TargetFormat.kt) — `isStoreFormat` = Pkg, AppX, Flatpak; [`PlatformSettings.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/dsl/PlatformSettings.kt) — `appStore`, `entitlementsFile`, `provisioningProfile` for MAS; [`AppXSettings.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/dsl/AppXSettings.kt) — `identityName`, `publisher`, `capabilities`; [`FlatpakSettings.kt`](https://github.com/sproctor/potassium/blob/main/plugin/src/main/kotlin/com/seanproctor/potassium/dsl/FlatpakSettings.kt) — `runtime`, `finishArgs`, `license`
     - **Conveyor**: [Windows config](https://conveyor.hydraulic.dev/21.1/configs/windows/) — Microsoft Store supported via `conveyor make ms-store-release`; [Output formats FAQ](https://conveyor.hydraulic.dev/21.1/faq/output-formats/) — Mac App Store listed as "not supported yet"
     - **jpackage**: [Oracle man page](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html) — `--mac-app-store` flag exists but limited
 
@@ -4999,6 +5001,12 @@ Each dimension rated 0–10. Total = sum / 130 × 100 (rounded).
 
 Built into the JDK since Java 14 (GA in 16). Creates platform-specific installers (DMG, PKG, MSI, EXE, DEB, RPM) from a modular or non-modular Java application. Requires the target OS for building ([Oracle docs](https://docs.oracle.com/en/java/javase/23/docs/specs/man/jpackage.html)). macOS code signing and notarization via `--mac-sign`, `--mac-signing-key-user-name`, and `--mac-app-store` flags. Windows signing not included. Moderate customization via `--resource-dir`. WiX v4/v5 support added in JDK 24 ([JDK 24 release notes](https://www.oracle.com/java/technologies/javase/24-relnote-issues.html)). JDK 25 changed default jlink behavior: service bindings no longer included by default ([JDK 25 release notes](https://www.oracle.com/java/technologies/javase/25-relnote-issues.html)). No auto-update. The baseline that all JVM packaging tools build upon.
 
+### Nucleus — v2.1.10
+
+The upstream project Potassium was forked from, now developed at [NucleusFramework/Nucleus](https://github.com/NucleusFramework/Nucleus). Nucleus positions itself as a full desktop application *framework*: the same electron-builder-based packaging core Potassium inherited (18 formats per its README, all three OSes on x64 + arm64, macOS universal binaries, GraalVM native-image and JDK 25+ AOT-cache support) plus 25+ runtime modules on Maven Central — native window decorations (Material 2/3, Jewel), notifications, dark-mode/accent detection, taskbar/dock and media-key integration, native SSL and HTTP clients. Its `nucleus.updater-runtime` auto-updates from GitHub/S3 with SHA-512 verification and progress tracking, but full-file downloads only — no blockmap-based delta updates. Plugin id `dev.nucleusframework`, MIT, very actively developed.
+
+Because the packaging cores share lineage, most of the feature tables above read similarly for Nucleus. Potassium tracks a deliberately narrower scope — the packager and updater, nothing else — and has diverged where it counts for updates: blockmap-based differential downloads and a single-version release model. Choose Nucleus when you want the batteries-included framework rather than packaging alone.
+
 ### Conveyor (Hydraulic) — v21.1
 
 A modern CLI tool that uniquely supports **cross-compilation** — build for Windows, macOS, and Linux all from a single machine ([docs](https://conveyor.hydraulic.dev/21.1/)). Configured via HOCON (Human-Optimized Config Object Notation) with 120+ settings.
@@ -5104,7 +5112,7 @@ Bundles JRE with application into a directory structure. Game-focused (libGDX/LW
 | **Simplest setup** | jDeploy | Zero-config CLI, cross-compiles | [jDeploy](https://www.jdeploy.com/) |
 | **Enterprise deployment** | install4j | 20+ years maturity | [ej-technologies](https://www.ej-technologies.com/install4j) |
 | **Maven-only project** | install4j or JavaPackager | Potassium is Gradle-only | — |
-| **Delta updates critical** | Conveyor | MSIX + Sparkle delta | [Updates](https://conveyor.hydraulic.dev/21.1/understanding-updates/) |
+| **Batteries-included framework** | Nucleus | 25+ runtime modules (windowing, notifications, media) | [GitHub](https://github.com/NucleusFramework/Nucleus) |
 | **Maximum signing providers** | Conveyor | 6 cloud HSM services | [Keys](https://conveyor.hydraulic.dev/21.1/configs/keys-and-certificates/) |
 
 ---
