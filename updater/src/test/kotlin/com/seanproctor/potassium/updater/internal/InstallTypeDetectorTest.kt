@@ -152,6 +152,8 @@ class InstallTypeDetectorTest {
 
     @Test
     fun `windows install without nsis uninstaller resolves to msi`() {
+        // The install dir was read and NSIS's uninstaller is genuinely not there — the only
+        // signal left by an MSI install built before the package-type marker.
         val env =
             FakeEnv(
                 Platform.Windows,
@@ -162,15 +164,28 @@ class InstallTypeDetectorTest {
     }
 
     @Test
-    fun `windows without any install evidence resolves to msi`() {
-        assertEquals(InstallType.MSI, detect(FakeEnv(Platform.Windows)))
+    fun `windows unreadable install directory resolves to nsis rather than disabling updates`() {
+        // listFileNames returns null (restrictive ACLs): nothing was ruled out, so this must not
+        // be mistaken for "no uninstaller present".
+        val env =
+            FakeEnv(
+                Platform.Windows,
+                properties = mapOf("java.home" to "C:/Program Files/App/runtime"),
+                directories = emptyMap(),
+            )
+        assertEquals(InstallType.NSIS, detect(env))
+    }
+
+    @Test
+    fun `windows without any resolvable install root resolves to nsis`() {
+        assertEquals(InstallType.NSIS, detect(FakeEnv(Platform.Windows)))
     }
 
     @Test
     fun `windows package-type wins over uninstaller evidence`() {
-        // An explicitly stamped marker is a deliberate override: it must beat the evidence chain
-        // even when that evidence points elsewhere. The NSIS uninstaller below is what detection
-        // would otherwise key on, so this fails if the marker is ever demoted or dropped.
+        // The marker the MSI build stamps must beat the evidence chain even when that evidence
+        // points elsewhere — e.g. a stale uninstaller left by a previous NSIS install, which
+        // would otherwise make the updater apply the NSIS build over the MSI one.
         val env =
             FakeEnv(
                 Platform.Windows,

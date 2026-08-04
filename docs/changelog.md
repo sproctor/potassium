@@ -15,8 +15,11 @@
 
 ### Behavior Changes
 
-- **Evidence-based Windows install-type detection** — instead of assuming every Windows install is NSIS, the updater now detects portable builds (`PORTABLE_EXECUTABLE_FILE` env), AppX/MSIX (`WindowsApps` install path), and NSIS (its uninstaller present in the install root); anything else is treated as an MSI install.
-- **MSI installs no longer self-update** — a detected MSI install reports `isUpdateSupported() == false` instead of silently installing the NSIS build alongside the MSI one. electron-builder publishes no `.msi` entries in `latest.yml` and per-machine MSI upgrades require elevation, so MSI is treated as a managed-deployment format (Intune/GPO/SCCM). Opt in explicitly with `executableType = InstallType.MSI` and a manifest that lists the `.msi`.
+- **MSI installs are identified positively and no longer updated with the NSIS installer** — every Windows format installs an identical payload, so an MSI install was indistinguishable from an NSIS one and would "update" by installing the NSIS build alongside itself: two entries in Apps & Features, and the running app still on the old version. The packager now builds MSI in its own electron-builder invocation so its app image can carry `resources/package-type = msi`, which the updater reads to recognize the install and hold back — MSI reports `isUpdateSupported() == false` and is treated as a managed-deployment format (Intune/GPO/SCCM), since electron-builder publishes no `.msi` entries in `latest.yml` and per-machine MSI upgrades require elevation. Opt in explicitly with `executableType = InstallType.MSI` plus a manifest listing the `.msi`.
+
+    **Two build-side consequences:** the `.msi` is written to its own `msi/` output directory instead of alongside the other Windows artifacts, so publishing workflows that glob the Windows output directory need to pick up both; and requesting MSI adds a second electron-builder invocation. Installs made by earlier versions carry no marker and behave as before.
+
+- **Evidence-based Windows install-type detection** — instead of assuming every Windows install is NSIS, the updater detects portable builds (`PORTABLE_EXECUTABLE_FILE` env), AppX/MSIX (`WindowsApps` install path), and NSIS (its uninstaller present in the install root). An install directory that can be read but holds no NSIS uninstaller resolves to MSI, the only signal an MSI built before the marker leaves behind; one that cannot be read at all resolves to NSIS, so a transient failure such as restrictive ACLs cannot silently disable updates forever.
 
 ## v0.4.0
 

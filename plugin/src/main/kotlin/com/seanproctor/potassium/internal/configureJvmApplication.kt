@@ -321,8 +321,15 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
     val nonStoreNotarizeTasks = mutableListOf<TaskProvider<AbstractNotarizationTask>>()
 
     // All of the current OS's non-store formats are built in ONE electron-builder invocation
-    // (e.g. packageLinux builds deb + rpm + appimage together).
-    val currentOsNonStoreFormats = nonStoreFormats.filter { it.isCompatibleWithCurrentOS }
+    // (e.g. packageLinux builds deb + rpm + appimage together) — except MSI, see below.
+    val batchableNonStoreFormats = nonStoreFormats.filter { it.isCompatibleWithCurrentOS }
+    // MSI gets its own invocation so its app image can carry a `package-type` marker: `--prepackaged`
+    // feeds one directory to every target in an invocation, so a marker written for the batch would
+    // stamp NSIS and portable identically. That marker is how the updater tells an MSI install apart
+    // at runtime — nothing else in the installed payload differs — and therefore how it avoids
+    // updating an MSI install with the NSIS installer.
+    val msiFormats = batchableNonStoreFormats.filter { it == TargetFormat.Msi }
+    val currentOsNonStoreFormats = batchableNonStoreFormats - msiFormats.toSet()
     val nonStorePackageTask: TaskProvider<AbstractElectronBuilderPackageTask>? =
         if (currentOsNonStoreFormats.isNotEmpty()) {
             val packageTask =
@@ -357,6 +364,29 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
             }
 
             packageTask
+        } else {
+            null
+        }
+
+    val msiPackageTask: TaskProvider<AbstractElectronBuilderPackageTask>? =
+        if (msiFormats.isNotEmpty()) {
+            tasks.register<AbstractElectronBuilderPackageTask>(
+                taskNameAction = "package",
+                taskNameObject = TargetFormat.Msi.name,
+                args = listOf(msiFormats),
+            ) {
+                configureElectronBuilderPackageTask(
+                    this,
+                    // Its own output directory: two package tasks writing one directory would
+                    // give Gradle overlapping outputs, and keeps this invocation clear of the
+                    // batched one's update manifest.
+                    outputDirName = TargetFormat.Msi.outputDirName,
+                    createDistributable = createDistributable,
+                    unpackDefaultResources = commonTasks.unpackDefaultResources,
+                )
+                packageTypeMarker.set(TargetFormat.Msi.id)
+                generateAotCache?.let { dependsOn(it) }
+            }
         } else {
             null
         }
@@ -450,7 +480,7 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
             emptyList()
         }
 
-    val packageFormats = listOfNotNull(nonStorePackageTask) + storePackageFormats
+    val packageFormats = listOfNotNull(nonStorePackageTask, msiPackageTask) + storePackageFormats
     val allNotarizeTasks = nonStoreNotarizeTasks + storeNotarizeTasks
 
     val notarizeForCurrentOS =

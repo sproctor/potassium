@@ -335,9 +335,7 @@ internal object PlatformInstaller {
         val appRoot = File(javaHome).parentFile ?: return null
         if (!appRoot.isDirectory) return null
         return appRoot.listFiles()?.firstOrNull {
-            it.isFile &&
-                it.name.endsWith(".exe", ignoreCase = true) &&
-                !it.name.startsWith("Uninstall", ignoreCase = true)
+            it.isFile && it.name.endsWith(".exe", ignoreCase = true) && !isNsisUninstallerName(it.name)
         }
     }
 }

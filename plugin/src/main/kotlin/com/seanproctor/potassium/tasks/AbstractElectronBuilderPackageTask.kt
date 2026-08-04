@@ -95,6 +95,14 @@ abstract class AbstractElectronBuilderPackageTask
             /** Resources marker read by potassium-updater to locate the NSIS-seeded installer copy. */
             internal const val UPDATER_CACHE_DIR_FILE = "updater-cache-dir"
 
+            /**
+             * Resources marker naming the format that installed the app, read by
+             * potassium-updater. electron-builder writes this itself for Linux deb/rpm; this
+             * plugin writes it for formats that need to be told apart at runtime but share an
+             * invocation otherwise (see [packageTypeMarker]).
+             */
+            internal const val PACKAGE_TYPE_FILE = "package-type"
+
             /** The npm-safe package name written to the generated package.json's `name` field. */
             internal fun npmPackageName(raw: String): String =
                 raw
@@ -138,6 +146,19 @@ abstract class AbstractElectronBuilderPackageTask
         @get:Input
         @get:Optional
         val startupWMClass: Property<String> = objects.nullableProperty()
+
+        /**
+         * Value to write into the app image's `resources/package-type`, identifying at runtime
+         * which format installed the app.
+         *
+         * Only set for a task whose formats all want the same value, because `--prepackaged`
+         * feeds one directory to every target in the invocation — a marker set on a batched task
+         * would stamp each of its formats alike. Left unset for the batched non-store task; MSI
+         * is built on its own so it can carry one.
+         */
+        @get:Input
+        @get:Optional
+        val packageTypeMarker: Property<String> = objects.nullableProperty()
 
         @get:Input
         @get:Optional
@@ -589,6 +610,10 @@ abstract class AbstractElectronBuilderPackageTask
                 // machine against the seeded installer copy.
                 val appName = executableName.orNull ?: packageName.get()
                 resourcesDir.resolve(UPDATER_CACHE_DIR_FILE).writeText(updaterCacheDirName(appName))
+            }
+            packageTypeMarker.orNull?.let { marker ->
+                resourcesDir.resolve(PACKAGE_TYPE_FILE).writeText(marker)
+                logger.info("Stamped $PACKAGE_TYPE_FILE=$marker into ${resourcesDir.absolutePath}")
             }
         }
 
