@@ -560,7 +560,9 @@ This allows you to adapt the UI — for example, force a confirmation dialog for
 
 After an update is installed (via `installAndRestart()` or `installAndQuit()`), the updater persists a marker file. On the next launch, you can detect that the app was just updated:
 
-The marker is validated against the running app: if the app still reports the version that was current when the marker was written (i.e. the install never completed — it failed or was cancelled after the app exited), the stale marker is discarded and no update event is reported.
+The marker is validated against the running app: if the app still reports the version that was current when the marker was written, the update has not taken effect — the install failed, or it is still running and the user reopened the old app — and no update event is reported. The marker itself is kept, so an install still in flight is reported correctly once it completes; only `consumeUpdateEvent()` clears it, and only when it actually returns an event.
+
+Neither `wasJustUpdated()` nor `consumeUpdateEvent()` throws. A marker that cannot be read or parsed (for example a torn write from a crash mid-update) is reported as "not updated" rather than propagating an exception into your startup path.
 
 ```kotlin
 val updater = PotassiumUpdater {

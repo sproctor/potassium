@@ -132,20 +132,40 @@ public class PotassiumUpdater(
     /**
      * Returns `true` if the application was launched after an update.
      * Does **not** consume the event — call [consumeUpdateEvent] to clear it.
+     *
+     * Answers `false` whenever an update cannot be positively established, including an
+     * unreadable or malformed marker; it never throws. Both this and [consumeUpdateEvent] are
+     * typically called during startup, where an exception would take the application down.
      */
     public fun wasJustUpdated(): Boolean = peekUpdateEvent() != null
 
-    private fun peekUpdateEvent(): UpdateEvent? {
+    /** The recorded update event, or null when there is no positive evidence of one. Never throws. */
+    private fun peekUpdateEvent(): UpdateEvent? =
+        try {
+            readUpdateEvent()
+        } catch (
+            @Suppress("TooGenericExceptionCaught") _: Exception,
+        ) {
+            // A marker that cannot be read or parsed — e.g. a torn write from a crash during
+            // the non-atomic UpdateMarker.write — is not evidence of an update. Report "not
+            // updated" instead of propagating into the caller's startup path. The file is left
+            // alone: the next update overwrites it, and deleting it here would mean a corrupt
+            // read could discard a marker the caller never got to see.
+            null
+        }
+
+    private fun readUpdateEvent(): UpdateEvent? {
         val (previousVersion, newVersion) = UpdateMarker.read() ?: return null
         // The marker is written before the installer runs. If the app still reports the exact
-        // version recorded then, the install never completed — drop the stale marker instead of
-        // reporting a phantom update. Both strings originate from config.currentVersion (one
-        // process generation apart), so strict equality is the right comparison; parsing would
-        // conflate differently-formatted strings and could falsely pass validation.
-        if (previousVersion == config.currentVersion) {
-            UpdateMarker.delete()
-            return null
-        }
+        // version recorded then, the update has not taken effect — either the install failed, or
+        // it is still running and the user reopened the old app — so report no event. Both
+        // strings originate from config.currentVersion (one process generation apart), so strict
+        // equality is the right comparison; parsing would conflate differently-formatted strings
+        // and could falsely pass validation.
+        //
+        // The marker is deliberately kept: an install still in flight will make it valid, and
+        // only consumeUpdateEvent() — which delivers the event — clears it.
+        if (previousVersion == config.currentVersion) return null
         val level = Version.fromString(newVersion).levelFrom(Version.fromString(previousVersion))
         return UpdateEvent(previousVersion, newVersion, level)
     }

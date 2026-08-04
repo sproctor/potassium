@@ -71,18 +71,62 @@ class UpdateEventTest {
     }
 
     @Test
-    fun `consumeUpdateEvent discards marker when app still runs the previous version`() {
-        // Written by a 2.0.0 process whose install never completed — the app still reports 2.0.0.
+    fun `consumeUpdateEvent reports nothing while the app still runs the previous version`() {
+        // Written by a 2.0.0 process whose install has not taken effect — the app still reports 2.0.0.
         UpdateMarker.write("2.0.0", "3.0.0")
 
         assertNull(updater.consumeUpdateEvent())
-        assertFalse(UpdateMarker.exists())
     }
 
     @Test
     fun `wasJustUpdated is false after a failed update`() {
         UpdateMarker.write("2.0.0", "3.0.0")
         assertFalse(updater.wasJustUpdated())
+    }
+
+    @Test
+    fun `marker is preserved while the install may still be in flight`() {
+        // The user reopened the old app while the installer is still running: the event belongs
+        // to the update that is about to land, so nothing may discard it.
+        UpdateMarker.write("2.0.0", "3.0.0")
+
+        assertFalse(updater.wasJustUpdated())
+        assertNull(updater.consumeUpdateEvent())
+        assertTrue(UpdateMarker.exists())
+
+        // Once the install completes, the now-3.0.0 app reports the event.
+        val updated =
+            PotassiumUpdater {
+                currentVersion = "3.0.0"
+                provider = FakeUpdateProvider()
+            }
+        val event = updated.consumeUpdateEvent()
+        assertNotNull(event)
+        assertEquals("2.0.0", event!!.previousVersion)
+        assertEquals("3.0.0", event.newVersion)
+    }
+
+    @Test
+    fun `wasJustUpdated is false for an unparseable marker instead of throwing`() {
+        // A torn write from a crash mid-update: Version.fromString("1.") throws on the empty group.
+        UpdateMarker.write("1.0.0", "1.")
+
+        assertFalse(updater.wasJustUpdated())
+    }
+
+    @Test
+    fun `consumeUpdateEvent returns null for an unparseable marker instead of throwing`() {
+        UpdateMarker.write("1.0.0", "1.")
+
+        assertNull(updater.consumeUpdateEvent())
+    }
+
+    @Test
+    fun `an out-of-range version component does not throw`() {
+        UpdateMarker.write("1.0.0", "99999999999999.0.0")
+
+        assertFalse(updater.wasJustUpdated())
+        assertNull(updater.consumeUpdateEvent())
     }
 
     @Test
