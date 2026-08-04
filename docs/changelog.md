@@ -12,7 +12,7 @@
 
 ### Improvements
 
-- **Update script renamed** — the temporary script the updater writes to apply an update is now `potassium-updater.sh` / `potassium-updater.ps1`, dropping the inherited `nucleus-update` name. It is created and removed within a single update, so nothing needs migrating.
+- **Update script renamed and moved into a per-app directory** — the script the updater writes to apply an update is now `<temp>/<appId>/updater.sh` (`updater.ps1` on Windows), replacing the inherited `nucleus-update` name at the root of the shared system temp directory. Two apps updating at the same moment no longer overwrite each other's script, which previously let one app's update run the other's installer or silently no-op. The script is created and removed within a single update, so nothing needs migrating.
 - **electron-builder 26.15.7** — picks up the upstream NSIS fix that pins the payload archive to an install-time-decodable 7z filter (modern 7za auto-applied `BCJ2`/`ARM64` branch filters the NSIS extractor silently skips, which could drop executables from the installed app), plus snap template extraction and `electronLanguages` locale fixes.
 
 ### Behavior Changes

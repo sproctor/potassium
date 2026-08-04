@@ -6,15 +6,20 @@ import kotlin.system.exitProcess
 
 @Suppress("TooManyFunctions")
 internal object PlatformInstaller {
+    private const val UPDATE_SCRIPT_UNIX = "updater.sh"
+    private const val UPDATE_SCRIPT_WINDOWS = "updater.ps1"
+
     /**
-     * Names of the detached script that applies the update, written to the system temp directory.
+     * The detached script that applies the update, in this app's own scratch directory.
      *
-     * Namespaced deliberately: on Linux and macOS `java.io.tmpdir` is `/tmp`, shared by every user
-     * and every application on the machine, so a bare name like `updater.sh` invites collision
-     * with unrelated software.
+     * The per-app directory is what makes the plain file name safe: two apps updating at once
+     * would otherwise overwrite one another's script in the shared system temp directory.
      */
-    private const val UPDATE_SCRIPT_UNIX = "potassium-updater.sh"
-    private const val UPDATE_SCRIPT_WINDOWS = "potassium-updater.ps1"
+    private fun updateScriptFile(name: String): File {
+        val dir = AppDirs.tempDir()
+        dir.mkdirs()
+        return File(dir, name)
+    }
 
     fun install(
         file: File,
@@ -70,7 +75,7 @@ internal object PlatformInstaller {
                 ""
             }
 
-        val script = File(System.getProperty("java.io.tmpdir"), UPDATE_SCRIPT_UNIX)
+        val script = updateScriptFile(UPDATE_SCRIPT_UNIX)
         script.writeText(
             """
             |#!/usr/bin/env bash
@@ -133,7 +138,7 @@ internal object PlatformInstaller {
                 ""
             }
 
-        val script = File(System.getProperty("java.io.tmpdir"), UPDATE_SCRIPT_UNIX)
+        val script = updateScriptFile(UPDATE_SCRIPT_UNIX)
         script.writeText(
             """
             |#!/usr/bin/env bash
@@ -211,8 +216,9 @@ internal object PlatformInstaller {
             MacInstallScripts.forDmg(
                 dmgFile = dmgFile.absolutePath,
                 appPath = appBundle.absolutePath,
-                // Per-process mount point: a fixed one would collide with a concurrent update.
-                mountPoint = File(System.getProperty("java.io.tmpdir"), "potassium-dmg-$pid").absolutePath,
+                // Per-process mount point inside this app's scratch directory: a shared one would
+                // collide with a concurrent update.
+                mountPoint = File(AppDirs.tempDir(), "dmg-mount-$pid").absolutePath,
                 pid = pid,
                 restart = restart,
             ),
@@ -228,7 +234,7 @@ internal object PlatformInstaller {
      * script deletes itself via `$0` when it finishes.
      */
     private fun startDetachedMacScript(body: String) {
-        val script = File(System.getProperty("java.io.tmpdir"), UPDATE_SCRIPT_UNIX)
+        val script = updateScriptFile(UPDATE_SCRIPT_UNIX)
         script.writeText(body)
         script.setExecutable(true)
 
@@ -278,7 +284,7 @@ internal object PlatformInstaller {
                 ""
             }
 
-        val script = File(System.getProperty("java.io.tmpdir"), UPDATE_SCRIPT_WINDOWS)
+        val script = updateScriptFile(UPDATE_SCRIPT_WINDOWS)
         script.writeText(
             """
             |# Wait for the app process to fully exit

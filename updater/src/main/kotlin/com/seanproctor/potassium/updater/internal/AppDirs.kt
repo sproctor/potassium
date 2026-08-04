@@ -42,7 +42,17 @@ internal object AppDirs {
         }
     }
 
-    private fun appId(): String =
+    /**
+     * Per-application scratch directory inside the system temp directory, for files that only
+     * need to outlive the app process — currently the script that applies an update.
+     *
+     * Namespaced by [appId] because `java.io.tmpdir` is `/tmp` on Linux and macOS, shared by
+     * every user and application on the machine: two apps writing a fixed file name there would
+     * overwrite each other mid-update.
+     */
+    fun tempDir(): File = File(System.getProperty("java.io.tmpdir"), appId())
+
+    internal fun appId(): String =
         System.getProperty("app.id")?.takeIf { it.isNotBlank() }
             ?: derivedAppId()
 
