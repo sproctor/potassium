@@ -338,4 +338,13 @@ internal object PlatformInstaller {
             it.isFile && it.name.endsWith(".exe", ignoreCase = true) && !isNsisUninstallerName(it.name)
         }
     }
+
+    /**
+     * Whether [fileName] is the uninstaller electron-builder's NSIS installer writes into the
+     * install root (`Uninstall <ProductName>.exe`). Relaunching that after an update would show
+     * the app's own uninstall prompt instead of starting the app.
+     */
+    private fun isNsisUninstallerName(fileName: String): Boolean =
+        fileName.startsWith("Uninstall", ignoreCase = true) &&
+            fileName.endsWith(".exe", ignoreCase = true)
 }

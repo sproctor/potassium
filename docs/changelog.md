@@ -19,7 +19,7 @@
 
     **Two build-side consequences:** the `.msi` is written to its own `msi/` output directory instead of alongside the other Windows artifacts, so publishing workflows that glob the Windows output directory need to pick up both; and requesting MSI adds a second electron-builder invocation. Installs made by earlier versions carry no marker and behave as before.
 
-- **Evidence-based Windows install-type detection** — instead of assuming every Windows install is NSIS, the updater detects portable builds (`PORTABLE_EXECUTABLE_FILE` env), AppX/MSIX (`WindowsApps` install path), and NSIS (its uninstaller present in the install root). An install directory that can be read but holds no NSIS uninstaller resolves to MSI, the only signal an MSI built before the marker leaves behind; one that cannot be read at all resolves to NSIS, so a transient failure such as restrictive ACLs cannot silently disable updates forever.
+- **Evidence-based Windows install-type detection** — the updater now recognizes portable builds (`PORTABLE_EXECUTABLE_FILE` env) and AppX/MSIX (`WindowsApps` install path), which are not self-updatable, instead of treating every Windows install as NSIS. Everything else still resolves to NSIS; nothing is inferred from what an install lacks, since MSI was the only format that needed such an inference and now carries a marker.
 
 ## v0.4.0
 

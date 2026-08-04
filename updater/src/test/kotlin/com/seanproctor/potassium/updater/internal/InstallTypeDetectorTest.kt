@@ -14,7 +14,6 @@ class InstallTypeDetectorTest {
         private val properties: Map<String, String> = emptyMap(),
         private val files: Map<String, String> = emptyMap(),
         private val executable: String? = null,
-        private val directories: Map<String, List<String>> = emptyMap(),
     ) : InstallEnvironment {
         override fun getenv(name: String): String? = envVars[name]
 
@@ -25,18 +24,9 @@ class InstallTypeDetectorTest {
         override fun readText(path: String): String? = files[path]
 
         override fun executablePath(): String? = executable
-
-        override fun listFileNames(dirPath: String): List<String>? = directories[dirPath]
     }
 
     private fun detect(env: InstallEnvironment) = InstallTypeDetector(env).detect()
-
-    /**
-     * Production derives lookup keys through [File], which rewrites `/` to `\` on a Windows JVM.
-     * Keys built here go through the same normalization so these tests exercise the real behavior
-     * on both Windows and Linux rather than silently falling through on one of them.
-     */
-    private fun dirKey(path: String): String = File(path).path
 
     /** Mirrors [AppResources], which appends the resources segment with a literal `/`. */
     private fun resourceKey(
@@ -106,31 +96,6 @@ class InstallTypeDetectorTest {
     }
 
     @Test
-    fun `windows nsis uninstaller in install root detects nsis`() {
-        val env =
-            FakeEnv(
-                Platform.Windows,
-                properties = mapOf("java.home" to "C:/Users/u/AppData/Local/Programs/App/runtime"),
-                directories =
-                    mapOf(
-                        dirKey("C:/Users/u/AppData/Local/Programs/App") to listOf("App.exe", "Uninstall App.exe"),
-                    ),
-            )
-        assertEquals(InstallType.NSIS, detect(env))
-    }
-
-    @Test
-    fun `windows uninstaller found via launcher path detects nsis`() {
-        val env =
-            FakeEnv(
-                Platform.Windows,
-                executable = "C:/Programs/App/App.exe",
-                directories = mapOf(dirKey("C:/Programs/App") to listOf("App.exe", "uninstall.exe")),
-            )
-        assertEquals(InstallType.NSIS, detect(env))
-    }
-
-    @Test
     fun `windows portable env detects portable`() {
         val env =
             FakeEnv(
@@ -151,63 +116,33 @@ class InstallTypeDetectorTest {
     }
 
     @Test
-    fun `windows install without nsis uninstaller resolves to msi`() {
-        // The install dir was read and NSIS's uninstaller is genuinely not there — the only
-        // signal left by an MSI install built before the package-type marker.
-        val env =
-            FakeEnv(
-                Platform.Windows,
-                properties = mapOf("java.home" to "C:/Program Files/App/runtime"),
-                directories = mapOf(dirKey("C:/Program Files/App") to listOf("App.exe")),
-            )
-        assertEquals(InstallType.MSI, detect(env))
-    }
-
-    @Test
-    fun `windows unreadable install directory resolves to nsis rather than disabling updates`() {
-        // listFileNames returns null (restrictive ACLs): nothing was ruled out, so this must not
-        // be mistaken for "no uninstaller present".
-        val env =
-            FakeEnv(
-                Platform.Windows,
-                properties = mapOf("java.home" to "C:/Program Files/App/runtime"),
-                directories = emptyMap(),
-            )
-        assertEquals(InstallType.NSIS, detect(env))
-    }
-
-    @Test
-    fun `windows without any resolvable install root resolves to nsis`() {
+    fun `windows defaults to nsis`() {
+        // The only installed Windows format the updater applies, and the only one present in the
+        // manifest. MSI announces itself with a marker instead of being inferred from absence.
         assertEquals(InstallType.NSIS, detect(FakeEnv(Platform.Windows)))
     }
 
     @Test
-    fun `windows package-type wins over uninstaller evidence`() {
-        // The marker the MSI build stamps must beat the evidence chain even when that evidence
-        // points elsewhere — e.g. a stale uninstaller left by a previous NSIS install, which
-        // would otherwise make the updater apply the NSIS build over the MSI one.
+    fun `windows package-type msi overrides the nsis default`() {
         val env =
             FakeEnv(
                 Platform.Windows,
                 properties = mapOf("java.home" to "C:/Program Files/App/runtime"),
                 files = mapOf(resourceKey("C:/Program Files/App", "resources/package-type") to "msi"),
-                directories = mapOf(dirKey("C:/Program Files/App") to listOf("App.exe", "Uninstall App.exe")),
             )
         assertEquals(InstallType.MSI, detect(env))
     }
 
     @Test
-    fun `windows package-type can force nsis where evidence says otherwise`() {
-        // The inverse direction, which the msi-over-nsis case alone cannot prove: without the
-        // marker this install has no evidence at all and would resolve to MSI.
+    fun `windows package-type is read from the launcher path too`() {
+        // GraalVM native images have no bundled runtime, so java.home does not locate the install.
         val env =
             FakeEnv(
                 Platform.Windows,
-                properties = mapOf("java.home" to "C:/Program Files/App/runtime"),
-                files = mapOf(resourceKey("C:/Program Files/App", "resources/package-type") to "nsis"),
-                directories = mapOf(dirKey("C:/Program Files/App") to listOf("App.exe")),
+                executable = "C:/Programs/App/App.exe",
+                files = mapOf(resourceKey("C:/Programs/App", "resources/package-type") to "msi"),
             )
-        assertEquals(InstallType.NSIS, detect(env))
+        assertEquals(InstallType.MSI, detect(env))
     }
 
     @Test

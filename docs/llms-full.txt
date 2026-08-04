@@ -2172,9 +2172,9 @@ PKG (macOS), AppX/MSIX (Windows), Snap, and Flatpak are not supported by the aut
 The install format is detected at runtime:
 
 - **Linux** — the `APPIMAGE`/`SNAP`/`FLATPAK` environment variables, and the `resources/package-type` marker electron-builder writes for deb/rpm.
-- **Windows** — the `resources/package-type` marker the packager stamps for MSI (see below), the `PORTABLE_EXECUTABLE_FILE` environment variable (portable), a `WindowsApps` install path (AppX/MSIX), or the `Uninstall <AppName>.exe` the NSIS installer writes into the install directory.
+- **Windows** — the `resources/package-type` marker the packager stamps for MSI (see below), the `PORTABLE_EXECUTABLE_FILE` environment variable (portable), or a `WindowsApps` install path (AppX/MSIX). Anything else is NSIS, the only remaining installed format the updater applies.
 
-An install directory that can be read but contains no NSIS uninstaller is treated as MSI — the only signal left by an MSI built before the marker existed. An install directory that cannot be read at all is treated as NSIS instead, so a transient failure (restrictive ACLs, an unresolvable install root) cannot silently disable updates forever.
+Nothing is inferred from what an install *lacks*: MSI was the only format that needed such an inference, and it now identifies itself. Installs produced before the marker existed carry none, so an MSI from an older build still resolves to NSIS.
 
 **MSI builds in its own electron-builder invocation:** Because `--prepackaged` feeds one directory to every target in an invocation, a marker written for the batched Windows build would stamp NSIS and portable identically. MSI is therefore packaged on its own so its app image can carry `resources/package-type = msi` — the one thing that distinguishes an MSI install at runtime, since the installed payload is otherwise identical to the NSIS one.
     Two consequences: requesting MSI adds a second electron-builder invocation to the Windows build, and the `.msi` is written to its own `msi/` output directory rather than alongside the other Windows artifacts. Publishing workflows that glob the Windows output directory need to pick up both.

@@ -25,9 +25,6 @@ internal interface InstallEnvironment {
 
     /** The current process's executable path (used to locate the install dir), or null. */
     fun executablePath(): String?
-
-    /** The names of the regular files directly inside [dirPath], or null when it is not a listable directory. */
-    fun listFileNames(dirPath: String): List<String>?
 }
 
 /** [InstallEnvironment] backed by the real JVM and filesystem. */
@@ -48,10 +45,4 @@ internal object SystemInstallEnvironment : InstallEnvironment {
             .info()
             .command()
             .orElse(null)
-
-    override fun listFileNames(dirPath: String): List<String>? =
-        File(dirPath)
-            .listFiles()
-            ?.filter { it.isFile }
-            ?.map { it.name }
 }
