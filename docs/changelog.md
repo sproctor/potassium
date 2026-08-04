@@ -15,6 +15,8 @@
 
 ### Behavior Changes
 
+- **`executableType` is validated against the running platform** — setting it to a format that cannot exist on the current OS (for example `InstallType.MSI` in a cross-platform app's shared configuration) now throws `IllegalArgumentException` when the updater is constructed, instead of turning every update check on the other platforms into a `NoMatchingFileException`. Platform-independent formats (ZIP, TAR, 7z) and an unset value are accepted everywhere.
+
 - **MSI installs are identified positively and no longer updated with the NSIS installer** — every Windows format installs an identical payload, so an MSI install was indistinguishable from an NSIS one and would "update" by installing the NSIS build alongside itself: two entries in Apps & Features, and the running app still on the old version. The packager now builds MSI in its own electron-builder invocation so its app image can carry `resources/package-type = msi`, which the updater reads to recognize the install and hold back — MSI reports `isUpdateSupported() == false` and is treated as a managed-deployment format (Intune/GPO/SCCM), since electron-builder publishes no `.msi` entries in `latest.yml` and per-machine MSI upgrades require elevation. Opt in explicitly with `executableType = InstallType.MSI` plus a manifest listing the `.msi`.
 
     **Two build-side consequences:** the `.msi` is written to its own `msi/` output directory instead of alongside the other Windows artifacts, so publishing workflows that glob the Windows output directory need to pick up both; and requesting MSI adds a second electron-builder invocation. Installs made by earlier versions carry no marker and behave as before.

@@ -36,7 +36,7 @@ flowchart LR
 PKG (macOS), AppX/MSIX (Windows), Snap, and Flatpak are not supported by the auto-updater because Potassium assumes these formats are distributed through their respective app stores (Mac App Store, Microsoft Store, Snapcraft, Flathub), which handle updates natively.
 
 !!! note "MSI installs are treated as managed deployments"
-    An MSI install reports `isUpdateSupported() == false`, so the app never applies the NSIS installer over it. electron-builder publishes no `.msi` entries in `latest.yml`, and per-machine MSI upgrades require UAC elevation, so MSI is best suited for IT-managed distribution (Intune, Group Policy, SCCM) where updates are pushed centrally. To opt in to MSI self-update anyway, set `executableType = InstallType.MSI` in the updater config and serve a custom update manifest that lists the `.msi` artifact — the updater then applies it with `msiexec /i <file> /passive`.
+    An MSI install reports `isUpdateSupported() == false`, so the app never applies the NSIS installer over it. electron-builder publishes no `.msi` entries in `latest.yml`, and per-machine MSI upgrades require UAC elevation, so MSI is best suited for IT-managed distribution (Intune, Group Policy, SCCM) where updates are pushed centrally. To opt in to MSI self-update anyway, set `executableType = InstallType.MSI` in the updater config and serve a custom update manifest that lists the `.msi` artifact — the updater then applies it with `msiexec /i <file> /passive`. Set it only on Windows: a shared configuration that sets it unconditionally throws `IllegalArgumentException` when the app starts on macOS or Linux, where no manifest can ever list an `.msi`.
 
 The install format is detected at runtime:
 
@@ -302,6 +302,9 @@ PotassiumUpdater {
 
     // Force a specific installer format (auto-detected if null). Setting this is also the
     // opt-in for MSI self-update, which is never applied on detection alone.
+    // Must be a format that can exist on the running platform — constructing the updater with,
+    // say, InstallType.MSI on macOS throws IllegalArgumentException. In a cross-platform app,
+    // set it per platform rather than in shared code.
     executableType = null
 
     // Disable blockmap-based differential downloads (see "Differential (Delta) Updates");

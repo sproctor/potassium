@@ -11,6 +11,8 @@ import com.seanproctor.potassium.updater.internal.UpdateCache
 import com.seanproctor.potassium.updater.internal.UpdateDownloadEngine
 import com.seanproctor.potassium.updater.internal.UpdateMarker
 import com.seanproctor.potassium.updater.internal.YamlParser
+import com.seanproctor.potassium.updater.internal.requiredPlatform
+import com.seanproctor.potassium.updater.runtime.Platform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -41,6 +43,31 @@ public class PotassiumUpdater(
                 .build()
 
     private val installTypeDetector = InstallTypeDetector()
+
+    init {
+        validateExecutableType()
+    }
+
+    /**
+     * Rejects an [UpdaterConfig.executableType] that cannot exist on the running platform.
+     *
+     * The setting is a declaration about how *this* install was produced, so a cross-platform app
+     * has to set it per platform. Getting it wrong is a configuration error, not a runtime
+     * condition: it would otherwise turn every update check on the other platforms into a
+     * `NoMatchingFileException`, because the manifest there can never list that format.
+     */
+    private fun validateExecutableType() {
+        val configured = config.executableType ?: return
+        val required = configured.requiredPlatform() ?: return
+        val current = PlatformInfo.currentPlatform()
+        // An unidentified OS establishes no mismatch — do not fail on platforms we cannot name.
+        if (current == Platform.Unknown) return
+        require(required == current) {
+            "executableType is set to '${configured.id}', a ${required.name} install format, but " +
+                "this process is running on ${current.name}. Set executableType per platform, or " +
+                "leave it null to detect the install format at runtime."
+        }
+    }
 
     public fun isUpdateSupported(): Boolean {
         // An explicitly configured type is an opt-in: it also unlocks MSI, which is never
