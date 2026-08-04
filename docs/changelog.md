@@ -4,6 +4,7 @@
 
 ### Bug Fixes
 
+- **Update scripts now quote every interpolated path** — installer, launcher, and cleanup paths were interpolated into the generated scripts unquoted, so an apostrophe in a path (`C:\Users\O'Brien\...`, an ordinary Windows profile) aborted the whole update after the app had already exited, leaving nothing installed and nothing relaunched. Because the downloaded artifact's file name comes from the update manifest, a hostile manifest could also inject shell or PowerShell statements. Paths are now emitted as properly escaped single-quoted literals on all platforms (`$(…)` in a path is no longer executed by the Linux/macOS scripts either).
 - **Windows update could prompt to uninstall** — after a silent NSIS update, the relaunch step picked the first `.exe` in the install directory, which could be the NSIS uninstaller (showing "Are you sure you want to uninstall?" — and removing the app on OK). The relaunch now uses the exact path of the previously running launcher (resolved from the process itself, never by scanning the install directory), and the NSIS installer is invoked in update mode (`/S --updated`). The relaunched app receives no installer arguments.
 - **Failed installs no longer report a phantom update** — the post-update marker is written before the installer runs; if the install fails or is cancelled after the app exits, the next launch used to report `wasJustUpdated() == true` anyway. The marker is now discarded when the app still reports the version it had when the marker was written.
 

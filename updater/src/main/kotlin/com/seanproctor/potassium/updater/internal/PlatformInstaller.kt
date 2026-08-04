@@ -71,8 +71,8 @@ internal object PlatformInstaller {
             |# Ignore SIGHUP to survive parent process exit
             |trap '' HUP
             |
-            |NEW_FILE="${newAppImage.absolutePath}"
-            |OLD_FILE="$currentAppImage"
+            |NEW_FILE=${shLiteral(newAppImage.absolutePath)}
+            |OLD_FILE=${shLiteral(currentAppImage)}
             |APP_PID=$pid
             |
             |# Wait for the app process to fully exit
@@ -133,9 +133,9 @@ internal object PlatformInstaller {
             |# Ignore SIGHUP to survive parent process exit
             |trap '' HUP
             |
-            |PKG_FILE="${packageFile.absolutePath}"
+            |PKG_FILE=${shLiteral(packageFile.absolutePath)}
             |APP_PID=$pid
-            |APP_LAUNCHER="${launcher.absolutePath}"
+            |APP_LAUNCHER=${shLiteral(launcher.absolutePath)}
             |
             |# Wait for the app process to fully exit
             |while kill -0 "${'$'}APP_PID" 2>/dev/null; do
@@ -208,9 +208,9 @@ internal object PlatformInstaller {
             |#!/usr/bin/env bash
             |set -e
             |
-            |ZIP_FILE="${zipFile.absolutePath}"
-            |APP_PATH="$appPath"
-            |INSTALL_DIR="${installDir.absolutePath}"
+            |ZIP_FILE=${shLiteral(zipFile.absolutePath)}
+            |APP_PATH=${shLiteral(appPath)}
+            |INSTALL_DIR=${shLiteral(installDir.absolutePath)}
             |APP_PID=$pid
             |
             |# Wait for the app process to fully exit
@@ -263,18 +263,22 @@ internal object PlatformInstaller {
         val pid = ProcessHandle.current().pid()
         val installerCmd =
             when (extension) {
-                "msi" -> "Start-Process msiexec -ArgumentList '/i', '\"${file.absolutePath}\"', '/passive' -Wait"
+                // msiexec needs the path double-quoted in its own argument string; that inner
+                // quoting is part of the value, and psLiteral quotes the whole thing for PowerShell.
+                "msi" ->
+                    "Start-Process msiexec -ArgumentList '/i', " +
+                        "${psLiteral("\"${file.absolutePath}\"")}, '/passive' -Wait"
                 // --updated keeps the installer in update mode (shortcut preservation,
                 // close-wait handling). --force-run is deliberately omitted: the installer's
                 // own relaunch would pass an --updated argument to the app and depends on the
                 // Start-Menu shortcut; the script relaunches the exact launcher path instead.
-                else -> "Start-Process '${file.absolutePath}' -ArgumentList '/S', '--updated' -Wait"
+                else -> "Start-Process ${psLiteral(file.absolutePath)} -ArgumentList '/S', '--updated' -Wait"
             }
 
         val launcher = if (restart) resolveWindowsLauncher() else null
         val relaunchCmd =
             if (launcher != null) {
-                "\n|# Relaunch the application\n|Start-Process '${launcher.absolutePath}'"
+                "\n|# Relaunch the application\n|Start-Process ${psLiteral(launcher.absolutePath)}"
             } else {
                 ""
             }
@@ -291,8 +295,8 @@ internal object PlatformInstaller {
             |$installerCmd
             |$relaunchCmd
             |# Clean up
-            |Remove-Item '${file.absolutePath}' -Force -ErrorAction SilentlyContinue
-            |Remove-Item '${script.absolutePath}' -Force -ErrorAction SilentlyContinue
+            |Remove-Item ${psLiteral(file.absolutePath)} -Force -ErrorAction SilentlyContinue
+            |Remove-Item ${psLiteral(script.absolutePath)} -Force -ErrorAction SilentlyContinue
             """.trimMargin(),
         )
 
