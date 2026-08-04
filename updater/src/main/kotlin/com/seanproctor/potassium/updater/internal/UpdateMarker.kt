@@ -20,7 +20,11 @@ internal object UpdateMarker {
     ) {
         val file = markerFile()
         file.parentFile?.mkdirs()
-        file.writeText("$KEY_PREVIOUS_VERSION=$previousVersion\n$KEY_NEW_VERSION=$newVersion\n")
+        // Trim on the way in: [read] trims on the way out, and a value carrying a newline would
+        // otherwise split the record across lines and make the file unreadable.
+        file.writeText(
+            "$KEY_PREVIOUS_VERSION=${previousVersion.trim()}\n$KEY_NEW_VERSION=${newVersion.trim()}\n",
+        )
     }
 
     fun read(): Pair<String, String>? {
@@ -28,10 +32,15 @@ internal object UpdateMarker {
         if (!file.isFile) return null
         return try {
             val props =
-                file.readLines().associate { line ->
-                    val (key, value) = line.split("=", limit = 2)
-                    key.trim() to value.trim()
-                }
+                file
+                    .readLines()
+                    // Tolerate blank and malformed lines rather than failing the whole read: a
+                    // marker written by an older version could contain a value with a newline in it.
+                    .filter { it.isNotBlank() && it.contains('=') }
+                    .associate { line ->
+                        val (key, value) = line.split("=", limit = 2)
+                        key.trim() to value.trim()
+                    }
             val previous = props[KEY_PREVIOUS_VERSION] ?: return null
             val newVer = props[KEY_NEW_VERSION] ?: return null
             previous to newVer

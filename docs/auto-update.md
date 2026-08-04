@@ -27,13 +27,28 @@ flowchart LR
 
 ## Updatable Formats
 
-| Platform | Updatable Formats | Not updatable (Store-managed) |
-|----------|-------------------|-------------------------------|
+| Platform | Updatable Formats | Not auto-updated |
+|----------|-------------------|------------------|
 | macOS | DMG, ZIP | PKG |
-| Windows | EXE/NSIS, NSIS Web, MSI | AppX/MSIX |
+| Windows | EXE/NSIS, NSIS Web | MSI, AppX/MSIX, Portable |
 | Linux | DEB, RPM, AppImage | Snap, Flatpak |
 
 PKG (macOS), AppX/MSIX (Windows), Snap, and Flatpak are not supported by the auto-updater because Potassium assumes these formats are distributed through their respective app stores (Mac App Store, Microsoft Store, Snapcraft, Flathub), which handle updates natively.
+
+!!! note "MSI installs are treated as managed deployments"
+    An MSI install reports `isUpdateSupported() == false`, so the app never applies the NSIS installer over it. electron-builder publishes no `.msi` entries in `latest.yml`, and per-machine MSI upgrades require UAC elevation, so MSI is best suited for IT-managed distribution (Intune, Group Policy, SCCM) where updates are pushed centrally. To opt in to MSI self-update anyway, set `executableType = InstallType.MSI` in the updater config and serve a custom update manifest that lists the `.msi` artifact — the updater then applies it with `msiexec /i <file> /passive`. Set it only on Windows: a shared configuration that sets it unconditionally throws `IllegalArgumentException` when the app starts on macOS or Linux, where no manifest can ever list an `.msi`.
+
+The install format is detected at runtime:
+
+- **Linux** — the `APPIMAGE`/`SNAP`/`FLATPAK` environment variables, and the `resources/package-type` marker electron-builder writes for deb/rpm.
+- **Windows** — the `resources/package-type` marker the packager stamps for MSI (see below), the `PORTABLE_EXECUTABLE_FILE` environment variable (portable), or a `WindowsApps` install path (AppX/MSIX). Anything else is NSIS, the only remaining installed format the updater applies.
+
+Nothing is inferred from what an install *lacks*: MSI was the only format that needed such an inference, and it now identifies itself. Installs produced before the marker existed carry none, so an MSI from an older build still resolves to NSIS.
+
+!!! info "MSI builds in its own electron-builder invocation"
+    Because `--prepackaged` feeds one directory to every target in an invocation, a marker written for the batched Windows build would stamp NSIS and portable identically. MSI is therefore packaged on its own so its app image can carry `resources/package-type = msi` — the one thing that distinguishes an MSI install at runtime, since the installed payload is otherwise identical to the NSIS one.
+
+    Two consequences: requesting MSI adds a second electron-builder invocation to the Windows build, and the `.msi` is written to its own `msi/` output directory rather than alongside the other Windows artifacts. Publishing workflows that glob the Windows output directory need to pick up both.
 
 !!! warning "macOS: ZIP is required alongside DMG"
     On macOS, the auto-updater uses the **ZIP** format to perform the update (extract and replace the `.app` bundle silently). The DMG is used for initial installation only. You **must** include `MacOSTargetFormat.Zip` in your macOS `targetFormats` configuration, otherwise macOS auto-update will not work:
@@ -285,7 +300,11 @@ PotassiumUpdater {
     // Allow installing older versions
     allowDowngrade = false
 
-    // Force a specific installer format (auto-detected if null)
+    // Force a specific installer format (auto-detected if null). Setting this is also the
+    // opt-in for MSI self-update, which is never applied on detection alone.
+    // Must be a format that can exist on the running platform — constructing the updater with,
+    // say, InstallType.MSI on macOS throws IllegalArgumentException. In a cross-platform app,
+    // set it per platform rather than in shared code.
     executableType = null
 
     // Disable blockmap-based differential downloads (see "Differential (Delta) Updates");
@@ -447,13 +466,21 @@ fun UpdateBanner() {
 
 The `installAndRestart()` method launches the platform-specific installer, exits the current process, and relaunches the app after installation:
 
-| Platform | Format | Command |
-|----------|--------|---------|
-| Linux | DEB | `sudo dpkg -i <file>` |
-| Linux | RPM | `sudo rpm -U <file>` |
-| macOS | DMG/PKG | `open <file>` |
-| Windows | EXE/NSIS | `<file> /S` (silent) |
-| Windows | MSI | `msiexec /i <file> /passive` |
+| Platform | Format | How it is applied | Relaunches |
+|----------|--------|-------------------|------------|
+| macOS | ZIP | Extracted over the installed `.app` bundle | Yes |
+| macOS | DMG | Mounted, the `.app` copied out, then detached | Yes |
+| macOS | PKG | Handed to the system installer (`open <file>`) | No |
+| Windows | EXE/NSIS | `<file> /S --updated` (silent) | Yes |
+| Windows | MSI (opt-in) | `msiexec /i <file> /passive` | Yes |
+| Linux | AppImage | Replaces the running AppImage file in place | Yes |
+| Linux | DEB | `pkexec dpkg -i <file>` (graphical authentication) | Yes |
+| Linux | RPM | `pkexec rpm -U <file>` (graphical authentication) | Yes |
+| Linux | other | Handed to the desktop (`xdg-open <file>`) | No |
+
+Every format the updater installs itself waits for the app to exit, applies the update, and then relaunches the app with **no arguments** — the relaunched process never receives installer-protocol flags.
+
+The two hand-off rows are the exception, and cannot relaunch: `open` and `xdg-open` return as soon as the graphical installer starts, so there is no completion for the updater to wait on. Neither format is auto-updatable by default, so `installAndRestart()` reaches them only when `executableType` is set explicitly.
 
 ### Silent Update with `installAndQuit()`
 
@@ -551,6 +578,10 @@ This allows you to adapt the UI — for example, force a confirmation dialog for
 ### Post-Update Detection
 
 After an update is installed (via `installAndRestart()` or `installAndQuit()`), the updater persists a marker file. On the next launch, you can detect that the app was just updated:
+
+The marker is validated against the running app: if the app still reports the version that was current when the marker was written, the update has not taken effect — the install failed, or it is still running and the user reopened the old app — and no update event is reported. The marker itself is kept, so an install still in flight is reported correctly once it completes; only `consumeUpdateEvent()` clears it, and only when it actually returns an event.
+
+Neither `wasJustUpdated()` nor `consumeUpdateEvent()` throws. A marker that cannot be read or parsed (for example a torn write from a crash mid-update) is reported as "not updated" rather than propagating an exception into your startup path.
 
 ```kotlin
 val updater = PotassiumUpdater {

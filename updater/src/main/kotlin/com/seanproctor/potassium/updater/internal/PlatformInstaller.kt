@@ -6,6 +6,21 @@ import kotlin.system.exitProcess
 
 @Suppress("TooManyFunctions")
 internal object PlatformInstaller {
+    private const val UPDATE_SCRIPT_UNIX = "updater.sh"
+    private const val UPDATE_SCRIPT_WINDOWS = "updater.ps1"
+
+    /**
+     * The detached script that applies the update, in this app's own scratch directory.
+     *
+     * The per-app directory is what makes the plain file name safe: two apps updating at once
+     * would otherwise overwrite one another's script in the shared system temp directory.
+     */
+    private fun updateScriptFile(name: String): File {
+        val dir = AppDirs.tempDir()
+        dir.mkdirs()
+        return File(dir, name)
+    }
+
     fun install(
         file: File,
         platform: Platform,
@@ -15,35 +30,33 @@ internal object PlatformInstaller {
 
         when {
             platform == Platform.MacOS && extension == "zip" -> installMacZip(file, restart)
+            platform == Platform.MacOS && extension == "dmg" -> installMacDmg(file, restart)
             platform == Platform.Windows -> installWindows(file, extension, restart)
             platform == Platform.Linux && extension == "appimage" -> installLinuxAppImage(file, restart)
             platform == Platform.Linux && (extension == "deb" || extension == "rpm") ->
                 installLinuxPackage(file, extension, restart)
-            else -> buildProcessForInstaller(file, platform, extension).start()
+            else -> handOffToDesktop(file, platform).start()
         }
         exitProcess(0)
     }
 
-    private fun buildProcessForInstaller(
+    /**
+     * Opens [file] with the desktop's default handler, for formats this updater does not install
+     * itself (macOS PKG, Linux tarballs and store packages).
+     *
+     * This is a hand-off: the graphical installer it launches reports no completion, so the app
+     * cannot be relaunched afterwards and `restart` cannot be honored. Every format the updater
+     * claims to self-update is routed to a real installer above.
+     */
+    private fun handOffToDesktop(
         file: File,
         platform: Platform,
-        extension: String,
     ): ProcessBuilder =
         when (platform) {
-            Platform.Linux -> buildLinuxInstaller(file, extension)
-            Platform.MacOS -> buildMacInstaller(file)
+            Platform.Linux -> ProcessBuilder("xdg-open", file.absolutePath)
+            Platform.MacOS -> ProcessBuilder("open", file.absolutePath)
             Platform.Windows -> error("Windows uses installWindows()")
             Platform.Unknown -> error("Unsupported platform: ${System.getProperty("os.name")}")
-        }
-
-    private fun buildLinuxInstaller(
-        file: File,
-        extension: String,
-    ): ProcessBuilder =
-        when (extension) {
-            "deb" -> ProcessBuilder("sudo", "dpkg", "-i", file.absolutePath)
-            "rpm" -> ProcessBuilder("sudo", "rpm", "-U", file.absolutePath)
-            else -> ProcessBuilder("xdg-open", file.absolutePath)
         }
 
     private fun installLinuxAppImage(
@@ -62,7 +75,7 @@ internal object PlatformInstaller {
                 ""
             }
 
-        val script = File(System.getProperty("java.io.tmpdir"), "nucleus-update.sh")
+        val script = updateScriptFile(UPDATE_SCRIPT_UNIX)
         script.writeText(
             """
             |#!/usr/bin/env bash
@@ -71,8 +84,8 @@ internal object PlatformInstaller {
             |# Ignore SIGHUP to survive parent process exit
             |trap '' HUP
             |
-            |NEW_FILE="${newAppImage.absolutePath}"
-            |OLD_FILE="$currentAppImage"
+            |NEW_FILE=${shLiteral(newAppImage.absolutePath)}
+            |OLD_FILE=${shLiteral(currentAppImage)}
             |APP_PID=$pid
             |
             |# Wait for the app process to fully exit
@@ -125,7 +138,7 @@ internal object PlatformInstaller {
                 ""
             }
 
-        val script = File(System.getProperty("java.io.tmpdir"), "nucleus-update.sh")
+        val script = updateScriptFile(UPDATE_SCRIPT_UNIX)
         script.writeText(
             """
             |#!/usr/bin/env bash
@@ -133,9 +146,9 @@ internal object PlatformInstaller {
             |# Ignore SIGHUP to survive parent process exit
             |trap '' HUP
             |
-            |PKG_FILE="${packageFile.absolutePath}"
+            |PKG_FILE=${shLiteral(packageFile.absolutePath)}
             |APP_PID=$pid
-            |APP_LAUNCHER="${launcher.absolutePath}"
+            |APP_LAUNCHER=${shLiteral(launcher.absolutePath)}
             |
             |# Wait for the app process to fully exit
             |while kill -0 "${'$'}APP_PID" 2>/dev/null; do
@@ -177,66 +190,54 @@ internal object PlatformInstaller {
         return binDir.listFiles()?.firstOrNull { it.canExecute() }
     }
 
-    private fun buildMacInstaller(file: File): ProcessBuilder = ProcessBuilder("open", file.absolutePath)
-
     private fun installMacZip(
         zipFile: File,
         restart: Boolean,
     ) {
-        val appBundle =
-            resolveCurrentAppBundle()
-                ?: error("Cannot resolve current .app bundle from java.home")
-        val installDir = appBundle.parentFile
-        val appName = appBundle.name
-        val appPath = File(installDir, appName).absolutePath
-        val pid = ProcessHandle.current().pid()
-
-        val relaunchCmd =
-            if (restart) {
-                "\n# Relaunch the app\nopen \"\$APP_PATH\"\n"
-            } else {
-                ""
-            }
-
-        // Write a shell script that will:
-        // 1. Wait for our process to actually die
-        // 2. Replace the app bundle
-        // 3. Remove quarantine and optionally relaunch
-        val script = File(System.getProperty("java.io.tmpdir"), "nucleus-update.sh")
-        script.writeText(
-            """
-            |#!/usr/bin/env bash
-            |set -e
-            |
-            |ZIP_FILE="${zipFile.absolutePath}"
-            |APP_PATH="$appPath"
-            |INSTALL_DIR="${installDir.absolutePath}"
-            |APP_PID=$pid
-            |
-            |# Wait for the app process to fully exit
-            |while kill -0 "${'$'}APP_PID" 2>/dev/null; do
-            |    sleep 0.5
-            |done
-            |
-            |# Remove old app bundle
-            |if [ -d "${'$'}APP_PATH" ]; then
-            |    rm -rf "${'$'}APP_PATH"
-            |fi
-            |
-            |# Extract the ZIP
-            |ditto -x -k "${'$'}ZIP_FILE" "${'$'}INSTALL_DIR"
-            |
-            |# Remove quarantine attribute
-            |xattr -r -d com.apple.quarantine "${'$'}APP_PATH" 2>/dev/null || true
-            |$relaunchCmd
-            |# Clean up
-            |rm -f "${'$'}ZIP_FILE"
-            |rm -f "${'$'}{0}"
-            """.trimMargin(),
+        val appBundle = currentAppBundleOrFail()
+        startDetachedMacScript(
+            MacInstallScripts.forZip(
+                zipFile = zipFile.absolutePath,
+                appPath = appBundle.absolutePath,
+                installDir = appBundle.parentFile.absolutePath,
+                pid = ProcessHandle.current().pid(),
+                restart = restart,
+            ),
         )
+    }
+
+    private fun installMacDmg(
+        dmgFile: File,
+        restart: Boolean,
+    ) {
+        val appBundle = currentAppBundleOrFail()
+        val pid = ProcessHandle.current().pid()
+        startDetachedMacScript(
+            MacInstallScripts.forDmg(
+                dmgFile = dmgFile.absolutePath,
+                appPath = appBundle.absolutePath,
+                // Per-process mount point inside this app's scratch directory: a shared one would
+                // collide with a concurrent update.
+                mountPoint = File(AppDirs.tempDir(), "dmg-mount-$pid").absolutePath,
+                pid = pid,
+                restart = restart,
+            ),
+        )
+    }
+
+    private fun currentAppBundleOrFail(): File =
+        resolveCurrentAppBundle()
+            ?: error("Cannot resolve current .app bundle from java.home")
+
+    /**
+     * Starts [body] detached, so it outlives the exit this updater is about to perform. The
+     * script deletes itself via `$0` when it finishes.
+     */
+    private fun startDetachedMacScript(body: String) {
+        val script = updateScriptFile(UPDATE_SCRIPT_UNIX)
+        script.writeText(body)
         script.setExecutable(true)
 
-        // Launch the script as a detached process that survives our exit
         ProcessBuilder("bash", script.absolutePath)
             .redirectOutput(ProcessBuilder.Redirect.DISCARD)
             .redirectError(ProcessBuilder.Redirect.DISCARD)
@@ -261,21 +262,29 @@ internal object PlatformInstaller {
         restart: Boolean,
     ) {
         val pid = ProcessHandle.current().pid()
-        val launcher = resolveWindowsLauncher()
         val installerCmd =
             when (extension) {
-                "msi" -> "Start-Process msiexec -ArgumentList '/i', '\"${file.absolutePath}\"', '/passive' -Wait"
-                else -> "Start-Process '${file.absolutePath}' -ArgumentList '/S', '--updated' -Wait"
+                // msiexec needs the path double-quoted in its own argument string; that inner
+                // quoting is part of the value, and psLiteral quotes the whole thing for PowerShell.
+                "msi" ->
+                    "Start-Process msiexec -ArgumentList '/i', " +
+                        "${psLiteral("\"${file.absolutePath}\"")}, '/passive' -Wait"
+                // --updated keeps the installer in update mode (shortcut preservation,
+                // close-wait handling). --force-run is deliberately omitted: the installer's
+                // own relaunch would pass an --updated argument to the app and depends on the
+                // Start-Menu shortcut; the script relaunches the exact launcher path instead.
+                else -> "Start-Process ${psLiteral(file.absolutePath)} -ArgumentList '/S', '--updated' -Wait"
             }
 
+        val launcher = if (restart) resolveWindowsLauncher() else null
         val relaunchCmd =
-            if (restart && launcher != null) {
-                "\n|# Relaunch the application\n|Start-Process '${launcher.absolutePath}'"
+            if (launcher != null) {
+                "\n|# Relaunch the application\n|Start-Process ${psLiteral(launcher.absolutePath)}"
             } else {
                 ""
             }
 
-        val script = File(System.getProperty("java.io.tmpdir"), "nucleus-update.ps1")
+        val script = updateScriptFile(UPDATE_SCRIPT_WINDOWS)
         script.writeText(
             """
             |# Wait for the app process to fully exit
@@ -287,8 +296,8 @@ internal object PlatformInstaller {
             |$installerCmd
             |$relaunchCmd
             |# Clean up
-            |Remove-Item '${file.absolutePath}' -Force -ErrorAction SilentlyContinue
-            |Remove-Item '${script.absolutePath}' -Force -ErrorAction SilentlyContinue
+            |Remove-Item ${psLiteral(file.absolutePath)} -Force -ErrorAction SilentlyContinue
+            |Remove-Item ${psLiteral(script.absolutePath)} -Force -ErrorAction SilentlyContinue
             """.trimMargin(),
         )
 
@@ -307,13 +316,36 @@ internal object PlatformInstaller {
 
     /**
      * Resolves the jpackage launcher on Windows.
-     * jpackage structure: C:\...\<AppName>\<AppName>.exe with java.home = C:\...\<AppName>\runtime
+     *
+     * The running process is the launcher itself, so its command path is the authoritative
+     * source. The fallback scans the install dir (java.home = C:\...\<AppName>\runtime →
+     * parent = install dir), skipping electron-builder's NSIS uninstaller
+     * ("Uninstall <ProductName>.exe"), which also lives there.
      */
     private fun resolveWindowsLauncher(): File? {
+        ProcessHandle
+            .current()
+            .info()
+            .command()
+            .orElse(null)
+            ?.let(::File)
+            ?.takeIf { it.isFile && it.name.endsWith(".exe", ignoreCase = true) }
+            ?.let { return it }
+
         val javaHome = System.getProperty("java.home") ?: return null
-        // java.home = <install-dir>\runtime → parent = <install-dir>
         val appRoot = File(javaHome).parentFile ?: return null
         if (!appRoot.isDirectory) return null
-        return appRoot.listFiles()?.firstOrNull { it.isFile && it.name.endsWith(".exe") }
+        return appRoot.listFiles()?.firstOrNull {
+            it.isFile && it.name.endsWith(".exe", ignoreCase = true) && !isNsisUninstallerName(it.name)
+        }
     }
+
+    /**
+     * Whether [fileName] is the uninstaller electron-builder's NSIS installer writes into the
+     * install root (`Uninstall <ProductName>.exe`). Relaunching that after an update would show
+     * the app's own uninstall prompt instead of starting the app.
+     */
+    private fun isNsisUninstallerName(fileName: String): Boolean =
+        fileName.startsWith("Uninstall", ignoreCase = true) &&
+            fileName.endsWith(".exe", ignoreCase = true)
 }

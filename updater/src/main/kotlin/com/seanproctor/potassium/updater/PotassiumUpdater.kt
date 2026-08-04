@@ -11,6 +11,8 @@ import com.seanproctor.potassium.updater.internal.UpdateCache
 import com.seanproctor.potassium.updater.internal.UpdateDownloadEngine
 import com.seanproctor.potassium.updater.internal.UpdateMarker
 import com.seanproctor.potassium.updater.internal.YamlParser
+import com.seanproctor.potassium.updater.internal.requiredPlatform
+import com.seanproctor.potassium.updater.runtime.Platform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -42,8 +44,36 @@ public class PotassiumUpdater(
 
     private val installTypeDetector = InstallTypeDetector()
 
+    init {
+        validateExecutableType()
+    }
+
+    /**
+     * Rejects an [UpdaterConfig.executableType] that cannot exist on the running platform.
+     *
+     * The setting is a declaration about how *this* install was produced, so a cross-platform app
+     * has to set it per platform. Getting it wrong is a configuration error, not a runtime
+     * condition: it would otherwise turn every update check on the other platforms into a
+     * `NoMatchingFileException`, because the manifest there can never list that format.
+     */
+    private fun validateExecutableType() {
+        val configured = config.executableType ?: return
+        val required = configured.requiredPlatform() ?: return
+        val current = PlatformInfo.currentPlatform()
+        // An unidentified OS establishes no mismatch — do not fail on platforms we cannot name.
+        if (current == Platform.Unknown) return
+        require(required == current) {
+            "executableType is set to '${configured.id}', a ${required.name} install format, but " +
+                "this process is running on ${current.name}. Set executableType per platform, or " +
+                "leave it null to detect the install format at runtime."
+        }
+    }
+
     public fun isUpdateSupported(): Boolean {
-        val type = resolveExecutableType() ?: return false
+        // An explicitly configured type is an opt-in: it also unlocks MSI, which is never
+        // self-updated when merely detected (see OPT_IN_UPDATABLE_TYPES).
+        config.executableType?.let { return it in OPT_IN_UPDATABLE_TYPES }
+        val type = installTypeDetector.detect() ?: return false
         return type in SELF_UPDATABLE_TYPES
     }
 
@@ -129,11 +159,42 @@ public class PotassiumUpdater(
     /**
      * Returns `true` if the application was launched after an update.
      * Does **not** consume the event — call [consumeUpdateEvent] to clear it.
+     *
+     * Answers `false` whenever an update cannot be positively established, including an
+     * unreadable or malformed marker; it never throws. Both this and [consumeUpdateEvent] are
+     * typically called during startup, where an exception would take the application down.
      */
-    public fun wasJustUpdated(): Boolean = UpdateMarker.exists()
+    public fun wasJustUpdated(): Boolean = peekUpdateEvent() != null
 
-    private fun peekUpdateEvent(): UpdateEvent? {
+    /** The recorded update event, or null when there is no positive evidence of one. Never throws. */
+    private fun peekUpdateEvent(): UpdateEvent? =
+        try {
+            readUpdateEvent()
+        } catch (
+            @Suppress("TooGenericExceptionCaught") _: Exception,
+        ) {
+            // A marker that cannot be read or parsed — e.g. a torn write from a crash during
+            // the non-atomic UpdateMarker.write — is not evidence of an update. Report "not
+            // updated" instead of propagating into the caller's startup path. The file is left
+            // alone: the next update overwrites it, and deleting it here would mean a corrupt
+            // read could discard a marker the caller never got to see.
+            null
+        }
+
+    private fun readUpdateEvent(): UpdateEvent? {
         val (previousVersion, newVersion) = UpdateMarker.read() ?: return null
+        // The marker is written before the installer runs. If the app still reports the exact
+        // version recorded then, the update has not taken effect — either the install failed, or
+        // it is still running and the user reopened the old app — so report no event. Both
+        // strings originate from config.currentVersion (one process generation apart), so strict
+        // equality is the right comparison; parsing would conflate differently-formatted strings
+        // and could falsely pass validation.
+        //
+        // The marker is deliberately kept: an install still in flight will make it valid, and
+        // only consumeUpdateEvent() — which delivers the event — clears it.
+        // Trimmed on both sides: the marker's values are trimmed when read, so comparing them to a
+        // raw currentVersion would let stray whitespace defeat the check entirely.
+        if (previousVersion == config.currentVersion.trim()) return null
         val level = Version.fromString(newVersion).levelFrom(Version.fromString(previousVersion))
         return UpdateEvent(previousVersion, newVersion, level)
     }
@@ -180,8 +241,9 @@ public class PotassiumUpdater(
         val executableType = resolveExecutableType()
 
         // The install format is detected at runtime (APPIMAGE/SNAP/FLATPAK env, electron-builder's
-        // resources/package-type); macOS resolves to ZIP and Windows to NSIS. A null format lets
-        // FileSelector fall back to the platform default. Users can force one via config.executableType.
+        // resources/package-type, the NSIS uninstaller / portable env / WindowsApps path on
+        // Windows); macOS resolves to ZIP. A null format lets FileSelector fall back to the
+        // platform default. Users can force one via config.executableType.
         val format = executableType?.id
 
         val selectedFile =
@@ -247,17 +309,25 @@ public class PotassiumUpdater(
     public companion object {
         private const val HTTP_OK = 200
 
+        /** Types the updater installs when they are auto-detected at runtime. */
         private val SELF_UPDATABLE_TYPES =
             setOf(
                 InstallType.EXE,
                 InstallType.NSIS,
                 InstallType.NSIS_WEB,
-                InstallType.MSI,
                 InstallType.DMG,
                 InstallType.ZIP,
                 InstallType.APPIMAGE,
                 InstallType.DEB,
                 InstallType.RPM,
             )
+
+        /**
+         * Types accepted when [UpdaterConfig.executableType] is set explicitly. MSI is opt-in
+         * only: electron-builder publishes no `.msi` entries in `latest.yml` and per-machine
+         * MSI upgrades require elevation, so MSI installs are treated as managed deployments
+         * (Intune/GPO/SCCM) unless the app opts in and serves a manifest listing the `.msi`.
+         */
+        private val OPT_IN_UPDATABLE_TYPES = SELF_UPDATABLE_TYPES + InstallType.MSI
     }
 }
