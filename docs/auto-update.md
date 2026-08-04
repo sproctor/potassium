@@ -466,15 +466,21 @@ fun UpdateBanner() {
 
 The `installAndRestart()` method launches the platform-specific installer, exits the current process, and relaunches the app after installation:
 
-| Platform | Format | Command |
-|----------|--------|---------|
-| Linux | DEB | `sudo dpkg -i <file>` |
-| Linux | RPM | `sudo rpm -U <file>` |
-| macOS | DMG/PKG | `open <file>` |
-| Windows | EXE/NSIS | `<file> /S --updated` (silent; the updater relaunches the app afterwards) |
-| Windows | MSI (opt-in) | `msiexec /i <file> /passive` |
+| Platform | Format | How it is applied | Relaunches |
+|----------|--------|-------------------|------------|
+| macOS | ZIP | Extracted over the installed `.app` bundle | Yes |
+| macOS | DMG | Mounted, the `.app` copied out, then detached | Yes |
+| macOS | PKG | Handed to the system installer (`open <file>`) | No |
+| Windows | EXE/NSIS | `<file> /S --updated` (silent) | Yes |
+| Windows | MSI (opt-in) | `msiexec /i <file> /passive` | Yes |
+| Linux | AppImage | Replaces the running AppImage file in place | Yes |
+| Linux | DEB | `pkexec dpkg -i <file>` (graphical authentication) | Yes |
+| Linux | RPM | `pkexec rpm -U <file>` (graphical authentication) | Yes |
+| Linux | other | Handed to the desktop (`xdg-open <file>`) | No |
 
-On every platform the app is relaunched by the updater itself with no arguments — the relaunched process never receives installer-protocol flags.
+Every format the updater installs itself waits for the app to exit, applies the update, and then relaunches the app with **no arguments** — the relaunched process never receives installer-protocol flags.
+
+The two hand-off rows are the exception, and cannot relaunch: `open` and `xdg-open` return as soon as the graphical installer starts, so there is no completion for the updater to wait on. Neither format is auto-updatable by default, so `installAndRestart()` reaches them only when `executableType` is set explicitly.
 
 ### Silent Update with `installAndQuit()`
 
