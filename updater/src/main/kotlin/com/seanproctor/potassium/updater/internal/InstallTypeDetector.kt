@@ -69,11 +69,28 @@ internal class InstallTypeDetector(
         return InstallType.NSIS
     }
 
-    /** AppX/MSIX packages run from beneath the system's WindowsApps directory. */
+    /**
+     * Whether the app runs from the system package root, where Windows stages AppX/MSIX packages
+     * (`C:\Program Files\WindowsApps\<identity>\`).
+     *
+     * Anchored to the Program Files roots rather than matching `\WindowsApps\` anywhere in the
+     * path: an ordinary install into a directory that happens to contain that segment — say
+     * `D:\WindowsApps\MyApp\` — is not a packaged app, and treating it as one would report a
+     * format that cannot self-update, silently disabling updates.
+     */
     private fun isWindowsAppsInstall(): Boolean {
-        val exe = env.executablePath() ?: return false
-        return exe.replace('/', '\\').contains("\\WindowsApps\\", ignoreCase = true)
+        val exe = env.executablePath()?.let(::normalizeSeparators) ?: return false
+        return windowsAppsRoots().any { root -> exe.startsWith(root, ignoreCase = true) }
     }
+
+    private fun windowsAppsRoots(): List<String> =
+        PROGRAM_FILES_VARS
+            .mapNotNull { env.getenv(it)?.takeIf(String::isNotBlank) }
+            .plus(DEFAULT_PROGRAM_FILES)
+            .map { "${normalizeSeparators(it).trimEnd('\\')}\\$WINDOWS_APPS_DIR\\" }
+            .distinct()
+
+    private fun normalizeSeparators(path: String): String = path.replace('/', '\\')
 
     /**
      * Reads `resources/package-type`, if present and recognized.
@@ -88,5 +105,12 @@ internal class InstallTypeDetector(
 
     private companion object {
         const val PACKAGE_TYPE_FILE = "package-type"
+        const val WINDOWS_APPS_DIR = "WindowsApps"
+
+        /** Program Files locations, covering 32-bit and WOW64 views as well as a relocated root. */
+        val PROGRAM_FILES_VARS = listOf("ProgramFiles", "ProgramFiles(x86)", "ProgramW6432")
+
+        /** Used alongside the environment, so detection still works if those variables are absent. */
+        const val DEFAULT_PROGRAM_FILES = "C:\\Program Files"
     }
 }

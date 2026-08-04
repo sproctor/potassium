@@ -192,7 +192,9 @@ public class PotassiumUpdater(
         //
         // The marker is deliberately kept: an install still in flight will make it valid, and
         // only consumeUpdateEvent() — which delivers the event — clears it.
-        if (previousVersion == config.currentVersion) return null
+        // Trimmed on both sides: the marker's values are trimmed when read, so comparing them to a
+        // raw currentVersion would let stray whitespace defeat the check entirely.
+        if (previousVersion == config.currentVersion.trim()) return null
         val level = Version.fromString(newVersion).levelFrom(Version.fromString(previousVersion))
         return UpdateEvent(previousVersion, newVersion, level)
     }

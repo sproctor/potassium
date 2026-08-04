@@ -107,6 +107,32 @@ class UpdateEventTest {
     }
 
     @Test
+    fun `whitespace in the app version does not defeat the stale-marker guard`() {
+        val padded =
+            PotassiumUpdater {
+                currentVersion = " 2.0.0 "
+                provider = FakeUpdateProvider()
+            }
+        // Written by that same process, so it records the padded value; the guard must still see
+        // the install as not having taken effect.
+        UpdateMarker.write(" 2.0.0 ", "3.0.0")
+
+        assertFalse(padded.wasJustUpdated())
+        assertNull(padded.consumeUpdateEvent())
+    }
+
+    @Test
+    fun `a version with a trailing newline still round-trips`() {
+        // An untrimmed write would split the record across lines and lose the event entirely.
+        UpdateMarker.write("1.0.0\n", "2.0.0")
+
+        val event = updater.consumeUpdateEvent()
+        assertNotNull(event)
+        assertEquals("1.0.0", event!!.previousVersion)
+        assertEquals("2.0.0", event.newVersion)
+    }
+
+    @Test
     fun `wasJustUpdated is false for an unparseable marker instead of throwing`() {
         // A torn write from a crash mid-update: Version.fromString("1.") throws on the empty group.
         UpdateMarker.write("1.0.0", "1.")

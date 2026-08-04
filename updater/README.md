@@ -14,11 +14,11 @@ it needed vendored in, so it depends on nothing else from Nucleus.
 
 Self-updates desktop apps from an electron-builder-style release manifest (`latest-<os>.yml`):
 
-| Platform | Self-updates | Not self-updated |
-|----------|--------------|------------------|
-| Linux    | AppImage, deb, rpm | snap, flatpak (store-managed) |
+| Platform | Self-updates            | Not self-updated                  |
+|----------|-------------------------|-----------------------------------|
+| Linux    | AppImage, deb, rpm      | snap, flatpak (store-managed)     |
 | Windows  | NSIS (`.exe`), NSIS-web | MSI (opt-in), AppX/MSIX, portable |
-| macOS    | ZIP, DMG | PKG (store-managed) |
+| macOS    | ZIP, DMG                | PKG (store-managed)               |
 
 It checks a provider (GitHub Releases or a generic HTTP server) for a newer version, picks the
 artifact matching how *this* copy was installed, downloads it, verifies its SHA-512, and applies it
@@ -90,8 +90,6 @@ From the repo root:
 ```bash
 ./gradlew :updater:check      # compile + tests + detekt/ktlint
 ```
-
-Kotlin 2.4.10 / JVM 17, `explicitApi()`.
 
 ## Attribution
 

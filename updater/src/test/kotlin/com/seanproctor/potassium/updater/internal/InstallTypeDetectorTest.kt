@@ -116,6 +116,29 @@ class InstallTypeDetectorTest {
     }
 
     @Test
+    fun `windows appx detection honors a relocated Program Files`() {
+        val env =
+            FakeEnv(
+                Platform.Windows,
+                envVars = mapOf("ProgramFiles" to "D:\\Programme"),
+                executable = "D:\\Programme\\WindowsApps\\Pkg_1.0_x64__abc\\App.exe",
+            )
+        assertEquals(InstallType.APPX, detect(env))
+    }
+
+    @Test
+    fun `windows WindowsApps elsewhere in the path is not appx`() {
+        // An ordinary install into a directory that merely contains the segment. Reporting APPX
+        // here would mark a self-updatable install as un-updatable.
+        val env =
+            FakeEnv(
+                Platform.Windows,
+                executable = "D:\\WindowsApps\\MyApp\\App.exe",
+            )
+        assertEquals(InstallType.NSIS, detect(env))
+    }
+
+    @Test
     fun `windows defaults to nsis`() {
         // The only installed Windows format the updater applies, and the only one present in the
         // manifest. MSI announces itself with a marker instead of being inferred from absence.
