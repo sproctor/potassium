@@ -14,13 +14,15 @@ import java.io.File
  * `resources/package-type` file electron-builder writes **per target** into deb/rpm packages,
  * plus the `APPIMAGE` / `SNAP` / `FLATPAK` environment variables.
  *
- * Windows has no per-target marker (all formats package the same shared directory), so
- * detection reads evidence the install itself provides: the `PORTABLE_EXECUTABLE_FILE`
- * environment variable exported by electron-builder's portable launcher, a `WindowsApps`
- * install path (AppX/MSIX), or the `Uninstall <ProductName>.exe` that electron-builder's NSIS
- * installer writes into the install root. An install with none of these is resolved as MSI —
- * the only remaining installed Windows format — which the updater treats as a managed
- * deployment and does not self-update.
+ * Nothing writes that marker on Windows — electron-builder only emits it from its Linux fpm
+ * target, and all Windows formats are packaged from one shared directory, so a marker placed
+ * there would stamp every format alike. It is still read first on Windows, as a deliberate
+ * override for a build that stamps one itself; absent it, detection reads evidence the install
+ * provides: the `PORTABLE_EXECUTABLE_FILE` environment variable exported by electron-builder's
+ * portable launcher, a `WindowsApps` install path (AppX/MSIX), or the
+ * `Uninstall <ProductName>.exe` that electron-builder's NSIS installer writes into the install
+ * root. An install with none of these is resolved as MSI — the only remaining installed Windows
+ * format — which the updater treats as a managed deployment and does not self-update.
  *
  * Returns null when the type cannot be determined (Linux without any marker); selection then
  * falls back to the platform default in [FileSelector]. macOS resolves to [InstallType.ZIP] —
@@ -90,8 +92,13 @@ internal class InstallTypeDetector(
         }.distinct()
 
     /**
-     * Reads electron-builder's per-target `resources/package-type` (or a plugin-written one on
-     * Windows), if present and recognized.
+     * Reads `resources/package-type`, if present and recognized.
+     *
+     * electron-builder writes it from its Linux fpm target only (deb/rpm/pacman, and only when a
+     * publish config is configured), immediately before packaging each target — which is why the
+     * value is per-package there despite the staging directory being shared. On other platforms
+     * no tool writes it; it is honored anyway so a build that stamps its own marker overrides the
+     * evidence-based detection.
      */
     private fun packageType(): InstallType? = InstallType.fromId(AppResources.read(env, PACKAGE_TYPE_FILE))
 

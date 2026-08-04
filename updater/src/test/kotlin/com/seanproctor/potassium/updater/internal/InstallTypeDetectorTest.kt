@@ -5,6 +5,7 @@ import com.seanproctor.potassium.updater.runtime.Platform
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.io.File
 
 class InstallTypeDetectorTest {
     private class FakeEnv(
@@ -30,6 +31,19 @@ class InstallTypeDetectorTest {
 
     private fun detect(env: InstallEnvironment) = InstallTypeDetector(env).detect()
 
+    /**
+     * Production derives lookup keys through [File], which rewrites `/` to `\` on a Windows JVM.
+     * Keys built here go through the same normalization so these tests exercise the real behavior
+     * on both Windows and Linux rather than silently falling through on one of them.
+     */
+    private fun dirKey(path: String): String = File(path).path
+
+    /** Mirrors [AppResources], which appends the resources segment with a literal `/`. */
+    private fun resourceKey(
+        installDir: String,
+        fileName: String,
+    ): String = "${File(installDir).path}/$fileName"
+
     @Test
     fun `linux APPIMAGE env detects AppImage`() {
         val env = FakeEnv(Platform.Linux, envVars = mapOf("APPIMAGE" to "/x/App.AppImage"))
@@ -53,7 +67,7 @@ class InstallTypeDetectorTest {
             FakeEnv(
                 Platform.Linux,
                 properties = mapOf("java.home" to "/opt/app/lib/runtime"),
-                files = mapOf("/opt/app/resources/package-type" to "deb\n"),
+                files = mapOf(resourceKey("/opt/app", "resources/package-type") to "deb\n"),
             )
         assertEquals(InstallType.DEB, detect(env))
     }
@@ -64,7 +78,7 @@ class InstallTypeDetectorTest {
             FakeEnv(
                 Platform.Linux,
                 executable = "/opt/app/bin/app",
-                files = mapOf("/opt/app/bin/resources/package-type" to "rpm"),
+                files = mapOf(resourceKey("/opt/app/bin", "resources/package-type") to "rpm"),
             )
         assertEquals(InstallType.RPM, detect(env))
     }
@@ -81,7 +95,7 @@ class InstallTypeDetectorTest {
             FakeEnv(
                 Platform.Linux,
                 properties = mapOf("java.home" to "/opt/app/lib/runtime"),
-                files = mapOf("/opt/app/resources/package-type" to "pacman"),
+                files = mapOf(resourceKey("/opt/app", "resources/package-type") to "pacman"),
             )
         assertNull(detect(env))
     }
@@ -99,7 +113,7 @@ class InstallTypeDetectorTest {
                 properties = mapOf("java.home" to "C:/Users/u/AppData/Local/Programs/App/runtime"),
                 directories =
                     mapOf(
-                        "C:/Users/u/AppData/Local/Programs/App" to listOf("App.exe", "Uninstall App.exe"),
+                        dirKey("C:/Users/u/AppData/Local/Programs/App") to listOf("App.exe", "Uninstall App.exe"),
                     ),
             )
         assertEquals(InstallType.NSIS, detect(env))
@@ -111,7 +125,7 @@ class InstallTypeDetectorTest {
             FakeEnv(
                 Platform.Windows,
                 executable = "C:/Programs/App/App.exe",
-                directories = mapOf("C:/Programs/App" to listOf("App.exe", "uninstall.exe")),
+                directories = mapOf(dirKey("C:/Programs/App") to listOf("App.exe", "uninstall.exe")),
             )
         assertEquals(InstallType.NSIS, detect(env))
     }
@@ -142,7 +156,7 @@ class InstallTypeDetectorTest {
             FakeEnv(
                 Platform.Windows,
                 properties = mapOf("java.home" to "C:/Program Files/App/runtime"),
-                directories = mapOf("C:/Program Files/App" to listOf("App.exe")),
+                directories = mapOf(dirKey("C:/Program Files/App") to listOf("App.exe")),
             )
         assertEquals(InstallType.MSI, detect(env))
     }
@@ -154,14 +168,31 @@ class InstallTypeDetectorTest {
 
     @Test
     fun `windows package-type wins over uninstaller evidence`() {
+        // An explicitly stamped marker is a deliberate override: it must beat the evidence chain
+        // even when that evidence points elsewhere. The NSIS uninstaller below is what detection
+        // would otherwise key on, so this fails if the marker is ever demoted or dropped.
         val env =
             FakeEnv(
                 Platform.Windows,
                 properties = mapOf("java.home" to "C:/Program Files/App/runtime"),
-                files = mapOf("C:/Program Files/App/resources/package-type" to "msi"),
-                directories = mapOf("C:/Program Files/App" to listOf("App.exe", "Uninstall App.exe")),
+                files = mapOf(resourceKey("C:/Program Files/App", "resources/package-type") to "msi"),
+                directories = mapOf(dirKey("C:/Program Files/App") to listOf("App.exe", "Uninstall App.exe")),
             )
         assertEquals(InstallType.MSI, detect(env))
+    }
+
+    @Test
+    fun `windows package-type can force nsis where evidence says otherwise`() {
+        // The inverse direction, which the msi-over-nsis case alone cannot prove: without the
+        // marker this install has no evidence at all and would resolve to MSI.
+        val env =
+            FakeEnv(
+                Platform.Windows,
+                properties = mapOf("java.home" to "C:/Program Files/App/runtime"),
+                files = mapOf(resourceKey("C:/Program Files/App", "resources/package-type") to "nsis"),
+                directories = mapOf(dirKey("C:/Program Files/App") to listOf("App.exe")),
+            )
+        assertEquals(InstallType.NSIS, detect(env))
     }
 
     @Test
