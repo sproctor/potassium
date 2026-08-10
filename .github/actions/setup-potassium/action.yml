@@ -135,9 +135,16 @@ runs:
         /snap/bin/snapcraft --version
 
     # ── Gradle ───────────────────────────────────────────────────────────
+    # cache-provider: basic is a licensing choice, not a tuning knob. v6's default 'enhanced'
+    # caching is gradle-actions-caching, a proprietary component outside the action's MIT
+    # license whose Terms of Use a consumer accepts by running it. This action is used by other
+    # people's builds, so it must not opt them into that on their behalf; 'basic' is the MIT
+    # implementation. Dropping this input silently restores the proprietary default.
     - name: Setup Gradle
       if: inputs.setup-gradle == 'true'
       uses: gradle/actions/setup-gradle@v6
+      with:
+        cache-provider: basic
 
     # ── Node.js ──────────────────────────────────────────────────────────
     - name: Setup Node.js
