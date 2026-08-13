@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- **Notarization resumes instead of re-uploading** — a `notarize<Format>` task now checks the submission recorded by an earlier run before uploading anything. `xcrun notarytool submit --wait` polls Apple for minutes and is the step most likely to be lost to a dropped connection or a killed process, and re-running it abandoned a submission that was often about to be accepted. An already-accepted submission is stapled without re-uploading, one still in progress is waited for, and one Apple rejected fails the build with its log rather than silently paying for a second round trip on identical bytes. The record is keyed by the artifact's SHA-512, so a rebuilt artifact is always submitted fresh, and it is deleted once notarization completes.
+
 ## v0.4.1
 
 **Released: 2026-08-04**

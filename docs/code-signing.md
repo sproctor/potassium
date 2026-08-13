@@ -199,6 +199,19 @@ This mode is recommended for CI/CD: API keys can be revoked independently of the
 
 > Configuring more than one mode in the same build is rejected at validation time. Pick one.
 
+#### Resuming an interrupted notarization
+
+Uploading is the fast part of notarization; waiting for Apple's verdict is where a run is most likely to die (a dropped connection, a killed process, a cancelled CI job). Each `notarize<Format>` task records the submission it got back from Apple in `build/tmp/notarize<Format>/notarization-request.properties`, together with the SHA-512 of the artifact it uploaded, and consults that record before uploading anything:
+
+| Recorded submission | What the task does |
+|---------------------|--------------------|
+| `Accepted` | Skips the upload and staples the existing verdict |
+| `In Progress` | Waits for that submission instead of uploading again |
+| `Invalid` / `Rejected` | Fails with Apple's log — the same bytes would only be rejected again |
+| Unknown to Apple, or unreadable | Uploads normally |
+
+A record is only used when its hash matches the artifact on disk, so a rebuilt artifact is always submitted fresh, and it is deleted once the task finishes. Re-running the task therefore costs one status query rather than a second full round trip. To force a new submission, delete the properties file (or run `clean`).
+
 ### CI/CD: macOS Signing
 
 For GitHub Actions, import the certificate into a temporary keychain:
