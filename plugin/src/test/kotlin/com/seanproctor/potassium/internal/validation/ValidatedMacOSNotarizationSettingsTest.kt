@@ -3,6 +3,7 @@ package com.seanproctor.potassium.internal.validation
 import com.seanproctor.potassium.dsl.MacOSNotarizationSettings
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -267,5 +268,34 @@ class ValidatedMacOSNotarizationSettingsTest {
             args,
         )
         assertNull(stdin)
+    }
+
+    @Test
+    fun `every credential on the notarytool command line can be redacted`() {
+        val modes =
+            listOf(
+                NotarizationAuth.AppleId("dev@example.com", "@keychain:AC_PASSWORD", "TEAMID"),
+                NotarizationAuth.KeychainProfile("AC_PASSWORD", null),
+                NotarizationAuth.KeychainProfile("AC_PASSWORD", "/path/to/login.keychain-db"),
+                NotarizationAuth.ApiKey("/path/to/AuthKey.p8", "ABC123", "issuer-uuid"),
+            )
+
+        for (auth in modes) {
+            // Everything that is not a flag identifies the Apple account, and build logs are kept,
+            // so nothing on the command line may be missing from the redaction set.
+            val args = auth.toNotaryToolArgs().first
+            val values = args.filterNot { it.startsWith("--") }.toSet()
+            assertEquals(values, auth.toNotaryToolCredentialValues())
+        }
+    }
+
+    @Test
+    fun `the apple-id password never reaches the command line`() {
+        val auth = NotarizationAuth.AppleId("dev@example.com", "@keychain:AC_PASSWORD", "TEAMID")
+        val (args, stdin) = auth.toNotaryToolArgs()
+
+        assertFalse(args.contains("@keychain:AC_PASSWORD"))
+        assertFalse(auth.toNotaryToolCredentialValues().contains("@keychain:AC_PASSWORD"))
+        assertEquals("@keychain:AC_PASSWORD", stdin)
     }
 }
