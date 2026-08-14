@@ -16,6 +16,7 @@ import com.seanproctor.potassium.internal.utils.MacUtils
 import com.seanproctor.potassium.internal.utils.ioFile
 import com.seanproctor.potassium.internal.validation.ValidatedMacOSNotarizationSettings
 import com.seanproctor.potassium.internal.validation.toNotaryToolArgs
+import com.seanproctor.potassium.internal.validation.toNotaryToolCredentialValues
 import com.seanproctor.potassium.internal.validation.validate
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.Input
@@ -296,7 +297,6 @@ abstract class AbstractNotarizationTask
             toolOutput: String,
         ): Nothing {
             val appleLog = fetchNotarizationLog(notarization, submissionId)
-            val authArgs = notarization.auth.toNotaryToolArgs().first
             val errMsg =
                 buildString {
                     appendLine("Notarization failed for '${packageFile.name}'")
@@ -317,8 +317,10 @@ abstract class AbstractNotarizationTask
                         appendLine("Apple notarization log:")
                         appendLine(appleLog)
                     } else if (submissionId != null) {
+                        // Spelled out rather than filled in: the auth arguments carry the Apple ID,
+                        // team, keychain profile and API key identifiers, and build logs are kept.
                         appendLine("To fetch the log manually run:")
-                        appendLine("  xcrun notarytool log $submissionId ${authArgs.joinToString(" ")}")
+                        appendLine("  xcrun notarytool log $submissionId <the credentials this build notarizes with>")
                     }
                     if (submissionId != null && (status == null || status == NotarizationStatus.InProgress)) {
                         // Apple never reached a verdict, so the upload is not wasted: the saved
@@ -366,6 +368,9 @@ abstract class AbstractNotarizationTask
                         },
                     stdinStr = stdin,
                     processStdout = { logContent = it },
+                    // This is the one notarytool call that reports a failure by throwing the
+                    // command line back at us, and that message is logged below.
+                    sensitiveArgs = notarization.auth.toNotaryToolCredentialValues(),
                 )
                 logContent.ifEmpty { null }
             } catch (e: IllegalStateException) {

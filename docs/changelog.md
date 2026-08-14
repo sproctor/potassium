@@ -5,6 +5,7 @@
 ### Improvements
 
 - **Notarization resumes instead of re-uploading** — a `notarize<Format>` task now checks the submission recorded by an earlier run before uploading anything. `xcrun notarytool submit --wait` polls Apple for minutes and is the step most likely to be lost to a dropped connection or a killed process, and re-running it abandoned a submission that was often about to be accepted. An already-accepted submission is stapled without re-uploading, one still in progress is waited for, and one Apple rejected fails the build with its log rather than silently paying for a second round trip on identical bytes. The record is keyed by the artifact's SHA-512, so a rebuilt artifact is always submitted fresh, and it is deleted once notarization completes.
+- **Notarization credentials stay out of build logs** — a failed notarization printed a ready-to-run `xcrun notarytool log` command with the authentication arguments filled in, and a failed log fetch echoed the whole command line, putting the Apple ID, team ID, keychain profile, or API key and issuer identifiers into logs that CI retains. The manual command is now printed with a credentials placeholder, and the log fetch redacts those values. (The app-specific password was never on the command line; it is fed through stdin.)
 
 ## v0.4.1
 
