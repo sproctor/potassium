@@ -5,6 +5,7 @@ package com.seanproctor.potassium.internal
 import com.seanproctor.potassium.dsl.FileAssociation
 import com.seanproctor.potassium.dsl.GraalvmSettings
 import com.seanproctor.potassium.dsl.PackagingBackend
+import com.seanproctor.potassium.dsl.UrlProtocol
 import com.seanproctor.potassium.internal.InfoPlistBuilder.InfoPlistValue.InfoPlistListValue
 import com.seanproctor.potassium.internal.InfoPlistBuilder.InfoPlistValue.InfoPlistMapValue
 import com.seanproctor.potassium.internal.InfoPlistBuilder.InfoPlistValue.InfoPlistStringValue
@@ -260,7 +261,15 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
             val winPkgName = packageNameProvider
             val winPkgVersion = provider { app.nativeDistributions.packageVersion ?: "1.0.0" }
             val winCopyright = provider { app.nativeDistributions.copyright.orEmpty() }
-            val winDescription = provider { app.nativeDistributions.description ?: packageNameProvider.get() }
+            // FileDescription is the string Windows Task Manager shows as the process
+            // "Name", so it must carry the human app name (appName), not the description.
+            // Falls back to packageName when appName is unset.
+            val winDisplayName =
+                provider {
+                    app.nativeDistributions.appName
+                        ?: app.nativeDistributions.packageName
+                        ?: packageNameProvider.get()
+                }
             val winIconFile =
                 app.nativeDistributions.windows.iconFile
                     .orElse(unpackDefaultResources.flatMap { it.resources.windowsIcon })
@@ -281,7 +290,7 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
                 inputs.property("pkgName", winPkgName)
                 inputs.property("pkgVersion", winPkgVersion)
                 inputs.property("copyright", winCopyright)
-                inputs.property("description", winDescription)
+                inputs.property("displayName", winDisplayName)
                 inputs.property("imageName", imageName)
 
                 doLast {
@@ -291,7 +300,7 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
                     val pkgName = winPkgName.get()
                     val pkgVersion = winPkgVersion.get()
                     val copyright = winCopyright.get()
-                    val taskDescription = winDescription.get()
+                    val displayName = winDisplayName.get()
                     val versionParts = pkgVersion.split(".").map { it.toIntOrNull() ?: 0 }
                     val v1 = versionParts.getOrElse(0) { 0 }
                     val v2 = versionParts.getOrElse(1) { 0 }
@@ -326,6 +335,11 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
 
                     val rcContent =
                         buildString {
+                            // The .rc is written as UTF-8 below; tell rc.exe to parse it as
+                            // UTF-8 instead of the system ANSI codepage, otherwise non-ASCII
+                            // VERSIONINFO strings (Hebrew/Arabic/CJK app names) become mojibake.
+                            appendLine("#pragma code_page(65001)")
+                            appendLine()
                             appendLine("1 ICON \"${winIconFile.get().asFile.absolutePath.replace("\\", "\\\\")}\"")
                             appendLine()
                             // Embed DPI-aware manifest (RT_MANIFEST = 24)
@@ -339,12 +353,12 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
                             appendLine("  BEGIN")
                             appendLine("    BLOCK \"040904B0\"")
                             appendLine("    BEGIN")
-                            appendLine("      VALUE \"FileDescription\", \"$taskDescription\"")
+                            appendLine("      VALUE \"FileDescription\", \"$displayName\"")
                             appendLine("      VALUE \"FileVersion\", \"$pkgVersion\"")
                             appendLine("      VALUE \"InternalName\", \"$pkgName\"")
                             appendLine("      VALUE \"LegalCopyright\", \"$copyright\"")
                             appendLine("      VALUE \"OriginalFilename\", \"${imageName.get()}.exe\"")
-                            appendLine("      VALUE \"ProductName\", \"$pkgName\"")
+                            appendLine("      VALUE \"ProductName\", \"$displayName\"")
                             appendLine("      VALUE \"ProductVersion\", \"$pkgVersion\"")
                             appendLine("    END")
                             appendLine("  END")
@@ -759,7 +773,7 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
                 OS.MacOS -> {
                     val dir =
                         appTmpDir.map {
-                            it.dir("graalvm/output/${packageNameProvider.get()}.app/Contents/MacOS")
+                            it.dir("graalvm/output/${resolvedMacBundleNameProvider().get()}.app/Contents/MacOS")
                         }
                     dir.map { it.file(imageName.get()) }
                 }
@@ -803,7 +817,7 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
     unpackDefaultResources: TaskProvider<AbstractUnpackDefaultApplicationResourcesTask>,
     packageUberJar: TaskProvider<Jar>,
 ): TaskProvider<DefaultTask> {
-    val appBundleName = packageNameProvider.map { "$it.app" }
+    val appBundleName = resolvedMacBundleNameProvider().map { "$it.app" }
     val appBundleDir =
         appTmpDir.map { tmpDir ->
             tmpDir.dir("graalvm/output/${appBundleName.get()}/Contents")
@@ -1019,6 +1033,10 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
         app.nativeDistributions.macOS.fileAssociations
             .toSet()
 
+    // Capture URL protocol handlers (deep linking) at configuration time for the Info.plist
+    val plistUrlProtocols: List<UrlProtocol> =
+        app.nativeDistributions.protocols.toList()
+
     // Build a mapping from icon File -> unique name inside Resources/ (avoids collisions)
     val fileAssociationIconMapping: Map<File, File> =
         run {
@@ -1067,6 +1085,7 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
             inputs.property("copyright", plistCopyright.orEmpty())
             inputs.property("iconFileName", plistIconFileName)
             inputs.property("fileAssociations", plistFileAssociations.toString())
+            inputs.property("urlProtocols", plistUrlProtocols.toString())
 
             doLast {
                 val plist = InfoPlistBuilder()
@@ -1112,6 +1131,17 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
                                         InfoPlistListValue(InfoPlistStringValue("****")),
                                 )
                             }
+                }
+
+                if (plistUrlProtocols.isNotEmpty()) {
+                    plist[PlistKeys.CFBundleURLTypes] =
+                        plistUrlProtocols.map { protocol ->
+                            InfoPlistMapValue(
+                                PlistKeys.CFBundleURLName to InfoPlistStringValue(protocol.name),
+                                PlistKeys.CFBundleURLSchemes to
+                                    InfoPlistListValue(protocol.schemes.map { InfoPlistStringValue(it) }),
+                            )
+                        }
                 }
 
                 plistFile
@@ -1498,6 +1528,7 @@ private fun JvmApplicationContext.configureGraalvmElectronBuilderPackaging(
             )
 
             packageName.set(packageNameProvider)
+            macBundleName.set(resolvedMacBundleNameProvider())
             packageVersion.set(resolvedPackageVersion())
 
             // Only wire platform-specific icons/entitlements for the current OS

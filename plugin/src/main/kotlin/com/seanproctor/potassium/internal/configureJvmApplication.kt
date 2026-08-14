@@ -7,6 +7,8 @@
 
 package com.seanproctor.potassium.internal
 
+import com.seanproctor.potassium.dsl.AotCacheCompatibility
+import com.seanproctor.potassium.dsl.AotCacheSettings
 import com.seanproctor.potassium.dsl.PackagingBackend
 import com.seanproctor.potassium.dsl.TargetFormat
 import com.seanproctor.potassium.internal.utils.Arch
@@ -21,6 +23,7 @@ import com.seanproctor.potassium.internal.utils.ioFileOrNull
 import com.seanproctor.potassium.internal.utils.javaExecutable
 import com.seanproctor.potassium.internal.utils.jdkArch
 import com.seanproctor.potassium.internal.utils.provider
+import com.seanproctor.potassium.internal.validation.validateMacBundleName
 import com.seanproctor.potassium.internal.validation.validatePackageVersion
 import com.seanproctor.potassium.internal.validation.validatePublishProviders
 import com.seanproctor.potassium.tasks.AbstractCheckNativeDistributionRuntime
@@ -40,6 +43,7 @@ import com.seanproctor.potassium.tasks.AbstractSuggestModulesTask
 import com.seanproctor.potassium.tasks.AbstractUnpackDefaultApplicationResourcesTask
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.Sync
@@ -73,6 +77,7 @@ internal fun JvmApplicationContext.configureJvmApplication() {
     }
 
     validatePackageVersion()
+    validateMacBundleName()
     validatePublishProviders()
     val commonTasks = configureCommonJvmDesktopTasks()
     configurePackagingTasks(commonTasks)
@@ -306,6 +311,7 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
                 distributableDir.set(createDistributable.flatMap { it.destinationDir })
                 javaHome.set(app.javaHomeProvider)
                 javaRuntimePropertiesFile.set(commonTasks.checkRuntime.flatMap { it.javaRuntimePropertiesFile })
+                applyAotCacheSettings(app.nativeDistributions.aotCache)
                 if (currentOS == OS.MacOS) {
                     val mac = app.nativeDistributions.macOS
                     val defaultResources = commonTasks.unpackDefaultResources
@@ -428,6 +434,7 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
                         distributableDir.set(createSandboxedDistributable.flatMap { it.destinationDir })
                         javaHome.set(app.javaHomeProvider)
                         javaRuntimePropertiesFile.set(commonTasks.checkRuntime.flatMap { it.javaRuntimePropertiesFile })
+                        applyAotCacheSettings(app.nativeDistributions.aotCache)
                         if (currentOS == OS.MacOS) {
                             val mac = app.nativeDistributions.macOS
                             val defaultResources = commonTasks.unpackDefaultResources
@@ -578,6 +585,17 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
     }
 }
 
+/**
+ * Maps the `aotCache { }` DSL onto the training task.
+ *
+ * [AotCacheCompatibility.COMPATIBILITY] (the default) disables the cached adapter code, which is
+ * generated for the build machine CPU and crashes with an illegal instruction on narrower CPUs.
+ */
+private fun AbstractGenerateAotCacheTask.applyAotCacheSettings(settings: AotCacheSettings) {
+    adapterCaching.set(settings.compatibility == AotCacheCompatibility.NATIVE)
+    extraTrainingJvmArgs.set(settings.extraTrainingJvmArgs.toList())
+}
+
 private fun JvmApplicationContext.configureProguardTask(
     proguard: AbstractProguardTask,
     unpackDefaultResources: TaskProvider<AbstractUnpackDefaultApplicationResourcesTask>,
@@ -611,6 +629,23 @@ private fun JvmApplicationContext.configureProguardTask(
 
         dependsOn(unpackDefaultResources)
         defaultProguardRulesFile.set(unpackDefaultResources.flatMap { it.resources.defaultProguardRules })
+
+        // When obfuscation is on, inject framework name-preservation rules. Compose and the
+        // Kotlin(x) runtimes are resolved by their original names at runtime (Compose compiler,
+        // reflection, serialization), so renaming them crashes the app (e.g.
+        // ClassNotFoundException: androidx.compose.runtime.Composer). Only the application's own
+        // packages stay obfuscated. Not added when obfuscate is off, so shrinking is unaffected.
+        configurationFiles.from(
+            settings.obfuscate.flatMap { obfuscate ->
+                if (obfuscate) {
+                    unpackDefaultResources
+                        .flatMap { it.resources.obfuscationSafetyRules }
+                        .map { listOf(it) }
+                } else {
+                    project.provider { emptyList<RegularFile>() }
+                }
+            },
+        )
 
         maxHeapSize.set(settings.maxHeapSize)
         destinationDir.set(appTmpDir.dir("proguard"))
@@ -663,7 +698,14 @@ private fun JvmApplicationContext.configurePackageTask(
     app.nativeDistributions.let { executables ->
         packageTask.packageName.set(packageNameProvider)
         packageTask.appName.set(project.provider { executables.appName })
-        packageTask.packageDescription.set(executables.description)
+        packageTask.macBundleName.set(resolvedMacBundleNameProvider())
+        // For Windows: jpackage's --description becomes the FileDescription in the .exe
+        // version resource (shown as "Name" in Task Manager), so it must be the human app
+        // name, not the description. Falls back to packageName when appName is unset.
+        // (This matches the behavior of GraalVM native-image and electron-builder.)
+        packageTask.packageDescription.set(
+            project.provider { executables.appName ?: packageNameProvider.get() },
+        )
         packageTask.packageCopyright.set(executables.copyright)
         packageTask.packageVendor.set(executables.vendor)
         // jpackage app-image: use the jpackage-safe version.
@@ -750,6 +792,7 @@ private fun JvmApplicationContext.configureElectronBuilderPackageTask(
     )
 
     packageTask.packageName.set(packageNameProvider)
+    packageTask.macBundleName.set(resolvedMacBundleNameProvider())
     packageTask.executableName.set(
         project.provider {
             val dist = app.nativeDistributions

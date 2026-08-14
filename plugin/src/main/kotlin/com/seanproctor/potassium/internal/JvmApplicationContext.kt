@@ -62,6 +62,26 @@ internal data class JvmApplicationContext(
         get() = project.provider { appInternal.nativeDistributions.packageName ?: project.name }
 
     /**
+     * Resolves the name of the macOS `.app` bundle directory, shared by every macOS packaging
+     * backend so that the DMG, the ZIP, the PKG, the raw app image and the GraalVM bundle all ship
+     * the app under the same name. See [resolveMacBundleName].
+     *
+     * Only meaningful on macOS; on other platforms it degrades to the resolved package name.
+     */
+    fun resolvedMacBundleNameProvider(): Provider<String> =
+        project.provider {
+            if (currentOS != OS.MacOS) {
+                return@provider packageNameProvider.get()
+            }
+            val dist = appInternal.nativeDistributions
+            resolveMacBundleName(
+                distributions = dist,
+                macOS = dist.macOS,
+                projectName = project.name,
+            )
+        }
+
+    /**
      * Resolves the platform-specific application ID:
      * - macOS: bundleID > macOS.packageName > root packageName > project.name
      * - Linux: linux.packageName > root packageName > project.name

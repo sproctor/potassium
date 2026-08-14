@@ -21,8 +21,10 @@ import com.seanproctor.potassium.internal.MacAssetsTool
 import com.seanproctor.potassium.internal.MacSigner
 import com.seanproctor.potassium.internal.MacSignerImpl
 import com.seanproctor.potassium.internal.NoCertificateSigner
+import com.seanproctor.potassium.internal.PathingJarClasspath
 import com.seanproctor.potassium.internal.PlistKeys
 import com.seanproctor.potassium.internal.SKIKO_LIBRARY_PATH
+import com.seanproctor.potassium.internal.applyMacBundleName
 import com.seanproctor.potassium.internal.cliArg
 import com.seanproctor.potassium.internal.files.FileCopyingProcessor
 import com.seanproctor.potassium.internal.files.MacJarSignFileCopyingProcessor
@@ -36,6 +38,7 @@ import com.seanproctor.potassium.internal.files.mangledName
 import com.seanproctor.potassium.internal.files.normalizedPath
 import com.seanproctor.potassium.internal.files.transformJar
 import com.seanproctor.potassium.internal.javaOption
+import com.seanproctor.potassium.internal.macAppBundleDir
 import com.seanproctor.potassium.internal.utils.OS
 import com.seanproctor.potassium.internal.utils.clearDirs
 import com.seanproctor.potassium.internal.utils.currentArch
@@ -97,7 +100,10 @@ import kotlin.io.path.isRegularFile
  * by electron-builder via [AbstractElectronBuilderPackageTask].
  */
 @DisableCachingByDefault(because = "Depends on external jpackage tool")
-@Suppress("UnnecessaryAbstractClass")
+// LargeClass: this is the forked Compose Desktop jpackage task; it drives the whole app-image
+// pipeline (arg assembly, macOS signing/notarization prep, runtime patching) and splitting it
+// would diverge from upstream for no functional gain.
+@Suppress("UnnecessaryAbstractClass", "LargeClass")
 abstract class AbstractJPackageTask
     @Inject
     constructor(
@@ -166,6 +172,14 @@ abstract class AbstractJPackageTask
         @get:Input
         @get:Optional
         val appName: Property<String> = objects.nullableProperty()
+
+        /**
+         * Name of the macOS `.app` bundle directory produced by this task, without the `.app`
+         * extension. See [applyMacBundleName].
+         */
+        @get:Input
+        @get:Optional
+        val macBundleName: Property<String> = objects.nullableProperty()
 
         @get:Input
         @get:Optional
@@ -294,8 +308,10 @@ abstract class AbstractJPackageTask
                         }
                     }
                 }
-            val appDir = destinationDir.ioFile.resolve("${packageName.get()}.app")
-            val iconsDir = appDir.resolve("Contents").resolve("Resources")
+            val iconsDir =
+                macAppBundleDir(destinationDir.ioFile, packageName.get(), macBundleName.orNull)
+                    .resolve("Contents")
+                    .resolve("Resources")
             if (iconsDir.exists()) {
                 iconsDir.deleteRecursively()
             }
@@ -583,6 +599,11 @@ abstract class AbstractJPackageTask
         override fun checkResult(result: ExecResult) {
             super.checkResult(result)
             modifyRuntimeOnMacOsIfNeeded()
+            // Linux only: shrink the jpackage launcher's serialized classpath so the parent
+            // process's single pipe read cannot short-read (JDK-8380085).
+            if (targetFormat == TargetFormat.JpackageImage) {
+                PathingJarClasspath.collapseInLinuxAppImage(destinationDir.ioFile, packageName.get(), logger)
+            }
             val outputFile = findOutputFileOrDir(destinationDir.ioFile, targetFormat)
             logger.lifecycle("The distribution is written to ${outputFile.canonicalPath}")
         }
@@ -591,7 +612,9 @@ abstract class AbstractJPackageTask
         private fun modifyRuntimeOnMacOsIfNeeded() {
             if (currentOS != OS.MacOS || targetFormat != TargetFormat.JpackageImage) return
 
-            val appDir = destinationDir.ioFile.resolve("${packageName.get()}.app")
+            // Renames jpackage's `<packageName>.app` to `<macBundleName>.app` before signing, so
+            // the signature is produced against the layout every macOS artifact ships.
+            val appDir = applyMacBundleName(destinationDir.ioFile, packageName.get(), macBundleName.orNull, logger)
             val runtimeDir = appDir.resolve("Contents/runtime")
 
             macAssetsTool.assetsFile(workingDir.ioFile).apply {

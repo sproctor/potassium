@@ -52,6 +52,8 @@ internal class ElectronBuilderConfigGenerator {
         executableName: String? = null,
         dmgBackgroundOverride: File? = null,
         dmgWindowOverride: DmgWindowOverride? = null,
+        nsisProtocolInclude: File? = null,
+        macBundleName: String? = null,
     ): String {
         val formats = targetFormats.filter { it.isCompatibleWithCurrentOS }
         require(formats.isNotEmpty()) {
@@ -60,8 +62,12 @@ internal class ElectronBuilderConfigGenerator {
         val yaml = StringBuilder()
 
         // --- Common settings ---
+        // On macOS the product name must equal the prepackaged bundle's directory name: the DMG
+        // target stages the app as `${productFilename}.app` while the ZIP target archives the
+        // directory verbatim, so any mismatch ships two differently named bundles for one release.
         val resolvedProductName =
-            distributions.appName ?: distributions.packageName ?: executableName
+            macBundleName?.takeIf { currentOS == OS.MacOS && it.isNotBlank() }
+                ?: distributions.appName ?: distributions.packageName ?: executableName
                 ?: error(
                     "No appName, packageName, or executableName available for electron-builder config",
                 )
@@ -112,6 +118,7 @@ internal class ElectronBuilderConfigGenerator {
                     targetArch,
                     windowsIconOverride,
                     executableName,
+                    nsisProtocolInclude,
                 )
             OS.Linux ->
                 generateLinuxConfig(
@@ -266,6 +273,7 @@ internal class ElectronBuilderConfigGenerator {
         targetArch: Arch,
         windowsIconOverride: File?,
         executableName: String?,
+        nsisProtocolInclude: File? = null,
     ) {
         yaml.appendLine("win:")
         yaml.appendLine("  target:")
@@ -292,12 +300,12 @@ internal class ElectronBuilderConfigGenerator {
             if (TargetFormat.Nsis in targetFormats) {
                 appendArtifactName(yaml, distributions.artifactName, TargetFormat.Nsis, "  ")
             }
-            generateNsisSettings(yaml, distributions.windows.nsis, "  ")
+            generateNsisSettings(yaml, distributions.windows.nsis, "  ", nsisProtocolInclude)
         }
         if (TargetFormat.NsisWeb in targetFormats) {
             yaml.appendLine("nsisWeb:")
             appendArtifactName(yaml, distributions.artifactName, TargetFormat.NsisWeb, "  ")
-            generateNsisSettings(yaml, distributions.windows.nsis, "  ")
+            generateNsisSettings(yaml, distributions.windows.nsis, "  ", nsisProtocolInclude)
         }
         if (TargetFormat.Msi in targetFormats) {
             yaml.appendLine("msi:")
@@ -404,6 +412,7 @@ internal class ElectronBuilderConfigGenerator {
         yaml: StringBuilder,
         nsis: NsisSettings,
         indent: String,
+        protocolInclude: File? = null,
     ) {
         yaml.appendLine("${indent}oneClick: ${nsis.oneClick}")
         yaml.appendLine("${indent}allowElevation: ${nsis.allowElevation}")
@@ -415,7 +424,7 @@ internal class ElectronBuilderConfigGenerator {
         yaml.appendLine("${indent}deleteAppDataOnUninstall: ${nsis.deleteAppDataOnUninstall}")
         yaml.appendLine("${indent}warningsAsErrors: false")
 
-        appendNsisFileSettings(yaml, nsis, indent)
+        appendNsisFileSettings(yaml, nsis, indent, protocolInclude)
 
         if (nsis.multiLanguageInstaller) {
             yaml.appendLine("${indent}multiLanguageInstaller: true")
@@ -432,6 +441,7 @@ internal class ElectronBuilderConfigGenerator {
         yaml: StringBuilder,
         nsis: NsisSettings,
         indent: String,
+        protocolInclude: File? = null,
     ) {
         appendIfNotNull(
             yaml,
@@ -459,7 +469,8 @@ internal class ElectronBuilderConfigGenerator {
             "${indent}include",
             nsis.includeScript.orNull
                 ?.asFile
-                ?.absolutePath,
+                ?.absolutePath
+                ?: protocolInclude?.absolutePath,
         )
         appendIfNotNull(
             yaml,
@@ -520,7 +531,7 @@ internal class ElectronBuilderConfigGenerator {
         }
     }
 
-    private fun generateLinuxConfig(
+    internal fun generateLinuxConfig(
         yaml: StringBuilder,
         distributions: JvmApplicationDistributions,
         targetFormats: List<TargetFormat>,
@@ -570,6 +581,16 @@ internal class ElectronBuilderConfigGenerator {
                 }
             }
             appendIfNotNull(yaml, "  afterInstall", linuxAfterInstallTemplate?.absolutePath)
+            // fpm-generated RPMs list only files, never %dir entries for the app's own
+            // directory tree. The jpackage launcher (libapplauncher.so) discovers the app
+            // and runtime dirs by scanning `rpm -ql <pkg>` for paths ending in /app and
+            // /runtime; without directory entries those scans find nothing, so the launcher
+            // cannot locate its .cfg and dies with `Error opening "<app>.cfg"` on Fedora/RHEL.
+            // --rpm-auto-add-directories makes fpm own every payload directory (while still
+            // excluding the standard filesystem-package dirs), mirroring what jpackage's own
+            // template.spec does via `comm -23` against the filesystem package.
+            yaml.appendLine("  fpm:")
+            yaml.appendLine("    - \"--rpm-auto-add-directories\"")
         }
         if (TargetFormat.Snap in targetFormats) {
             generateSnapConfig(yaml, distributions.linux.snap)
