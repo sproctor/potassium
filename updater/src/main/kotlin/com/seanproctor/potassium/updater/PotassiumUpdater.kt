@@ -23,12 +23,19 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.file.Files
 import kotlin.coroutines.cancellation.CancellationException
 
 public class PotassiumUpdater(
-    private val config: UpdaterConfig,
+    config: UpdaterConfig,
 ) {
-    public val currentVersion: String get() = config.currentVersion
+    /**
+     * The config is validated and frozen here, once: a missing provider fails at construction,
+     * and mutating the [UpdaterConfig] afterwards has no effect on this updater.
+     */
+    private val config: ResolvedUpdaterConfig = config.resolve()
+
+    public val currentVersion: String get() = this.config.currentVersion
 
     public val channel: String
         get() = resolveChannel()
@@ -106,9 +113,11 @@ public class PotassiumUpdater(
         flow {
             pendingUpdateVersion = info.version
             val targetFile = info.currentFile
-            val tempDir = System.getProperty("java.io.tmpdir")
-            val tempFile = File(tempDir, "${targetFile.fileName}.download")
-            val finalFile = File(tempDir, targetFile.fileName)
+            // A fresh, owner-only (0700 on POSIX) staging directory: a predictable path in the
+            // shared temp dir would be a pre-created-file/symlink hazard on multi-user systems.
+            val stagingDir = Files.createTempDirectory("potassium-update-").toFile()
+            val tempFile = File(stagingDir, "${targetFile.fileName}.download")
+            val finalFile = File(stagingDir, targetFile.fileName)
 
             try {
                 val engine =
@@ -120,15 +129,15 @@ public class PotassiumUpdater(
                     )
                 engine.execute(info, targetFile, tempFile, finalFile) { emit(it) }
             } catch (e: UpdateException) {
-                tempFile.delete()
+                stagingDir.deleteRecursively()
                 throw e
             } catch (e: CancellationException) {
-                tempFile.delete()
+                stagingDir.deleteRecursively()
                 throw e
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception,
             ) {
-                tempFile.delete()
+                stagingDir.deleteRecursively()
                 throw NetworkException("Download failed", e)
             }
         }.flowOn(Dispatchers.IO)
