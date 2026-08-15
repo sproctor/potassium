@@ -110,7 +110,7 @@ def clean_mkdocs_markup(content: str) -> str:
     # `^    .*` stopped at the first blank line and left the rest of the block indented, which
     # renders as a code block once the surrounding MkDocs markup is gone.
     content = re.sub(
-        r"^!!!?\s+(\w+)([^\n]*)\n((?:^(?:    .*)?\n)*)",
+        r"^!!!\s+(\w+)([^\n]*)\n((?:^(?:    .*)?\n)*)",
         convert_admonition,
         content,
         flags=re.MULTILINE,
