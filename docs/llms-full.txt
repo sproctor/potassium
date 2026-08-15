@@ -68,6 +68,7 @@ potassium {
 
 **Kotlin DSL imports:** The Kotlin DSL types live under `com.seanproctor.potassium.*` (for example
 `import com.seanproctor.potassium.dsl.MacOSTargetFormat`).
+
 ## Coordinates
 
 - **Plugin id:** `com.seanproctor.potassium`
@@ -110,6 +111,7 @@ npm --version
 ```
 
 **CI/CD:** The `setup-potassium` composite action installs Node.js automatically. See [CI/CD](ci-cd.md) for details.
+
 ## Installation
 
 The plugin is published to Maven Central. Add Maven Central to your plugin repositories, then apply the plugin in your build script:
@@ -136,6 +138,7 @@ plugins {
 
 **Kotlin DSL imports:** The Kotlin DSL types live under `com.seanproctor.potassium.*` (for example
 `import com.seanproctor.potassium.dsl.MacOSTargetFormat`).
+
 ## Minimal Configuration
 
 ```kotlin
@@ -170,11 +173,10 @@ The `hotRun` task reads `mainClass` from the `compose.desktop.application` block
 ./gradlew hotRun -PmainClass=com.example.MainKt
 ```
 
-**Do not add a `compose.desktop.application { }` block:** 
-    Configuring it initializes Compose Desktop's own packaging, which registers the same task names
-    Potassium does (`createDistributable`, `packageDmg`, …). Potassium detects this and fails the
-    build with an explanation. Keep the Compose plugin applied — only its `application { }` block
-    has to stay out.
+**Do not add a `compose.desktop.application { }` block:** Configuring it initializes Compose Desktop's own packaging, which registers the same task names
+Potassium does (`createDistributable`, `packageDmg`, …). Potassium detects this and fails the
+build with an explanation. Keep the Compose plugin applied — only its `application { }` block
+has to stay out.
 
 ### Packaging
 
@@ -405,6 +407,7 @@ linux { targetFormats(LinuxTargetFormat.Deb, LinuxTargetFormat.Rpm, LinuxTargetF
 
 **One invocation per platform:** Configuring several formats for an OS (e.g. `Deb`, `Rpm`, `AppImage`) makes
 `packageLinux` build them all in one electron-builder run, rather than one run per format.
+
 Target all of an OS's formats at once:
 
 ```kotlin
@@ -510,10 +513,12 @@ potassium {
 
 #### Choosing a compatibility profile
 
-The AOT cache is not pure metadata. Since JDK 25 it also stores machine code generated for the CPU
-features of the machine that ran the training, and no JDK before 27 checks those features when
-loading it — so a cache built on a CI runner is mapped and executed on a narrower CPU and crashes
-with `EXCEPTION_ILLEGAL_INSTRUCTION` / `SIGILL` rather than being rejected.
+Left to the JDK's own defaults, the AOT cache is not pure metadata: since JDK 25 it also stores
+machine code generated for the CPU features of the machine that ran the training, and no JDK before
+27 checks those features when loading it — so a cache built on a CI runner is mapped and executed on
+a narrower CPU and crashes with `EXCEPTION_ILLEGAL_INSTRUCTION` / `SIGILL` rather than being
+rejected. That is what the `NATIVE` profile below selects; the default `COMPATIBILITY` profile
+turns the machine-code region off and is unaffected.
 
 | Profile         | What is cached           | Runs on                             |
 |-----------------|--------------------------|-------------------------------------|
@@ -575,6 +580,7 @@ potassium {
 due to squashfs/FUSE decompression overhead. For AppImage targets, use `Normal` or `Store` instead.
 Other formats (DMG, NSIS, DEB, RPM, etc.) are not affected.
 See [electron-builder#7483](https://github.com/electron-userland/electron-builder/issues/7483) for details.
+
 ### Trusted CA Certificates
 
 Import custom CA certificates into the bundled JVM's `cacerts` keystore at build time.
@@ -788,14 +794,13 @@ potassium {
 }
 ```
 
-**Upgrading from 0.4.1 or earlier:** 
-    Earlier versions named the raw app image after `macOS.packageName`. If you set that property
-    and it differs from `appName`, the bundle directory is now named after `appName` instead, and
-    the build prints a warning naming the `macOS.bundleName` value that restores the previous name.
+**Upgrading from 0.4.1 or earlier:** Earlier versions named the raw app image after `macOS.packageName`. If you set that property
+and it differs from `appName`, the bundle directory is now named after `appName` instead, and
+the build prints a warning naming the `macOS.bundleName` value that restores the previous name.
 
-    A renamed bundle matters for auto-update: the updater keeps the installed path when the old and
-    new bundles share a `CFBundleIdentifier`, so existing installs are updated in place rather than
-    left behind under the old name.
+A renamed bundle matters for auto-update: the updater keeps the installed path when the old and
+new bundles share a `CFBundleIdentifier`, so existing installs are updated in place rather than
+left behind under the old name.
 
 ## DMG Customization
 
@@ -864,10 +869,11 @@ Each `content()` call adds an entry with an `(x, y)` position and a `DmgContentT
 | `DmgContentType.Dir`  | A directory inside the DMG.                                                         |
 
 **Mapping from `create-dmg`:** If you are migrating from a `create-dmg` shell script, the `content()` DSL maps directly to the `--icon` and `--app-drop-link` flags:
-    | `create-dmg` flag | Potassium equivalent |
-    |---|---|
-    | `--icon "MyApp.app" 130 220` | `content(x = 130, y = 220, type = DmgContentType.File, name = "MyApp.app")` |
-    | `--app-drop-link 410 220` | `content(x = 410, y = 220, type = DmgContentType.Link, path = "/Applications")` |
+
+| `create-dmg` flag | Potassium equivalent |
+|---|---|
+| `--icon "MyApp.app" 130 220` | `content(x = 130, y = 220, type = DmgContentType.File, name = "MyApp.app")` |
+| `--app-drop-link 410 220` | `content(x = 410, y = 220, type = DmgContentType.Link, path = "/Applications")` |
 
 ## Layered Icons (macOS 26+)
 
@@ -942,6 +948,7 @@ potassium {
 - Only effective on macOS; ignored on other platforms.
 
 **How it works:** `vtool` modifies the `LC_BUILD_VERSION` load command in the Mach-O binary, setting the SDK version to 26.0. This is the same header that the linker writes when you compile with `-sdk_version 26.0`. The modification only affects metadata — no code is changed. The launcher is patched before signing, so the code signature covers the patched binary.
+
 ### GraalVM Native Image
 
 For applications compiled with GraalVM Native Image, the native binary is linked directly by the system toolchain. Select **Xcode 26** before building:
@@ -987,6 +994,7 @@ macOS {
 
 **NOTE:** PKG is always treated as an App Store format. Sandbox entitlements, "3rd Party Mac Developer"
 certificates, and `productsign` signing are applied automatically — no `appStore` flag needed.
+
 See [Sandboxing](../sandboxing.md#macos-app-sandbox) for full details.
 
 ## Signing & Notarization
@@ -1027,6 +1035,7 @@ macOS {
 ```
 
 **NOTE:** This property is macOS-only. Windows and Linux installers do not use it.
+
 ## Full macOS DSL Reference
 
 ### `macOS { }`
@@ -1290,14 +1299,17 @@ nsis {
 **Registry hive matters:** - If `perMachine = true`, the installer reads from `HKLM`. Write to **both** `HKLM` and `HKCU` for safety.
 - If `perMachine = false`, only `HKCU` is checked. Writing to `HKLM` alone will have no effect.
 - Always write to both 32-bit and 64-bit registry views (`SetRegView 64` / `SetRegView 32`).
+
 **References:** - [electron-builder NSIS configuration](https://www.electron.build/nsis.html)
 - [Change default installation directory value (electron-builder#2855)](https://github.com/electron-userland/electron-builder/issues/2855)
 - [Change $INSTDIR to a custom path (electron-builder#1961)](https://github.com/electron-userland/electron-builder/issues/1961)
+
 ## AppX (Windows Store / MSIX)
 
 AppX packages use the MSIX format for the Microsoft Store and sideloading. Desktop Bridge apps run with full trust (`runFullTrust`), so they are **not sandboxed**. They use the [store build pipeline](../sandboxing.md#windows-appx) automatically.
 
 **Developer Mode required for local builds:** Building AppX/MSIX packages locally requires **Windows Developer Mode** to be enabled. Without it, the build will fail. Go to **Settings → System → For developers** and enable **Developer Mode**. This is not needed in CI (GitHub-hosted runners have it enabled by default).
+
 ```kotlin
 windows {
     appx {
@@ -1541,6 +1553,7 @@ linux {
 ```
 
 **NOTE:** The default `plugs` list includes: `Desktop`, `DesktopLegacy`, `Home`, `X11`, `Wayland`, `Unity7`, `BrowserSupport`, `Network`, `Gsettings`, `AudioPlayback`, `Opengl`.
+
 ### Snap Plugs
 
 | Plug | `id` | Description |
@@ -1837,6 +1850,7 @@ macOS {
 
 **NOTE:** The `appStore` property is deprecated. PKG is always treated as an App Store format —
 sandbox entitlements and "3rd Party Mac Developer" certificates are applied automatically.
+
 ### AOT Cache and Sandboxing
 
 When generating an AOT cache for a sandboxed build, the plugin temporarily strips the code signature from `jspawnhelper` during the training phase. macOS kills sandboxed forked processes, so the signature must be removed for AOT training and re-applied afterward with the runtime entitlements.
@@ -2249,6 +2263,7 @@ Potassium provides a complete auto-update solution compatible with the [electron
 ## How It Works
 
 **Try it yourself:** Download an **older version** of the [potassium-sample](https://github.com/sproctor/potassium-sample) app from its [releases page](https://github.com/sproctor/potassium-sample/releases), install it, and launch it. The app will automatically detect that a newer version is available, download the update with a progress bar, and offer an "Install & Restart" button. This is the exact same flow your users will experience.
+
 ## Updatable Formats
 
 | Platform | Updatable Formats | Not auto-updated |
@@ -2260,6 +2275,7 @@ Potassium provides a complete auto-update solution compatible with the [electron
 PKG (macOS), AppX/MSIX (Windows), Snap, and Flatpak are not supported by the auto-updater because Potassium assumes these formats are distributed through their respective app stores (Mac App Store, Microsoft Store, Snapcraft, Flathub), which handle updates natively.
 
 **MSI installs are treated as managed deployments:** An MSI install reports `isUpdateSupported() == false`, so the app never applies the NSIS installer over it. electron-builder publishes no `.msi` entries in `latest.yml`, and per-machine MSI upgrades require UAC elevation, so MSI is best suited for IT-managed distribution (Intune, Group Policy, SCCM) where updates are pushed centrally. To opt in to MSI self-update anyway, set `executableType = InstallType.MSI` in the updater config and serve a custom update manifest that lists the `.msi` artifact — the updater then applies it with `msiexec /i <file> /passive`. Set it only on Windows: a shared configuration that sets it unconditionally throws `IllegalArgumentException` when the app starts on macOS or Linux, where no manifest can ever list an `.msi`.
+
 The install format is detected at runtime:
 
 - **Linux** — the `APPIMAGE`/`SNAP`/`FLATPAK` environment variables, and the `resources/package-type` marker electron-builder writes for deb/rpm.
@@ -2268,20 +2284,22 @@ The install format is detected at runtime:
 Nothing is inferred from what an install *lacks*: MSI was the only format that needed such an inference, and it now identifies itself. Installs produced before the marker existed carry none, so an MSI from an older build still resolves to NSIS.
 
 **MSI builds in its own electron-builder invocation:** Because `--prepackaged` feeds one directory to every target in an invocation, a marker written for the batched Windows build would stamp NSIS and portable identically. MSI is therefore packaged on its own so its app image can carry `resources/package-type = msi` — the one thing that distinguishes an MSI install at runtime, since the installed payload is otherwise identical to the NSIS one.
-    Two consequences: requesting MSI adds a second electron-builder invocation to the Windows build, and the `.msi` is written to its own `msi/` output directory rather than alongside the other Windows artifacts. Publishing workflows that glob the Windows output directory need to pick up both.
+
+Two consequences: requesting MSI adds a second electron-builder invocation to the Windows build, and the `.msi` is written to its own `msi/` output directory rather than alongside the other Windows artifacts. Publishing workflows that glob the Windows output directory need to pick up both.
 
 **macOS: ZIP is required alongside DMG:** On macOS, the auto-updater uses the **ZIP** format to perform the update (extract and replace the `.app` bundle silently). The DMG is used for initial installation only. You **must** include `MacOSTargetFormat.Zip` in your macOS `targetFormats` configuration, otherwise macOS auto-update will not work:
-    ```kotlin
-    macOS {
-        targetFormats(
-            MacOSTargetFormat.Dmg,   // Initial install
-            MacOSTargetFormat.Zip,   // Required for auto-update on macOS
-            // ... other formats
-        )
-    }
-    ```
 
-    Both the DMG and ZIP artifacts must be uploaded to the same release (GitHub, S3, or HTTP server). The generated `latest-mac.yml` will reference both files.
+```kotlin
+macOS {
+    targetFormats(
+        MacOSTargetFormat.Dmg,   // Initial install
+        MacOSTargetFormat.Zip,   // Required for auto-update on macOS
+        // ... other formats
+    )
+}
+```
+
+Both the DMG and ZIP artifacts must be uploaded to the same release (GitHub, S3, or HTTP server). The generated `latest-mac.yml` will reference both files.
 
 ## Differential (Delta) Updates
 
@@ -2338,6 +2356,7 @@ See [Multi-architecture update manifests](ci-cd.md#multi-architecture-update-man
 Each build is packaged in a single electron-builder invocation, so electron-builder writes the `latest-<os>.yml` for that build alongside the installers when you run `packageDistributionForCurrentOS`, and — for github, s3, and generic alike — uploads it as part of publishing. A single-arch build on one machine is ready to use as-is; combining architectures into one release is what CI's publish step automates.
 
 **TIP:** In practice, always use CI for multi-platform releases. The [release workflow](https://github.com/sproctor/potassium/blob/main/.github/workflows/release-desktop.yaml) handles all of this automatically: build on each platform in parallel and publish to GitHub Releases in a single pipeline.
+
 ### YML file examples
 
 electron-builder generates one manifest per platform (plus a `-arm64` variant for non-x64 Linux):
@@ -2868,6 +2887,7 @@ Potassium can publish your installers and update metadata to **GitHub Releases**
 
 **One provider at a time:** Exactly one publish provider may be enabled. Enabling more than one of `github`, `s3`, or
 `generic` fails the build (electron-builder writes a single shared update manifest per build).
+
 ## Configuration
 
 ```kotlin
@@ -3016,12 +3036,13 @@ export AWS_REGION=us-east-1
 **Inline S3 upload does not merge manifests:** electron-builder's inline S3 publish (`publishMode = Auto` / `Always`) PUTs each build's
 manifest independently, so two runners that share a manifest name **overwrite each other** on
 S3 — the last upload wins and lists only its own architecture.
-    - **Linux** is unaffected — electron-builder names the files per-arch (`latest-linux.yml` /
-      `latest-linux-arm64.yml`), so they never collide.
-    - **Windows and macOS** share one manifest each (`latest.yml`, `latest-mac.yml`); uploading two
-      arches inline leaves the loser's clients unable to update.
 
-    So inline S3 publish is only safe for a single architecture per OS.
+- **Linux** is unaffected — electron-builder names the files per-arch (`latest-linux.yml` /
+  `latest-linux-arm64.yml`), so they never collide.
+- **Windows and macOS** share one manifest each (`latest.yml`, `latest-mac.yml`); uploading two
+  arches inline leaves the loser's clients unable to update.
+
+So inline S3 publish is only safe for a single architecture per OS.
 
 For a multi-arch release, **don't publish inline** — build with `publishMode = Never` (manifests
 written locally, nothing uploaded) and upload from one job with the **`publish-s3-release`**
@@ -3286,6 +3307,7 @@ packageMacOS / packageLinux / packageWindows  (or packageDistributionForCurrentO
 # GraalVM Native Image
 
 **Alpha:** GraalVM Native Image support is **in alpha**. Most Compose Desktop apps work out of the box thanks to centralized reachability metadata, but edge cases (uncommon libraries, custom reflection) may still require additional configuration.
+
 ## Why Native Image?
 
 For most Compose Desktop applications, the JDK 25+ AOT cache (Leyden) is the recommended way to improve startup. It's simple to set up and provides a major boost. But there are cases where even Leyden isn't enough:
@@ -3318,6 +3340,7 @@ Native image is not a free lunch. In addition to significantly more complex conf
 GraalVM Native Image compilation **requires [BellSoft Liberica NIK 25](https://bell-sw.com/liberica-native-image-kit/)** (full distribution, not lite). This is the only supported distribution — standard GraalVM CE does not include the AWT/Swing support needed for desktop GUI applications.
 
 **Will not work with other distributions:** Using Oracle GraalVM, GraalVM CE, or Liberica NIK Lite will fail. Desktop GUI applications require the **full** Liberica NIK distribution which includes AWT and Swing native-image support.
+
 ### Platform toolchains
 
 | Platform | Required |
@@ -3330,13 +3353,12 @@ GraalVM Native Image compilation **requires [BellSoft Liberica NIK 25](https://b
 
 Some libraries and use cases make native image compilation **extremely difficult or impractical**. Potassium can handle most standard Compose Desktop dependencies automatically, but the following categories will likely require extensive manual configuration — or may not work at all:
 
-**Libraries that are very hard to support:** 
-    - **Heavy JNA users** — Libraries that rely extensively on JNA (Java Native Access) for dynamic function calls. JNA's runtime proxy generation is fundamentally at odds with native-image's closed-world assumption. Examples: some system tray libraries, platform bridge libraries.
-    - **Full-text search engines** — Apache Lucene, Elasticsearch client, and similar libraries use heavy reflection, dynamic class loading, custom classloaders, and `MethodHandle`-based access patterns that are nearly impossible to capture statically.
-    - **Dynamic scripting engines** — Embedding Groovy, JRuby, Nashorn, or other scripting runtimes that rely on runtime code generation.
-    - **Annotation-processing frameworks at runtime** — Libraries like Spring that scan classpath annotations and create proxies at runtime. (Compile-time DI frameworks like Koin or manual DI are fine.)
-    - **OSGi or custom classloaders** — Any library that loads classes through non-standard classloaders will bypass native-image's static analysis entirely.
-    - **Byte-code generation at runtime** — Libraries using ByteBuddy, cglib, or ASM to generate classes at runtime (e.g., mocking frameworks, some ORM lazy-loading proxies).
+**Libraries that are very hard to support:** - **Heavy JNA users** — Libraries that rely extensively on JNA (Java Native Access) for dynamic function calls. JNA's runtime proxy generation is fundamentally at odds with native-image's closed-world assumption. Examples: some system tray libraries, platform bridge libraries.
+- **Full-text search engines** — Apache Lucene, Elasticsearch client, and similar libraries use heavy reflection, dynamic class loading, custom classloaders, and `MethodHandle`-based access patterns that are nearly impossible to capture statically.
+- **Dynamic scripting engines** — Embedding Groovy, JRuby, Nashorn, or other scripting runtimes that rely on runtime code generation.
+- **Annotation-processing frameworks at runtime** — Libraries like Spring that scan classpath annotations and create proxies at runtime. (Compile-time DI frameworks like Koin or manual DI are fine.)
+- **OSGi or custom classloaders** — Any library that loads classes through non-standard classloaders will bypass native-image's static analysis entirely.
+- **Byte-code generation at runtime** — Libraries using ByteBuddy, cglib, or ASM to generate classes at runtime (e.g., mocking frameworks, some ORM lazy-loading proxies).
 
 If your application depends on libraries in these categories, **prefer AOT Cache (Leyden)** instead — it provides significant startup improvement with zero configuration overhead and full compatibility.
 
@@ -3392,6 +3414,7 @@ potassium {
 ```
 
 **About `nativeImageConfigBaseDir`:** Potassium ships all generic and platform-specific reflection metadata automatically. The `nativeImageConfigBaseDir` is only needed if you have app-specific entries that the automatic metadata doesn't cover — which is rare.
+
 ## DSL Reference
 
 | Property | Type | Default | Description |
@@ -3773,14 +3796,13 @@ The [`jewel-demo`](https://github.com/NucleusFramework/Nucleus/tree/main/example
 
 Potassium provides reusable composite actions and ready-to-use GitHub Actions workflows for building, packaging, and publishing desktop applications across all platforms.
 
-**Use Potassium actions in your own project:** 
-    All composite actions can be referenced directly from the Potassium repository — no need to copy them into your project:
+**Use Potassium actions in your own project:** All composite actions can be referenced directly from the Potassium repository — no need to copy them into your project:
 
-    ```yaml
-    - uses: sproctor/potassium/.github/actions/setup-potassium@main
-    ```
+```yaml
+- uses: sproctor/potassium/.github/actions/setup-potassium@main
+```
 
-    Replace `@main` with a specific tag (e.g. `@v1.0.0`) to pin a stable version.
+Replace `@main` with a specific tag (e.g. `@v1.0.0`) to pin a stable version.
 
 ## Overview
 
@@ -4331,6 +4353,7 @@ These tasks first compile the native image via `packageGraalvmNative`, then pack
 # Packaging
 
 **About this comparison:** Adapted from the [Nucleus comparison page](https://nucleusframework.dev/en/docs/compare/packaging/) — Nucleus is the project Potassium was forked from — with Potassium added back in. Last updated: August 2026.
+
 This page compares Potassium and Nucleus packaging with the other tools that build native installers for JVM desktop apps: jpackage, Compose Multiplatform, Conveyor, install4j, jDeploy, and JavaPackager. It covers distributable formats, auto-update, code signing, CI/CD, GraalVM Native Image, and store distribution.
 
 Potassium builds 16 distributable formats and packages auto-update, signing, sandboxing, CI actions, and GraalVM Native Image output in one Gradle plugin under an MIT license, sharing its electron-builder-based packaging core with Nucleus (18 formats). jpackage covers six formats and nothing around them, install4j is proprietary, and Conveyor covers a different set but does not produce DMG or PKG.
@@ -4397,6 +4420,7 @@ Potassium, Nucleus, Conveyor, and Compose Multiplatform each produce store-accep
 | Most formats. Auto-update, signing, and CI in one plugin. Built-in GraalVM Native Image packaging. MIT. Potassium adds blockmap delta updates; Nucleus adds a batteries-included runtime. | Conveyor: OS-native delta updates, broader HSM signing, single-machine builds. install4j: stable, paid, long-running support. jpackage: no new dependency. |
 
 **INFO:** Potassium and Nucleus build each OS on its own CI runner — there is no cross-compilation. Both are Gradle-only and younger than Conveyor and install4j.
+
 ## When to pick what
 
 - A small CLI or single-window app that needs OS-native update plumbing and cloud HSM signing — **Conveyor**.
@@ -4487,14 +4511,15 @@ Replace the `compose.desktop.application` block with `potassium` for packaging a
 ```
 
 **Using Compose Hot Reload?:** Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `potassium`. Pass the property explicitly when running:
-    ```bash
-    ./gradlew hotRun -PmainClass=com.example.MainKt
-    ```
 
-    Do **not** keep a minimal `compose.desktop.application { }` block for this. Configuring it
-    initializes Compose Desktop's packaging, which registers the same task names Potassium does;
-    Potassium detects the conflict and fails the build with an explanation. The Compose plugin
-    itself stays applied — Potassium extends it.
+```bash
+./gradlew hotRun -PmainClass=com.example.MainKt
+```
+
+Do **not** keep a minimal `compose.desktop.application { }` block for this. Configuring it
+initializes Compose Desktop's packaging, which registers the same task names Potassium does;
+Potassium detects the conflict and fails the build with an explanation. The Compose plugin
+itself stays applied — Potassium extends it.
 
 ## Step 4: Add Potassium Features (Optional)
 

@@ -196,10 +196,12 @@ potassium {
 
 #### Choosing a compatibility profile
 
-The AOT cache is not pure metadata. Since JDK 25 it also stores machine code generated for the CPU
-features of the machine that ran the training, and no JDK before 27 checks those features when
-loading it — so a cache built on a CI runner is mapped and executed on a narrower CPU and crashes
-with `EXCEPTION_ILLEGAL_INSTRUCTION` / `SIGILL` rather than being rejected.
+Left to the JDK's own defaults, the AOT cache is not pure metadata: since JDK 25 it also stores
+machine code generated for the CPU features of the machine that ran the training, and no JDK before
+27 checks those features when loading it — so a cache built on a CI runner is mapped and executed on
+a narrower CPU and crashes with `EXCEPTION_ILLEGAL_INSTRUCTION` / `SIGILL` rather than being
+rejected. That is what the `NATIVE` profile below selects; the default `COMPATIBILITY` profile
+turns the machine-code region off and is unaffected.
 
 | Profile         | What is cached           | Runs on                             |
 |-----------------|--------------------------|-------------------------------------|

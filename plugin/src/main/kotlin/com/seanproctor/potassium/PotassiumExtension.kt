@@ -5,6 +5,7 @@
 
 package com.seanproctor.potassium
 
+import com.seanproctor.potassium.dsl.AotCacheSettings
 import com.seanproctor.potassium.dsl.CompressionLevel
 import com.seanproctor.potassium.dsl.GraalvmSettings
 import com.seanproctor.potassium.dsl.JvmApplication
@@ -186,6 +187,10 @@ abstract class PotassiumExtension
             set(value) {
                 distributions.enableAotCache = value
             }
+
+        val aotCache: AotCacheSettings get() = distributions.aotCache
+
+        fun aotCache(fn: Action<AotCacheSettings>) = distributions.aotCache(fn)
 
         var compressionLevel: CompressionLevel?
             get() = distributions.compressionLevel

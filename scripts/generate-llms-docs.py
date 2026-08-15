@@ -103,10 +103,14 @@ def clean_mkdocs_markup(content: str) -> str:
             else:
                 body_lines.append(line)
         body_clean = "\n".join(body_lines).strip()
-        return f"**{title}:** {body_clean}"
+        return f"**{title}:** {body_clean}\n\n"
 
+    # The body is the run of indented lines, and blank lines belong to it too: an admonition may
+    # open with one and may separate paragraphs or fenced blocks with them. Matching only
+    # `^    .*` stopped at the first blank line and left the rest of the block indented, which
+    # renders as a code block once the surrounding MkDocs markup is gone.
     content = re.sub(
-        r"^!!!?\s+(\w+)([^\n]*)\n((?:^    .*\n?)*)",
+        r"^!!!?\s+(\w+)([^\n]*)\n((?:^(?:    .*)?\n)*)",
         convert_admonition,
         content,
         flags=re.MULTILINE,
