@@ -2,6 +2,7 @@ package com.seanproctor.potassium.updater
 
 import com.seanproctor.potassium.updater.exception.NetworkException
 import com.seanproctor.potassium.updater.exception.NoMatchingFileException
+import com.seanproctor.potassium.updater.exception.ParseException
 import com.seanproctor.potassium.updater.exception.UpdateException
 import com.seanproctor.potassium.updater.internal.FileSelector
 import com.seanproctor.potassium.updater.internal.InstallTypeDetector
@@ -23,12 +24,19 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.file.Files
 import kotlin.coroutines.cancellation.CancellationException
 
 public class PotassiumUpdater(
-    private val config: UpdaterConfig,
+    config: UpdaterConfig,
 ) {
-    public val currentVersion: String get() = config.currentVersion
+    /**
+     * The config is validated and frozen here, once: a missing provider fails at construction,
+     * and mutating the [UpdaterConfig] afterwards has no effect on this updater.
+     */
+    private val config: ResolvedUpdaterConfig = config.resolve()
+
+    public val currentVersion: String get() = this.config.currentVersion
 
     public val channel: String
         get() = resolveChannel()
@@ -106,10 +114,19 @@ public class PotassiumUpdater(
         flow {
             pendingUpdateVersion = info.version
             val targetFile = info.currentFile
-            val tempDir = System.getProperty("java.io.tmpdir")
-            val tempFile = File(tempDir, "${targetFile.fileName}.download")
-            val finalFile = File(tempDir, targetFile.fileName)
+            val artifactName = requireSingleFileName(targetFile.fileName)
+            // A fresh, owner-only (0700 on POSIX) staging directory: a predictable path in the
+            // shared temp dir would be a pre-created-file/symlink hazard on multi-user systems.
+            val stagingDir = Files.createTempDirectory("potassium-update-").toFile()
+            val tempFile = File(stagingDir, "$artifactName.download")
+            val finalFile = File(stagingDir, artifactName)
 
+            // Once the finished file has been handed to the collector it belongs to the caller,
+            // who installs from it — so cleanup must never remove it. `flowOn` buffers, so today
+            // the flow block returns before a collector like `first { it.file != null }` can
+            // cancel it, and cleanup is unreachable after delivery. This flag states the
+            // ownership rule outright instead of leaving it resting on that buffering.
+            var delivered = false
             try {
                 val engine =
                     UpdateDownloadEngine(
@@ -118,17 +135,20 @@ public class PotassiumUpdater(
                         resolveInstallType = ::resolveExecutableType,
                         cache = updateCache(),
                     )
-                engine.execute(info, targetFile, tempFile, finalFile) { emit(it) }
+                engine.execute(info, targetFile, tempFile, finalFile) { progress ->
+                    if (progress.file != null) delivered = true
+                    emit(progress)
+                }
             } catch (e: UpdateException) {
-                tempFile.delete()
+                if (!delivered) stagingDir.deleteRecursively()
                 throw e
             } catch (e: CancellationException) {
-                tempFile.delete()
+                if (!delivered) stagingDir.deleteRecursively()
                 throw e
             } catch (
                 @Suppress("TooGenericExceptionCaught") e: Exception,
             ) {
-                tempFile.delete()
+                if (!delivered) stagingDir.deleteRecursively()
                 throw NetworkException("Download failed", e)
             }
         }.flowOn(Dispatchers.IO)
@@ -287,6 +307,30 @@ public class PotassiumUpdater(
         val level = remoteVersion.levelFrom(currentVersion)
 
         return UpdateResult.Available(updateInfo, level)
+    }
+
+    /**
+     * Rejects a manifest artifact name that is anything other than a single path component.
+     *
+     * The name comes from the manifest's `url` field, which is remote input. A value like
+     * `../victim` would resolve outside the staging directory, so the download and the move that
+     * follows it could overwrite a file the updater process can write. Rejected rather than
+     * reduced to its basename: two entries collapsing to the same name would then overwrite each
+     * other's artifact instead of failing.
+     */
+    private fun requireSingleFileName(fileName: String): String {
+        val invalid =
+            fileName.isEmpty() ||
+                fileName == "." ||
+                fileName == ".." ||
+                fileName.contains('/') ||
+                fileName.contains('\\')
+        if (invalid) {
+            throw ParseException(
+                "Update manifest names an artifact that is not a plain file name: '$fileName'",
+            )
+        }
+        return fileName
     }
 
     private fun resolveExecutableType(): InstallType? = config.executableType ?: installTypeDetector.detect()

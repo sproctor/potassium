@@ -17,6 +17,7 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
 private const val DEFAULT_PROGUARD_RULES_FILE_NAME = "default-potassium-rules.pro"
+private const val OBFUSCATION_SAFETY_RULES_FILE_NAME = "potassium-obfuscation-safety-rules.pro"
 private const val DEFAULT_ENTITLEMENTS_FILE_NAME = "default-entitlements.plist"
 private const val DEFAULT_SANDBOX_ENTITLEMENTS_FILE_NAME = "default-sandbox-entitlements.plist"
 private const val DEFAULT_SANDBOX_RUNTIME_ENTITLEMENTS_FILE_NAME = "default-sandbox-runtime-entitlements.plist"
@@ -35,6 +36,8 @@ abstract class AbstractUnpackDefaultApplicationResourcesTask : AbstractPotassium
                     DEFAULT_PROGUARD_RULES_FILE_NAME,
                 )
             }
+        val obfuscationSafetyRules: Provider<RegularFile> =
+            resourcesRootDir.map { it.file(OBFUSCATION_SAFETY_RULES_FILE_NAME) }
         val defaultEntitlements: Provider<RegularFile> =
             resourcesRootDir.map {
                 it.file(
@@ -62,6 +65,7 @@ abstract class AbstractUnpackDefaultApplicationResourcesTask : AbstractPotassium
         unpack(iconSourcePath("windows", "ico"), resources.windowsIcon)
         unpack(iconSourcePath("linux", "png"), resources.linuxIcon)
         unpack(DEFAULT_PROGUARD_RULES_FILE_NAME, resources.defaultProguardRules)
+        unpack(OBFUSCATION_SAFETY_RULES_FILE_NAME, resources.obfuscationSafetyRules)
         unpack(DEFAULT_ENTITLEMENTS_FILE_NAME, resources.defaultEntitlements)
         unpack(DEFAULT_SANDBOX_ENTITLEMENTS_FILE_NAME, resources.defaultSandboxEntitlements)
         unpack(DEFAULT_SANDBOX_RUNTIME_ENTITLEMENTS_FILE_NAME, resources.defaultSandboxRuntimeEntitlements)

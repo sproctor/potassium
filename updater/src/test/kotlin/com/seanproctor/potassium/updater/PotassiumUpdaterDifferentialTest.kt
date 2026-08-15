@@ -1,11 +1,13 @@
 package com.seanproctor.potassium.updater
 
+import com.seanproctor.potassium.updater.exception.ParseException
 import com.seanproctor.potassium.updater.internal.BlockMapFixtures
 import com.seanproctor.potassium.updater.internal.RangeHttpHandler
 import com.seanproctor.potassium.updater.internal.UpdateCache
 import com.seanproctor.potassium.updater.provider.GenericProvider
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -13,6 +15,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -240,6 +243,55 @@ class PotassiumUpdaterDifferentialTest {
         assertTrue(intermediate.isNotEmpty())
         assertEquals(segmentX.size.toLong(), intermediate.last().totalBytes)
         assertEquals(segmentX.size.toLong(), intermediate.last().bytesDownloaded)
+    }
+
+    @Test
+    fun `the downloaded artifact survives a collector that stops at the terminal emission`() {
+        // The documented usage installs as soon as `file != null` arrives, and `first { }`
+        // cancels the flow at that moment. Whatever the flow does with that cancellation, the
+        // artifact it just handed over has to still be on disk when the collector returns.
+        val updater = newUpdater(tempFolder.newFolder())
+        val file =
+            runBlocking {
+                val result = updater.checkForUpdates()
+                val info = (result as UpdateResult.Available).info
+                requireNotNull(
+                    updater
+                        .downloadUpdate(info)
+                        .first { it.file != null }
+                        .file,
+                )
+            }
+
+        assertTrue("the delivered artifact must still exist", file.exists())
+        assertArrayEquals(newBytes, file.readBytes())
+    }
+
+    @Test
+    fun `an artifact name that is not a plain file name is rejected`() {
+        // `fileName` comes from the manifest's url field, which is remote input; a traversal
+        // component would resolve the download outside its staging directory.
+        val updater = newUpdater(tempFolder.newFolder())
+        for (hostile in listOf("../victim", "sub/dir.zip", "..", "", "a\\b.zip")) {
+            val info =
+                UpdateInfo(
+                    version = "2.0.0",
+                    releaseDate = "",
+                    files = emptyList(),
+                    currentFile =
+                        UpdateFile(
+                            url = "$serverBaseUrl/app-2.0.0.zip",
+                            sha512 = "",
+                            size = newBytes.size.toLong(),
+                            fileName = hostile,
+                        ),
+                )
+            val error =
+                assertThrows(ParseException::class.java) {
+                    runBlocking { updater.downloadUpdate(info).toList() }
+                }
+            assertTrue(error.message!!.contains("plain file name"))
+        }
     }
 
     private fun newUpdater(

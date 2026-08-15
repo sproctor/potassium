@@ -68,19 +68,19 @@ potassium {
 
 Potassium is fully compatible with [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html). Since Potassium extends the Compose plugin (not replaces it), Hot Reload works out of the box.
 
-The `hotRun` task reads `mainClass` from the `compose.desktop.application` block. If you only set it in `potassium`, add a minimal Compose block:
-
-```kotlin
-compose.desktop.application {
-    mainClass = "com.example.MainKt"
-}
-```
-
-Or pass it via the command line:
+The `hotRun` task reads `mainClass` from the `compose.desktop.application` block rather than from
+`potassium`, so pass it on the command line:
 
 ```bash
 ./gradlew hotRun -PmainClass=com.example.MainKt
 ```
+
+!!! warning "Do not add a `compose.desktop.application { }` block"
+
+    Configuring it initializes Compose Desktop's own packaging, which registers the same task names
+    Potassium does (`createDistributable`, `packageDmg`, …). Potassium detects this and fails the
+    build with an explanation. Keep the Compose plugin applied — only its `application { }` block
+    has to stay out.
 
 ### Packaging
 

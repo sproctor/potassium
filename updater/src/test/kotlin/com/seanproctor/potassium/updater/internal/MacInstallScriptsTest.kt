@@ -55,6 +55,45 @@ class MacInstallScriptsTest {
     }
 
     @Test
+    fun `zip script never removes the installed bundle before a replacement exists`() {
+        // The old script did `rm -rf "$APP_PATH"` and only then extracted, so a truncated archive
+        // left the machine with no application at all. The install must go through a staging
+        // directory and a reversible rename instead — any removal of the old bundle happens only
+        // after the replacement is in place.
+        val swap = zip.indexOf("mv \"\$NEW_APP\" \"\$TARGET\"")
+        val removeOld = zip.indexOf("rm -rf \"\$APP_PATH\"")
+        assertTrue("the swap must be present", swap >= 0)
+        assertTrue(
+            "the installed bundle must not be deleted before the replacement is in place",
+            removeOld < 0 || removeOld > swap,
+        )
+        assertTrue(zip.contains("STAGE_DIR="))
+        assertTrue(zip.contains("ditto -x -k \"\$ZIP_FILE\" \"\$STAGE_DIR\""))
+        assertTrue(zip.contains("mv \"\$TARGET\" \"\$BACKUP\""))
+        assertTrue(zip.contains("trap cleanup EXIT INT TERM"))
+    }
+
+    @Test
+    fun `zip script locates the bundle instead of assuming its name`() {
+        assertTrue(zip.contains("-name '*.app' -type d -print -quit"))
+        assertTrue(zip.contains("CFBundleIdentifier"))
+        // A matching identifier keeps the installed path so Dock tiles and aliases stay valid.
+        assertTrue(zip.contains("TARGET=\"\$APP_PATH\""))
+        assertTrue(zip.contains("open \"\$TARGET\""))
+    }
+
+    @Test
+    fun `zip script refuses to replace a different application at the adopted name`() {
+        // Adopting the archive's bundle name can collide with an unrelated .app in the install
+        // directory; the swap would otherwise move it aside and delete it.
+        val guard = zip.indexOf("Refusing to replace")
+        val backup = zip.indexOf("mv \"\$TARGET\" \"\$BACKUP\"")
+        assertTrue("the collision guard must be present", guard >= 0)
+        assertTrue("the guard must precede the swap", guard < backup)
+        assertTrue(zip.contains("EXISTING_BUNDLE_ID"))
+    }
+
+    @Test
     fun `dmg script detaches the image on every exit path`() {
         assertTrue(dmg.contains("trap "))
         assertTrue(dmg.contains("hdiutil detach"))

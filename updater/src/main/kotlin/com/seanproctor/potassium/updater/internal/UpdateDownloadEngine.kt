@@ -2,9 +2,9 @@ package com.seanproctor.potassium.updater.internal
 
 import com.seanproctor.potassium.updater.DownloadProgress
 import com.seanproctor.potassium.updater.InstallType
+import com.seanproctor.potassium.updater.ResolvedUpdaterConfig
 import com.seanproctor.potassium.updater.UpdateFile
 import com.seanproctor.potassium.updater.UpdateInfo
-import com.seanproctor.potassium.updater.UpdaterConfig
 import com.seanproctor.potassium.updater.exception.NetworkException
 import java.io.File
 import java.net.http.HttpClient
@@ -21,7 +21,7 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 internal class UpdateDownloadEngine(
     private val httpClient: HttpClient,
-    private val config: UpdaterConfig,
+    private val config: ResolvedUpdaterConfig,
     private val resolveInstallType: () -> InstallType?,
     private val cache: UpdateCache,
 ) {

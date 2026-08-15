@@ -171,6 +171,50 @@ potassium {
 
 Requires JDK 25+ and that the application self-terminates during the training run.
 
+`enableAotCache` is shorthand for the `aotCache { }` block, which also controls how portable the
+generated cache is:
+
+```kotlin
+potassium {
+    aotCache {
+        enabled = true
+
+        // Default. Class metadata only — runs on any CPU of the target architecture.
+        compatibility = AotCacheCompatibility.COMPATIBILITY
+
+        // Extra JVM arguments for the training run only.
+        extraTrainingJvmArgs("-Dmyapp.headless=true")
+    }
+}
+```
+
+| Property               | Type                     | Default         | Description                                          |
+|------------------------|--------------------------|-----------------|------------------------------------------------------|
+| `enabled`              | `Boolean`                | `false`         | Generate the cache and wire `-XX:AOTCache` in        |
+| `compatibility`        | `AotCacheCompatibility`  | `COMPATIBILITY` | Portability profile of the generated cache           |
+| `extraTrainingJvmArgs` | `MutableList<String>`    | empty           | JVM arguments passed to the training run only        |
+
+#### Choosing a compatibility profile
+
+Left to the JDK's own defaults, the AOT cache is not pure metadata: since JDK 25 it also stores
+machine code generated for the CPU features of the machine that ran the training, and no JDK before
+27 checks those features when loading it — so a cache built on a CI runner is mapped and executed on
+a narrower CPU and crashes with `EXCEPTION_ILLEGAL_INSTRUCTION` / `SIGILL` rather than being
+rejected. That is what the `NATIVE` profile below selects; the default `COMPATIBILITY` profile
+turns the machine-code region off and is unaffected.
+
+| Profile         | What is cached           | Runs on                             |
+|-----------------|--------------------------|-------------------------------------|
+| `COMPATIBILITY` | Class metadata only      | Any CPU of the target architecture  |
+| `NATIVE`        | Metadata + adapter code  | Only CPUs as wide as the build host |
+
+`COMPATIBILITY` is the default because a redistributed desktop application cannot know what its
+users run. It keeps the class loading and linking work, which is the bulk of the startup win, and
+leaves the JIT untouched at runtime.
+
+Use `NATIVE` only for locally built or fleet-homogeneous deployments. On a JDK older than 27 the
+build warns that the cache carries unvalidated machine code.
+
 ### Splash Screen
 
 Displays a splash screen during application startup:
@@ -321,11 +365,12 @@ potassium {
     licenseFile, appResourcesRootDir, outputBaseDir
     modules(...), includeAllModules
     cleanupNativeLibs, enableAotCache, splashImage
+    aotCache { enabled, compatibility, extraTrainingJvmArgs }
     compressionLevel, artifactName
     protocol(name, vararg schemes)
     fileAssociation(mimeType, extension, description, linuxIconFile?, windowsIconFile?, macOSIconFile?)
     publish { github { ... }, s3 { ... }, generic { ... } }
-    macOS { targetFormats(...), iconFile, bundleID, dockName, appCategory, layeredIconDir, signing { ... }, notarization { ... }, dmg { ... }, infoPlist { ... } }
+    macOS { targetFormats(...), iconFile, bundleID, bundleName, dockName, appCategory, layeredIconDir, signing { ... }, notarization { ... }, dmg { ... }, infoPlist { ... } }
     windows { targetFormats(...), iconFile, upgradeUuid, signing { ... }, nsis { ... }, appx { ... } }
     linux { targetFormats(...), iconFile, debMaintainer, debDepends, rpmRequires, appImage { ... }, snap { ... }, flatpak { ... } }
 }

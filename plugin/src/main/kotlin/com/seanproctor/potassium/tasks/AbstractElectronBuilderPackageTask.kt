@@ -92,6 +92,9 @@ abstract class AbstractElectronBuilderPackageTask
             private const val APPX_WIDE_LOGO_WIDTH = 310
             private const val APPX_WIDE_LOGO_HEIGHT = 150
 
+            /** Installer targets built from electron-builder's NSIS template, which honours `nsis.include`. */
+            private val NSIS_FAMILY_FORMATS = setOf(TargetFormat.Nsis, TargetFormat.NsisWeb, TargetFormat.Exe)
+
             /** Resources marker read by potassium-updater to locate the NSIS-seeded installer copy. */
             internal const val UPDATER_CACHE_DIR_FILE = "updater-cache-dir"
 
@@ -163,6 +166,19 @@ abstract class AbstractElectronBuilderPackageTask
         @get:Input
         @get:Optional
         val executableName: Property<String> = objects.nullableProperty()
+
+        /**
+         * Name of the macOS `.app` bundle directory, without the `.app` extension.
+         *
+         * electron-builder's DMG target stages the bundle under `${productFilename}.app` while its
+         * ZIP target archives the prepackaged directory as-is, so the two formats only ship the same
+         * bundle name when the prepackaged directory is already named after `productFilename`. This
+         * task therefore renames its working copy to `<macBundleName>.app` and pins `productName` to
+         * the same value, making `basename(prepackaged) == productFilename` hold by construction.
+         */
+        @get:Input
+        @get:Optional
+        val macBundleName: Property<String> = objects.nullableProperty()
 
         @get:Input
         val targetArch: Property<String> =
@@ -266,7 +282,8 @@ abstract class AbstractElectronBuilderPackageTask
 
             // Create a task-private copy of the app image so parallel tasks don't
             // interfere when signing the bundle or when electron-builder writes into it.
-            val workingAppDir = copyAppImage(originalAppDir, outputDir, logger)
+            val workingAppDir =
+                copyAppImage(originalAppDir, outputDir, resolveWorkingAppDirName(originalAppDir), logger)
 
             ensureResourcesDirForElectronBuilder(workingAppDir)
             ensureLinuxExecutableAlias(workingAppDir)
@@ -443,6 +460,8 @@ abstract class AbstractElectronBuilderPackageTask
                 )
             }
 
+            val nsisProtocolInclude = generateProtocolNsisInclude(distributions, targetFormats, outputDir)
+
             val configContent =
                 configGenerator.generateConfig(
                     distributions = distributions,
@@ -456,11 +475,118 @@ abstract class AbstractElectronBuilderPackageTask
                     executableName = executableName.orNull,
                     dmgBackgroundOverride = dmgBackgroundOverride,
                     dmgWindowOverride = dmgWindowOverride,
+                    nsisProtocolInclude = nsisProtocolInclude,
+                    macBundleName = macBundleName.orNull,
                 )
             val configFile = File(outputDir, "electron-builder.yml")
             configFile.writeText(configContent)
             logger.info("Generated electron-builder config at: ${configFile.absolutePath}")
             return configFile
+        }
+
+        /**
+         * Generates an NSIS include script that registers the declared URL protocol handlers
+         * (deep linking) in the Windows registry at install time.
+         *
+         * electron-builder's `protocols` field only registers schemes on macOS (Info.plist) and
+         * Linux (.desktop `x-scheme-handler`); the NSIS target ignores it. Windows therefore needs
+         * explicit registry writes, which we emit via the `customInstall`/`customUnInstall` hooks.
+         *
+         * Returns null (no registration) when the current OS is not Windows, the batch contains no
+         * NSIS-family installer, no protocols are declared, or the user already supplied a custom
+         * NSIS include script (which must not be overridden).
+         */
+        private fun generateProtocolNsisInclude(
+            distributions: JvmApplicationDistributions,
+            targetFormats: List<TargetFormat>,
+            outputDir: File,
+        ): File? {
+            if (currentOS != OS.Windows) return null
+            if (distributions.protocols.isEmpty()) return null
+            if (targetFormats.none { it in NSIS_FAMILY_FORMATS }) return null
+
+            if (distributions.windows.nsis.includeScript.orNull != null) {
+                logger.warn(
+                    "URL protocol handlers are declared but a custom nsis.includeScript is set; " +
+                        "skipping automatic protocol registration. Register the schemes yourself " +
+                        "in a customInstall macro inside your include script.",
+                )
+                return null
+            }
+
+            // Pair each scheme with its human-readable protocol name. The (Default) value of
+            // the protocol key is what Windows and Chrome show in the "Open with …?" prompt
+            // (convention: "URL:<friendly name>"). Using the protocol name — which may be in
+            // Hebrew/Arabic/etc. — instead of the raw scheme makes that prompt readable.
+            // Falls back to appName, then to the scheme itself.
+            val handlers =
+                distributions.protocols
+                    .flatMap { protocol ->
+                        val friendlyName =
+                            protocol.name.takeIf { it.isNotBlank() }
+                                ?: distributions.appName
+                        protocol.schemes
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() }
+                            .map { scheme -> scheme to (friendlyName ?: scheme) }
+                    }.distinctBy { it.first }
+            if (handlers.isEmpty()) return null
+
+            // Escaping cannot save a value containing a line break: NSIS is line-oriented, so the
+            // remainder of the name would become its own command. Reject rather than strip, since
+            // silently altering a registered protocol name would be worse than failing the build.
+            for ((scheme, friendlyName) in handlers) {
+                requireNoControlCharacters(scheme, "URL scheme")
+                requireNoControlCharacters(friendlyName, "URL protocol name")
+            }
+
+            // SHELL_CONTEXT resolves to HKLM (per-machine) or HKCU (per-user) automatically.
+            // ${APP_EXECUTABLE_FILENAME} is provided by electron-builder's NSIS template.
+            val script =
+                buildString {
+                    appendLine("!macro customInstall")
+                    for ((rawScheme, rawFriendlyName) in handlers) {
+                        val scheme = rawScheme.escapeForNsisString()
+                        val friendlyName = rawFriendlyName.escapeForNsisString()
+                        val key = "Software\\Classes\\$scheme"
+                        appendLine("  DetailPrint \"Registering $scheme:// URL handler\"")
+                        appendLine("  DeleteRegKey SHELL_CONTEXT \"$key\"")
+                        appendLine("  WriteRegStr SHELL_CONTEXT \"$key\" \"\" \"URL:$friendlyName\"")
+                        appendLine("  WriteRegStr SHELL_CONTEXT \"$key\" \"URL Protocol\" \"\"")
+                        appendLine(
+                            "  WriteRegStr SHELL_CONTEXT \"$key\\DefaultIcon\" \"\" " +
+                                "\"\$INSTDIR\\\${APP_EXECUTABLE_FILENAME},0\"",
+                        )
+                        appendLine(
+                            "  WriteRegStr SHELL_CONTEXT \"$key\\shell\\open\\command\" \"\" " +
+                                "'\"\$INSTDIR\\\${APP_EXECUTABLE_FILENAME}\" \"%1\"'",
+                        )
+                    }
+                    appendLine("!macroend")
+                    appendLine()
+                    appendLine("!macro customUnInstall")
+                    // Guard against auto-update: the new installer runs before the old uninstaller,
+                    // so unconditional cleanup would drop a just-registered scheme.
+                    appendLine("  \${ifNot} \${isUpdated}")
+                    for ((rawScheme, _) in handlers) {
+                        val scheme = rawScheme.escapeForNsisString()
+                        appendLine("    DeleteRegKey SHELL_CONTEXT \"Software\\Classes\\$scheme\"")
+                    }
+                    appendLine("  \${endIf}")
+                    appendLine("!macroend")
+                }
+
+            val nshFile = File(outputDir, "potassium-protocols.nsh")
+            nshFile.parentFile.mkdirs()
+            // Write with a UTF-8 BOM so makensis detects the encoding and keeps non-ASCII
+            // protocol names (e.g. Hebrew) intact. NSIS treats '#' as a comment, so a
+            // "#pragma" directive would be inert — the BOM is the supported mechanism.
+            nshFile.writeText("﻿$script", Charsets.UTF_8)
+            logger.info(
+                "Generated NSIS protocol registration script at ${nshFile.absolutePath} " +
+                    "for schemes: ${handlers.joinToString { it.first }}",
+            )
+            return nshFile
         }
 
         private fun exportPackagingMetadata(
@@ -526,8 +652,11 @@ abstract class AbstractElectronBuilderPackageTask
             val metadata =
                 buildString {
                     appendLine("{")
+                    // Mirrors the config generator: the bundle name wins so a DMG rebuilt from this
+                    // metadata on another machine stages the same .app the ZIP already ships.
                     val resolvedProductName =
-                        distributions.appName ?: distributions.packageName ?: executableName.orNull
+                        macBundleName.orNull?.takeIf { it.isNotBlank() }
+                            ?: distributions.appName ?: distributions.packageName ?: executableName.orNull
                     appendLine("  \"productName\": ${jsonStr(resolvedProductName)},")
                     appendLine("  \"appId\": ${jsonStr(appId)},")
                     appendLine("  \"copyright\": ${jsonStr(distributions.copyright)},")
@@ -968,6 +1097,13 @@ abstract class AbstractElectronBuilderPackageTask
         private fun isToolAvailableFor(targetFormat: TargetFormat): Boolean =
             when (targetFormat) {
                 TargetFormat.Snap -> {
+                    // snapcraft really is required here. electron-builder only takes its
+                    // template path — which shells out to mksquashfs and needs no snapcraft —
+                    // when the snap config leaves plugs and packages at their defaults
+                    // (`SnapCoreLegacy.isUseTemplateApp`). This plugin always emits an explicit
+                    // `snap.plugs` list, and any explicit list is a different array than
+                    // electron-builder's default, which turns the template path off and routes
+                    // the build through `snapcraft snap`.
                     when {
                         !isCommandAvailable("snapcraft") -> {
                             logger.lifecycle("Skipping Snap packaging: 'snapcraft' is not available on this runner.")
@@ -1277,7 +1413,7 @@ abstract class AbstractElectronBuilderPackageTask
          * Resolves the actual app directory inside the jpackage app-image output.
          *
          * jpackage produces: `<destinationDir>/<packageName>` on Linux/Windows
-         *                  or `<destinationDir>/<packageName>.app` on macOS.
+         *                  or `<destinationDir>/<macBundleName>.app` on macOS.
          */
         private fun resolveAppImageDir(): File {
             val root = appImageRoot.ioFile
@@ -1286,10 +1422,14 @@ abstract class AbstractElectronBuilderPackageTask
             }
 
             val name = packageName.get()
+            val bundleName = macBundleName.orNull?.takeIf { it.isNotBlank() }
 
-            // Try platform-specific name, then plain name, then single-child fallback
+            // Try the macOS bundle name, then the platform-specific name, then the plain name,
+            // then fall back to the single child directory.
             val resolved =
                 when {
+                    currentOS == OS.MacOS && bundleName != null && root.resolve("$bundleName.app").isDirectory ->
+                        root.resolve("$bundleName.app")
                     currentOS == OS.MacOS && root.resolve("$name.app").isDirectory ->
                         root.resolve("$name.app")
                     root.resolve(name).isDirectory -> root.resolve(name)
@@ -1298,8 +1438,21 @@ abstract class AbstractElectronBuilderPackageTask
 
             return resolved ?: throw GradleException(
                 "Unable to locate app image directory. " +
-                    "Expected '$name' or '$name.app' inside: ${root.absolutePath}",
+                    "Expected '$name' or '${bundleName ?: name}.app' inside: ${root.absolutePath}",
             )
+        }
+
+        /**
+         * Name the task-private copy of the app image must carry.
+         *
+         * On macOS this is `<macBundleName>.app`, which electron-builder's ZIP target archives
+         * verbatim and its DMG target reproduces via `productFilename`. Elsewhere the source name is
+         * kept as-is.
+         */
+        private fun resolveWorkingAppDirName(source: File): String {
+            if (currentOS != OS.MacOS) return source.name
+            val bundleName = macBundleName.orNull?.takeIf { it.isNotBlank() } ?: return source.name
+            return "$bundleName.app"
         }
 
         /**
@@ -1322,6 +1475,42 @@ abstract class AbstractElectronBuilderPackageTask
         }
     }
 
+private const val HEX_RADIX = 16
+private const val HEX_CODE_POINT_WIDTH = 4
+
+/**
+ * Rejects a value that cannot be represented on one line of an NSIS script.
+ *
+ * NSIS is line-oriented and has no escape for a line break, so a newline in a protocol name would
+ * end the `WriteRegStr` command and turn the rest of the name into a command of its own.
+ */
+internal fun requireNoControlCharacters(
+    value: String,
+    what: String,
+) {
+    val offending = value.firstOrNull { it.isISOControl() } ?: return
+    val codePoint =
+        offending.code
+            .toString(HEX_RADIX)
+            .uppercase()
+            .padStart(HEX_CODE_POINT_WIDTH, '0')
+    throw GradleException(
+        "$what contains a control character (U+$codePoint) and cannot be written to the NSIS " +
+            "protocol script: '${value.replace(Regex("\\p{Cntrl}"), "?")}'",
+    )
+}
+
+/**
+ * Escapes a value interpolated into a double-quoted NSIS string.
+ *
+ * `$` opens a variable or constant reference in NSIS and `"` ends the string, so an app or protocol
+ * name like `Cash$App` or `Acme"Tools` would otherwise produce a `WriteRegStr` line that registers
+ * the wrong value — or fails to compile. NSIS escapes both through `$`: `$$` for a literal dollar
+ * and `$\"` for a literal quote. Backslashes need no escaping and must not be doubled: registry key
+ * paths are written with single backslashes.
+ */
+internal fun String.escapeForNsisString(): String = replace("$", "$$").replace("\"", "$\\\"")
+
 /**
  * Creates a task-private copy of the app image directory so that parallel
  * packaging tasks do not interfere with each other when modifying .cfg files,
@@ -1333,10 +1522,11 @@ abstract class AbstractElectronBuilderPackageTask
 private fun copyAppImage(
     source: File,
     outputDir: File,
+    destinationName: String,
     logger: Logger,
 ): File {
     val workingRoot = File(outputDir, ".app-image")
-    val destination = File(workingRoot, source.name)
+    val destination = File(workingRoot, destinationName)
     if (destination.exists()) {
         deleteWithRetry(destination, logger)
     }

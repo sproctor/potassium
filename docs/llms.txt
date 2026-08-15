@@ -68,6 +68,7 @@ potassium {
 
 **Kotlin DSL imports:** The Kotlin DSL types live under `com.seanproctor.potassium.*` (for example
 `import com.seanproctor.potassium.dsl.MacOSTargetFormat`).
+
 ## Coordinates
 
 - **Plugin id:** `com.seanproctor.potassium`
@@ -110,6 +111,7 @@ npm --version
 ```
 
 **CI/CD:** The `setup-potassium` composite action installs Node.js automatically. See [CI/CD](ci-cd.md) for details.
+
 ## Installation
 
 The plugin is published to Maven Central. Add Maven Central to your plugin repositories, then apply the plugin in your build script:
@@ -136,6 +138,7 @@ plugins {
 
 **Kotlin DSL imports:** The Kotlin DSL types live under `com.seanproctor.potassium.*` (for example
 `import com.seanproctor.potassium.dsl.MacOSTargetFormat`).
+
 ## Minimal Configuration
 
 ```kotlin
@@ -163,19 +166,17 @@ potassium {
 
 Potassium is fully compatible with [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html). Since Potassium extends the Compose plugin (not replaces it), Hot Reload works out of the box.
 
-The `hotRun` task reads `mainClass` from the `compose.desktop.application` block. If you only set it in `potassium`, add a minimal Compose block:
-
-```kotlin
-compose.desktop.application {
-    mainClass = "com.example.MainKt"
-}
-```
-
-Or pass it via the command line:
+The `hotRun` task reads `mainClass` from the `compose.desktop.application` block rather than from
+`potassium`, so pass it on the command line:
 
 ```bash
 ./gradlew hotRun -PmainClass=com.example.MainKt
 ```
+
+**Do not add a `compose.desktop.application { }` block:** Configuring it initializes Compose Desktop's own packaging, which registers the same task names
+Potassium does (`createDistributable`, `packageDmg`, …). Potassium detects this and fails the
+build with an explanation. Keep the Compose plugin applied — only its `application { }` block
+has to stay out.
 
 ### Packaging
 
@@ -406,6 +407,7 @@ linux { targetFormats(LinuxTargetFormat.Deb, LinuxTargetFormat.Rpm, LinuxTargetF
 
 **One invocation per platform:** Configuring several formats for an OS (e.g. `Deb`, `Rpm`, `AppImage`) makes
 `packageLinux` build them all in one electron-builder run, rather than one run per format.
+
 Target all of an OS's formats at once:
 
 ```kotlin
@@ -486,6 +488,50 @@ potassium {
 
 Requires JDK 25+ and that the application self-terminates during the training run.
 
+`enableAotCache` is shorthand for the `aotCache { }` block, which also controls how portable the
+generated cache is:
+
+```kotlin
+potassium {
+    aotCache {
+        enabled = true
+
+        // Default. Class metadata only — runs on any CPU of the target architecture.
+        compatibility = AotCacheCompatibility.COMPATIBILITY
+
+        // Extra JVM arguments for the training run only.
+        extraTrainingJvmArgs("-Dmyapp.headless=true")
+    }
+}
+```
+
+| Property               | Type                     | Default         | Description                                          |
+|------------------------|--------------------------|-----------------|------------------------------------------------------|
+| `enabled`              | `Boolean`                | `false`         | Generate the cache and wire `-XX:AOTCache` in        |
+| `compatibility`        | `AotCacheCompatibility`  | `COMPATIBILITY` | Portability profile of the generated cache           |
+| `extraTrainingJvmArgs` | `MutableList<String>`    | empty           | JVM arguments passed to the training run only        |
+
+#### Choosing a compatibility profile
+
+Left to the JDK's own defaults, the AOT cache is not pure metadata: since JDK 25 it also stores
+machine code generated for the CPU features of the machine that ran the training, and no JDK before
+27 checks those features when loading it — so a cache built on a CI runner is mapped and executed on
+a narrower CPU and crashes with `EXCEPTION_ILLEGAL_INSTRUCTION` / `SIGILL` rather than being
+rejected. That is what the `NATIVE` profile below selects; the default `COMPATIBILITY` profile
+turns the machine-code region off and is unaffected.
+
+| Profile         | What is cached           | Runs on                             |
+|-----------------|--------------------------|-------------------------------------|
+| `COMPATIBILITY` | Class metadata only      | Any CPU of the target architecture  |
+| `NATIVE`        | Metadata + adapter code  | Only CPUs as wide as the build host |
+
+`COMPATIBILITY` is the default because a redistributed desktop application cannot know what its
+users run. It keeps the class loading and linking work, which is the bulk of the startup win, and
+leaves the JIT untouched at runtime.
+
+Use `NATIVE` only for locally built or fleet-homogeneous deployments. On a JDK older than 27 the
+build warns that the cache carries unvalidated machine code.
+
 ### Splash Screen
 
 Displays a splash screen during application startup:
@@ -534,6 +580,7 @@ potassium {
 due to squashfs/FUSE decompression overhead. For AppImage targets, use `Normal` or `Store` instead.
 Other formats (DMG, NSIS, DEB, RPM, etc.) are not affected.
 See [electron-builder#7483](https://github.com/electron-userland/electron-builder/issues/7483) for details.
+
 ### Trusted CA Certificates
 
 Import custom CA certificates into the bundled JVM's `cacerts` keystore at build time.
@@ -634,11 +681,12 @@ potassium {
     licenseFile, appResourcesRootDir, outputBaseDir
     modules(...), includeAllModules
     cleanupNativeLibs, enableAotCache, splashImage
+    aotCache { enabled, compatibility, extraTrainingJvmArgs }
     compressionLevel, artifactName
     protocol(name, vararg schemes)
     fileAssociation(mimeType, extension, description, linuxIconFile?, windowsIconFile?, macOSIconFile?)
     publish { github , s3 , generic  }
-    macOS { targetFormats(...), iconFile, bundleID, dockName, appCategory, layeredIconDir, signing , notarization , dmg , infoPlist  }
+    macOS { targetFormats(...), iconFile, bundleID, bundleName, dockName, appCategory, layeredIconDir, signing , notarization , dmg , infoPlist  }
     windows { targetFormats(...), iconFile, upgradeUuid, signing , nsis , appx  }
     linux { targetFormats(...), iconFile, debMaintainer, debDepends, rpmRequires, appImage , snap , flatpak  }
 }
@@ -724,18 +772,16 @@ Replace the `compose.desktop.application` block with `potassium` for packaging a
  }
 ```
 
-**Using Compose Hot Reload?:** Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `potassium`. If you use [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html), either keep a minimal Compose block alongside Potassium:
-    ```kotlin
-    compose.desktop.application {
-        mainClass = "com.example.MainKt"
-    }
-    ```
+**Using Compose Hot Reload?:** Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `potassium`. Pass the property explicitly when running:
 
-    Or pass the property explicitly when running:
+```bash
+./gradlew hotRun -PmainClass=com.example.MainKt
+```
 
-    ```bash
-    ./gradlew hotRun -PmainClass=com.example.MainKt
-    ```
+Do **not** keep a minimal `compose.desktop.application { }` block for this. Configuring it
+initializes Compose Desktop's packaging, which registers the same task names Potassium does;
+Potassium detects the conflict and fails the build with an explanation. The Compose plugin
+itself stays applied — Potassium extends it.
 
 ## Step 4: Add Potassium Features (Optional)
 
@@ -848,7 +894,7 @@ Everything from the official plugin works unchanged:
 - The standard Gradle tasks (`run`, `packageDistributionForCurrentOS`, the per-platform `packageMacOS` / `packageWindows` / `packageLinux`, etc.)
 - `compose.desktop.currentOs` dependency
 - Source set configuration
-- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Potassium extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so set it there too or pass `-PmainClass=...` (see [Step 3](#step-3-use-the-potassium-dsl))
+- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Potassium extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so pass `-PmainClass=...` rather than re-adding that block (see [Step 3](#step-3-use-the-potassium-dsl))
 
 ---
 

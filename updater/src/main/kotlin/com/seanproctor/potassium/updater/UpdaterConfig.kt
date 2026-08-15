@@ -37,11 +37,44 @@ public class UpdaterConfig {
     /** Overrides the directory holding the differential-update artifact cache (mainly a test seam). */
     internal var updateCacheDir: File? = null
 
-    internal fun isDevMode(): Boolean = currentVersion == DEV_VERSION
+    /**
+     * Validates the config and freezes it into an immutable snapshot, so a [PotassiumUpdater]
+     * never observes post-construction mutation and a missing [provider] fails at construction
+     * instead of at the first network call.
+     */
+    internal fun resolve(): ResolvedUpdaterConfig {
+        require(::provider.isInitialized) {
+            "UpdaterConfig.provider must be set, e.g. PotassiumUpdater { provider = GitHubProvider(\"owner/repo\") }"
+        }
+        return ResolvedUpdaterConfig(
+            currentVersion = currentVersion,
+            provider = provider,
+            channel = channel,
+            allowDowngrade = allowDowngrade,
+            executableType = executableType,
+            httpClient = httpClient,
+            disableDifferentialDownload = disableDifferentialDownload,
+            updateCacheDir = updateCacheDir,
+        )
+    }
 
     public companion object {
         public const val DEV_VERSION: String = "0.0.0-dev"
     }
+}
+
+/** The immutable snapshot of an [UpdaterConfig], taken once when a [PotassiumUpdater] is constructed. */
+internal data class ResolvedUpdaterConfig(
+    val currentVersion: String,
+    val provider: UpdateProvider,
+    val channel: String?,
+    val allowDowngrade: Boolean,
+    val executableType: InstallType?,
+    val httpClient: HttpClient?,
+    val disableDifferentialDownload: Boolean,
+    val updateCacheDir: File?,
+) {
+    fun isDevMode(): Boolean = currentVersion == UpdaterConfig.DEV_VERSION
 }
 
 public fun PotassiumUpdater(block: UpdaterConfig.() -> Unit): PotassiumUpdater {
