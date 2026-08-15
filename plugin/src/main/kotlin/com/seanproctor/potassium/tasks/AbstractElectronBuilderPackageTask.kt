@@ -532,6 +532,14 @@ abstract class AbstractElectronBuilderPackageTask
                     }.distinctBy { it.first }
             if (handlers.isEmpty()) return null
 
+            // Escaping cannot save a value containing a line break: NSIS is line-oriented, so the
+            // remainder of the name would become its own command. Reject rather than strip, since
+            // silently altering a registered protocol name would be worse than failing the build.
+            for ((scheme, friendlyName) in handlers) {
+                requireNoControlCharacters(scheme, "URL scheme")
+                requireNoControlCharacters(friendlyName, "URL protocol name")
+            }
+
             // SHELL_CONTEXT resolves to HKLM (per-machine) or HKCU (per-user) automatically.
             // ${APP_EXECUTABLE_FILENAME} is provided by electron-builder's NSIS template.
             val script =
@@ -1466,6 +1474,31 @@ abstract class AbstractElectronBuilderPackageTask
             return listOf(platformFlag) + targets
         }
     }
+
+private const val HEX_RADIX = 16
+private const val HEX_CODE_POINT_WIDTH = 4
+
+/**
+ * Rejects a value that cannot be represented on one line of an NSIS script.
+ *
+ * NSIS is line-oriented and has no escape for a line break, so a newline in a protocol name would
+ * end the `WriteRegStr` command and turn the rest of the name into a command of its own.
+ */
+internal fun requireNoControlCharacters(
+    value: String,
+    what: String,
+) {
+    val offending = value.firstOrNull { it.isISOControl() } ?: return
+    val codePoint =
+        offending.code
+            .toString(HEX_RADIX)
+            .uppercase()
+            .padStart(HEX_CODE_POINT_WIDTH, '0')
+    throw GradleException(
+        "$what contains a control character (U+$codePoint) and cannot be written to the NSIS " +
+            "protocol script: '${value.replace(Regex("\\p{Cntrl}"), "?")}'",
+    )
+}
 
 /**
  * Escapes a value interpolated into a double-quoted NSIS string.
