@@ -99,6 +99,16 @@ class PathingJarClasspathTest {
     }
 
     @Test
+    fun `encodes characters that would otherwise change which file an entry resolves to`() {
+        // Class-Path entries are URLs: a literal `%` reads back as the start of an escape, and
+        // `#` / `?` truncate the entry at a fragment or query boundary.
+        assertEquals("lib%2520x.jar", PathingJarClasspath.encodeClassPathEntry("lib%20x.jar"))
+        assertEquals("lib%23x.jar", PathingJarClasspath.encodeClassPathEntry("lib#x.jar"))
+        assertEquals("lib%3Fx.jar", PathingJarClasspath.encodeClassPathEntry("lib?x.jar"))
+        assertEquals("plain.jar", PathingJarClasspath.encodeClassPathEntry("plain.jar"))
+    }
+
+    @Test
     fun `collapseInLinuxAppImage finds lib-app under the package dir`() {
         val dest = tmp.newFolder("dest")
         val appImage = dest.resolve("DemoApp").apply { mkdirs() }

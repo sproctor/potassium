@@ -83,6 +83,17 @@ class MacInstallScriptsTest {
     }
 
     @Test
+    fun `zip script refuses to replace a different application at the adopted name`() {
+        // Adopting the archive's bundle name can collide with an unrelated .app in the install
+        // directory; the swap would otherwise move it aside and delete it.
+        val guard = zip.indexOf("Refusing to replace")
+        val backup = zip.indexOf("mv \"\$TARGET\" \"\$BACKUP\"")
+        assertTrue("the collision guard must be present", guard >= 0)
+        assertTrue("the guard must precede the swap", guard < backup)
+        assertTrue(zip.contains("EXISTING_BUNDLE_ID"))
+    }
+
+    @Test
     fun `dmg script detaches the image on every exit path`() {
         assertTrue(dmg.contains("trap "))
         assertTrue(dmg.contains("hdiutil detach"))

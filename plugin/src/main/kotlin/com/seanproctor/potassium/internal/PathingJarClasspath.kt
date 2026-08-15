@@ -9,6 +9,7 @@ import com.seanproctor.potassium.internal.utils.OS
 import com.seanproctor.potassium.internal.utils.currentOS
 import org.gradle.api.logging.Logger
 import java.io.File
+import java.net.URI
 import java.util.jar.Attributes
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
@@ -189,8 +190,12 @@ internal object PathingJarClasspath {
     }
 
     /**
-     * Manifest Class-Path entries are space-separated URLs. Encode spaces so a jar name
-     * containing whitespace does not split into multiple entries.
+     * Manifest Class-Path entries are space-separated *URLs*, not raw file names, so the name has
+     * to be encoded as a URI path segment rather than merely have its spaces replaced.
+     *
+     * A literal `%` in a jar name would otherwise be read back as the start of an escape (`lib%20x`
+     * resolving to `lib x`), and `#` or `?` would truncate the entry at a fragment or query
+     * boundary. Encoding through [URI] covers all three plus the space case.
      */
-    internal fun encodeClassPathEntry(name: String): String = name.replace(" ", "%20")
+    internal fun encodeClassPathEntry(name: String): String = URI(null, null, name, null).rawPath
 }

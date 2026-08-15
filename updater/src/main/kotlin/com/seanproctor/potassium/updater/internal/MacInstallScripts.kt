@@ -91,6 +91,18 @@ internal object MacInstallScripts {
         |    fi
         |fi
         |
+        |# Adopting the archive's name can land on a bundle that is not this application at all —
+        |# an unrelated .app that happens to share the name. The swap below removes whatever sits
+        |# at TARGET, so refuse unless that bundle is the same application.
+        |if [ "${D}TARGET" != "${D}APP_PATH" ] && [ -d "${D}TARGET" ]; then
+        |    EXISTING_BUNDLE_ID="$D(read_bundle_id "${D}TARGET")"
+        |    if [ "${D}EXISTING_BUNDLE_ID" != "${D}NEW_BUNDLE_ID" ]; then
+        |        echo "Refusing to replace ${D}TARGET: it is a different application" \
+        |            "(${D}EXISTING_BUNDLE_ID), not ${D}NEW_BUNDLE_ID" >&2
+        |        exit 1
+        |    fi
+        |fi
+        |
         |# Swap through a backup so a failed move can be rolled back.
         |BACKUP="${D}TARGET.potassium-old-$D$D"
         |if [ -d "${D}TARGET" ]; then

@@ -537,7 +537,9 @@ abstract class AbstractElectronBuilderPackageTask
             val script =
                 buildString {
                     appendLine("!macro customInstall")
-                    for ((scheme, friendlyName) in handlers) {
+                    for ((rawScheme, rawFriendlyName) in handlers) {
+                        val scheme = rawScheme.escapeForNsisString()
+                        val friendlyName = rawFriendlyName.escapeForNsisString()
                         val key = "Software\\Classes\\$scheme"
                         appendLine("  DetailPrint \"Registering $scheme:// URL handler\"")
                         appendLine("  DeleteRegKey SHELL_CONTEXT \"$key\"")
@@ -558,7 +560,8 @@ abstract class AbstractElectronBuilderPackageTask
                     // Guard against auto-update: the new installer runs before the old uninstaller,
                     // so unconditional cleanup would drop a just-registered scheme.
                     appendLine("  \${ifNot} \${isUpdated}")
-                    for ((scheme, _) in handlers) {
+                    for ((rawScheme, _) in handlers) {
+                        val scheme = rawScheme.escapeForNsisString()
                         appendLine("    DeleteRegKey SHELL_CONTEXT \"Software\\Classes\\$scheme\"")
                     }
                     appendLine("  \${endIf}")
@@ -1086,12 +1089,18 @@ abstract class AbstractElectronBuilderPackageTask
         private fun isToolAvailableFor(targetFormat: TargetFormat): Boolean =
             when (targetFormat) {
                 TargetFormat.Snap -> {
-                    // electron-builder builds snaps with its bundled `app-builder` tool (downloading
-                    // its own snap template) and never invokes the `snapcraft` binary, so snapcraft
-                    // is not a prerequisite — requiring it only produced false skips. arm64 stays
-                    // unsupported because that template (gnome-3-28-1804 build-snaps) is
-                    // unavailable for the arch.
+                    // snapcraft really is required here. electron-builder only takes its
+                    // template path — which shells out to mksquashfs and needs no snapcraft —
+                    // when the snap config leaves plugs and packages at their defaults
+                    // (`SnapCoreLegacy.isUseTemplateApp`). This plugin always emits an explicit
+                    // `snap.plugs` list, and any explicit list is a different array than
+                    // electron-builder's default, which turns the template path off and routes
+                    // the build through `snapcraft snap`.
                     when {
+                        !isCommandAvailable("snapcraft") -> {
+                            logger.lifecycle("Skipping Snap packaging: 'snapcraft' is not available on this runner.")
+                            false
+                        }
                         currentArch == Arch.Arm64 -> {
                             logger.lifecycle(
                                 "Skipping Snap packaging on arm64: electron-builder uses " +
@@ -1457,6 +1466,17 @@ abstract class AbstractElectronBuilderPackageTask
             return listOf(platformFlag) + targets
         }
     }
+
+/**
+ * Escapes a value interpolated into a double-quoted NSIS string.
+ *
+ * `$` opens a variable or constant reference in NSIS and `"` ends the string, so an app or protocol
+ * name like `Cash$App` or `Acme"Tools` would otherwise produce a `WriteRegStr` line that registers
+ * the wrong value — or fails to compile. NSIS escapes both through `$`: `$$` for a literal dollar
+ * and `$\"` for a literal quote. Backslashes need no escaping and must not be doubled: registry key
+ * paths are written with single backslashes.
+ */
+internal fun String.escapeForNsisString(): String = replace("$", "$$").replace("\"", "$\\\"")
 
 /**
  * Creates a task-private copy of the app image directory so that parallel
