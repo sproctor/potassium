@@ -47,7 +47,7 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.potassium") version "0.4.1"
+    id("com.seanproctor.potassium") version "0.5.0"
 }
 
 potassium {
@@ -72,7 +72,7 @@ potassium {
 ## Coordinates
 
 - **Plugin id:** `com.seanproctor.potassium`
-- **Latest version:** `0.4.1`
+- **Latest version:** `0.5.0`
 - **Published to:** Maven Central
 - **Repository:** [github.com/sproctor/potassium](https://github.com/sproctor/potassium)
 
@@ -132,7 +132,7 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.potassium") version "0.4.1"
+    id("com.seanproctor.potassium") version "0.5.0"
 }
 ```
 
@@ -2498,7 +2498,7 @@ See [Publishing](publishing.md) for the full configuration reference.
 
 ```kotlin
 dependencies {
-    implementation("com.seanproctor:potassium-updater:0.4.1")
+    implementation("com.seanproctor:potassium-updater:0.5.0")
 }
 ```
 
@@ -2765,7 +2765,7 @@ To fix this, pass a client pre-configured with the OS trust store (for example v
 
 ```kotlin
 dependencies {
-    implementation("com.seanproctor:potassium-updater:0.4.1")
+    implementation("com.seanproctor:potassium-updater:0.5.0")
     // Upstream Nucleus runtime library — deliberately keeps its original coordinates.
     implementation("io.github.kdroidfilter:nucleus.native-http:<version>")
 }
@@ -4462,7 +4462,7 @@ Potassium is a drop-in extension of the official JetBrains Compose Desktop plugi
      id("org.jetbrains.kotlin.jvm") version "2.3.10"
      id("org.jetbrains.kotlin.plugin.compose") version "2.3.10"
      id("org.jetbrains.compose") version "1.10.1"
-+    id("com.seanproctor.potassium") version "0.4.1"
++    id("com.seanproctor.potassium") version "0.5.0"
  }
 ```
 

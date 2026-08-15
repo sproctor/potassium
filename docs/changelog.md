@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.5.0
+
+**Released: 2026-08-14**
 
 ### New Features
 

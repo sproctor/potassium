@@ -250,7 +250,7 @@ See [Publishing](publishing.md) for the full configuration reference.
 
 ```kotlin
 dependencies {
-    implementation("com.seanproctor:potassium-updater:0.4.1")
+    implementation("com.seanproctor:potassium-updater:0.5.0")
 }
 ```
 
@@ -517,7 +517,7 @@ To fix this, pass a client pre-configured with the OS trust store (for example v
 
 ```kotlin
 dependencies {
-    implementation("com.seanproctor:potassium-updater:0.4.1")
+    implementation("com.seanproctor:potassium-updater:0.5.0")
     // Upstream Nucleus runtime library — deliberately keeps its original coordinates.
     implementation("io.github.kdroidfilter:nucleus.native-http:<version>")
 }
