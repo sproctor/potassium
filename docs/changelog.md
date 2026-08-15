@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-Ports the correctness fixes made upstream in [Nucleus](https://github.com/NucleusFramework/Nucleus) since Potassium forked from it.
-
 ### New Features
 
 - **`macOS.bundleName`** — names the `.app` bundle directory across every macOS artifact. Defaults to `appName`, then `macOS.packageName` / `packageName`. See [macOS → Bundle Name](targets/macos.md#bundle-name).
@@ -25,6 +23,8 @@ Ports the correctness fixes made upstream in [Nucleus](https://github.com/Nucleu
 
 ### Improvements
 
+- **Notarization resumes instead of re-uploading** — a `notarize<Format>` task now checks the submission recorded by an earlier run before uploading anything. `xcrun notarytool submit --wait` polls Apple for minutes and is the step most likely to be lost to a dropped connection or a killed process, and re-running it abandoned a submission that was often about to be accepted. An already-accepted submission is stapled without re-uploading, one still in progress is waited for, and one Apple rejected fails the build with its log rather than silently paying for a second round trip on identical bytes. The record is keyed by the artifact's SHA-512, so a rebuilt artifact is always submitted fresh, and it is deleted once notarization completes.
+- **Notarization credentials stay out of build logs** — a failed notarization printed a ready-to-run `xcrun notarytool log` command with the authentication arguments filled in, and a failed log fetch echoed the whole command line, putting the Apple ID, team ID, keychain profile, or API key and issuer identifiers into logs that CI retains. The manual command is now printed with a credentials placeholder, and the log fetch redacts those values. (The app-specific password was never on the command line; it is fed through stdin.)
 - **The macOS app image no longer rewrites every jar** — jars were re-zipped unconditionally and their entries restamped with the build time, so an untouched dependency came out byte-different on every build and differential updates had to refetch it whole. Only jars carrying a native library are rewritten now, and those keep their entry timestamps.
 - **Update downloads are staged in a private directory** — previously a predictable path in the shared system temp directory, which is a pre-created-file and symlink hazard on multi-user machines. Each download now gets a fresh owner-only directory.
 - **`UpdaterConfig` is validated and frozen when the updater is constructed** — a missing `provider` failed at the first network call instead of at construction, and mutating the config afterwards silently changed a live updater's behaviour.

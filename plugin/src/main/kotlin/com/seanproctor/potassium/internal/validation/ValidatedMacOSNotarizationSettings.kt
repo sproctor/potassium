@@ -59,6 +59,18 @@ internal fun NotarizationAuth.toNotaryToolArgs(): Pair<List<String>, String?> =
             ) to null
     }
 
+/**
+ * The credential values [toNotaryToolArgs] puts on the command line, so they can be redacted out
+ * of anything that ends up in a retained build log. Every one of them identifies the Apple account
+ * the build signs for; the password is not among them, since it is fed through stdin.
+ */
+internal fun NotarizationAuth.toNotaryToolCredentialValues(): Set<String> =
+    when (this) {
+        is NotarizationAuth.AppleId -> setOf(appleID, teamID)
+        is NotarizationAuth.KeychainProfile -> setOfNotNull(profileName, keychainPath)
+        is NotarizationAuth.ApiKey -> setOf(keyPath, keyId, issuerId)
+    }
+
 internal fun MacOSNotarizationSettings?.validate(): ValidatedMacOSNotarizationSettings {
     checkNotNull(this) {
         ERR_NOTARIZATION_SETTINGS_ARE_NOT_PROVIDED
