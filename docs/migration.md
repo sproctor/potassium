@@ -71,19 +71,16 @@ Replace the `compose.desktop.application` block with `potassium` for packaging a
 ```
 
 !!! tip "Using Compose Hot Reload?"
-    Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `potassium`. If you use [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html), either keep a minimal Compose block alongside Potassium:
-
-    ```kotlin
-    compose.desktop.application {
-        mainClass = "com.example.MainKt"
-    }
-    ```
-
-    Or pass the property explicitly when running:
+    Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `potassium`. Pass the property explicitly when running:
 
     ```bash
     ./gradlew hotRun -PmainClass=com.example.MainKt
     ```
+
+    Do **not** keep a minimal `compose.desktop.application { }` block for this. Configuring it
+    initializes Compose Desktop's packaging, which registers the same task names Potassium does;
+    Potassium detects the conflict and fails the build with an explanation. The Compose plugin
+    itself stays applied — Potassium extends it.
 
 ## Step 4: Add Potassium Features (Optional)
 
@@ -196,4 +193,4 @@ Everything from the official plugin works unchanged:
 - The standard Gradle tasks (`run`, `packageDistributionForCurrentOS`, the per-platform `packageMacOS` / `packageWindows` / `packageLinux`, etc.)
 - `compose.desktop.currentOs` dependency
 - Source set configuration
-- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Potassium extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so set it there too or pass `-PmainClass=...` (see [Step 3](#step-3-use-the-potassium-dsl))
+- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Potassium extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so pass `-PmainClass=...` rather than re-adding that block (see [Step 3](#step-3-use-the-potassium-dsl))

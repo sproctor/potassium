@@ -163,19 +163,18 @@ potassium {
 
 Potassium is fully compatible with [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html). Since Potassium extends the Compose plugin (not replaces it), Hot Reload works out of the box.
 
-The `hotRun` task reads `mainClass` from the `compose.desktop.application` block. If you only set it in `potassium`, add a minimal Compose block:
-
-```kotlin
-compose.desktop.application {
-    mainClass = "com.example.MainKt"
-}
-```
-
-Or pass it via the command line:
+The `hotRun` task reads `mainClass` from the `compose.desktop.application` block rather than from
+`potassium`, so pass it on the command line:
 
 ```bash
 ./gradlew hotRun -PmainClass=com.example.MainKt
 ```
+
+**Do not add a `compose.desktop.application { }` block:** 
+    Configuring it initializes Compose Desktop's own packaging, which registers the same task names
+    Potassium does (`createDistributable`, `packageDmg`, …). Potassium detects this and fails the
+    build with an explanation. Keep the Compose plugin applied — only its `application { }` block
+    has to stay out.
 
 ### Packaging
 
@@ -486,6 +485,48 @@ potassium {
 
 Requires JDK 25+ and that the application self-terminates during the training run.
 
+`enableAotCache` is shorthand for the `aotCache { }` block, which also controls how portable the
+generated cache is:
+
+```kotlin
+potassium {
+    aotCache {
+        enabled = true
+
+        // Default. Class metadata only — runs on any CPU of the target architecture.
+        compatibility = AotCacheCompatibility.COMPATIBILITY
+
+        // Extra JVM arguments for the training run only.
+        extraTrainingJvmArgs("-Dmyapp.headless=true")
+    }
+}
+```
+
+| Property               | Type                     | Default         | Description                                          |
+|------------------------|--------------------------|-----------------|------------------------------------------------------|
+| `enabled`              | `Boolean`                | `false`         | Generate the cache and wire `-XX:AOTCache` in        |
+| `compatibility`        | `AotCacheCompatibility`  | `COMPATIBILITY` | Portability profile of the generated cache           |
+| `extraTrainingJvmArgs` | `MutableList<String>`    | empty           | JVM arguments passed to the training run only        |
+
+#### Choosing a compatibility profile
+
+The AOT cache is not pure metadata. Since JDK 25 it also stores machine code generated for the CPU
+features of the machine that ran the training, and no JDK before 27 checks those features when
+loading it — so a cache built on a CI runner is mapped and executed on a narrower CPU and crashes
+with `EXCEPTION_ILLEGAL_INSTRUCTION` / `SIGILL` rather than being rejected.
+
+| Profile         | What is cached           | Runs on                             |
+|-----------------|--------------------------|-------------------------------------|
+| `COMPATIBILITY` | Class metadata only      | Any CPU of the target architecture  |
+| `NATIVE`        | Metadata + adapter code  | Only CPUs as wide as the build host |
+
+`COMPATIBILITY` is the default because a redistributed desktop application cannot know what its
+users run. It keeps the class loading and linking work, which is the bulk of the startup win, and
+leaves the JIT untouched at runtime.
+
+Use `NATIVE` only for locally built or fleet-homogeneous deployments. On a JDK older than 27 the
+build warns that the cache carries unvalidated machine code.
+
 ### Splash Screen
 
 Displays a splash screen during application startup:
@@ -634,11 +675,12 @@ potassium {
     licenseFile, appResourcesRootDir, outputBaseDir
     modules(...), includeAllModules
     cleanupNativeLibs, enableAotCache, splashImage
+    aotCache { enabled, compatibility, extraTrainingJvmArgs }
     compressionLevel, artifactName
     protocol(name, vararg schemes)
     fileAssociation(mimeType, extension, description, linuxIconFile?, windowsIconFile?, macOSIconFile?)
     publish { github , s3 , generic  }
-    macOS { targetFormats(...), iconFile, bundleID, dockName, appCategory, layeredIconDir, signing , notarization , dmg , infoPlist  }
+    macOS { targetFormats(...), iconFile, bundleID, bundleName, dockName, appCategory, layeredIconDir, signing , notarization , dmg , infoPlist  }
     windows { targetFormats(...), iconFile, upgradeUuid, signing , nsis , appx  }
     linux { targetFormats(...), iconFile, debMaintainer, debDepends, rpmRequires, appImage , snap , flatpak  }
 }
@@ -680,6 +722,9 @@ potassium {
         // Dock display name
         dockName = "MyApp"
 
+        // Name of the .app bundle directory (see "Bundle Name" below)
+        bundleName = "My App"
+
         // App Store category
         appCategory = "public.app-category.utilities"
 
@@ -706,6 +751,51 @@ potassium {
     }
 }
 ```
+
+## Bundle Name
+
+Every macOS artifact — DMG, ZIP, PKG, the raw app image and the GraalVM bundle — ships the `.app`
+directory under one name, resolved in this order:
+
+1. `macOS.bundleName`
+2. `appName`
+3. `macOS.packageName`, then the root `packageName`
+4. the Gradle project name
+
+This has to be a single value because the two formats disagree otherwise: electron-builder stages
+the bundle inside a DMG under its sanitized product name, while the ZIP target archives the
+prepackaged directory verbatim. An app installed from the DMG must be updatable from the ZIP, which
+only holds when both ship the same directory name.
+
+Only the directory is named this way. The launcher stays at `Contents/MacOS/<packageName>` and
+`CFBundleName` still comes from `appName`, so a rename does not disturb the running process or how
+the app identifies itself.
+
+The value is sanitized the same way electron-builder sanitizes `productName`, so characters that
+are illegal in a file name are dropped, and it is normalized to NFD to match what the DMG's HFS+
+volume stores.
+
+Set it explicitly when you need a name none of the fallbacks produce:
+
+```kotlin
+potassium {
+    appName = "My App"
+    packageName = "myapp"
+
+    macOS {
+        bundleName = "My App Pro"   // ships My App Pro.app in every format
+    }
+}
+```
+
+**Upgrading from 0.4.1 or earlier:** 
+    Earlier versions named the raw app image after `macOS.packageName`. If you set that property
+    and it differs from `appName`, the bundle directory is now named after `appName` instead, and
+    the build prints a warning naming the `macOS.bundleName` value that restores the previous name.
+
+    A renamed bundle matters for auto-update: the updater keeps the installed path when the old and
+    new bundles share a `CFBundleIdentifier`, so existing installs are updated in place rather than
+    left behind under the old name.
 
 ## DMG Customization
 
@@ -952,6 +1042,7 @@ macOS {
 | `minimumSystemVersion`         | `String?`             | `null`          | Minimum macOS version                                                                                       |
 | `layeredIconDir`               | `DirectoryProperty`   | —               | `.icon` directory for macOS 26+                                                                             |
 | `packageName`                  | `String?`             | `null`          | Override package name                                                                                       |
+| `bundleName`                   | `String?`             | `null`          | Name of the `.app` bundle directory, without `.app` (see [above](#bundle-name))                             |
 | `entitlementsFile`             | `RegularFileProperty` | —               | Entitlements plist                                                                                          |
 | `runtimeEntitlementsFile`      | `RegularFileProperty` | —               | Runtime entitlements plist                                                                                  |
 | `provisioningProfile`          | `RegularFileProperty` | —               | Provisioning profile                                                                                        |
@@ -4395,18 +4486,15 @@ Replace the `compose.desktop.application` block with `potassium` for packaging a
  }
 ```
 
-**Using Compose Hot Reload?:** Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `potassium`. If you use [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html), either keep a minimal Compose block alongside Potassium:
-    ```kotlin
-    compose.desktop.application {
-        mainClass = "com.example.MainKt"
-    }
-    ```
-
-    Or pass the property explicitly when running:
-
+**Using Compose Hot Reload?:** Some Compose plugin tasks (like `hotRun`) read `mainClass` from the original `compose.desktop.application` block, not from `potassium`. Pass the property explicitly when running:
     ```bash
     ./gradlew hotRun -PmainClass=com.example.MainKt
     ```
+
+    Do **not** keep a minimal `compose.desktop.application { }` block for this. Configuring it
+    initializes Compose Desktop's packaging, which registers the same task names Potassium does;
+    Potassium detects the conflict and fails the build with an explanation. The Compose plugin
+    itself stays applied — Potassium extends it.
 
 ## Step 4: Add Potassium Features (Optional)
 
@@ -4519,4 +4607,4 @@ Everything from the official plugin works unchanged:
 - The standard Gradle tasks (`run`, `packageDistributionForCurrentOS`, the per-platform `packageMacOS` / `packageWindows` / `packageLinux`, etc.)
 - `compose.desktop.currentOs` dependency
 - Source set configuration
-- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Potassium extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so set it there too or pass `-PmainClass=...` (see [Step 3](#step-3-use-the-potassium-dsl))
+- [Compose Hot Reload](https://kotlinlang.org/docs/multiplatform/compose-hot-reload.html) — works as usual since Potassium extends the Compose plugin. Note: `hotRun` reads `mainClass` from `compose.desktop.application`, so pass `-PmainClass=...` rather than re-adding that block (see [Step 3](#step-3-use-the-potassium-dsl))

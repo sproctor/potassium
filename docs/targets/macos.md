@@ -26,6 +26,9 @@ potassium {
         // Dock display name
         dockName = "MyApp"
 
+        // Name of the .app bundle directory (see "Bundle Name" below)
+        bundleName = "My App"
+
         // App Store category
         appCategory = "public.app-category.utilities"
 
@@ -52,6 +55,52 @@ potassium {
     }
 }
 ```
+
+## Bundle Name
+
+Every macOS artifact — DMG, ZIP, PKG, the raw app image and the GraalVM bundle — ships the `.app`
+directory under one name, resolved in this order:
+
+1. `macOS.bundleName`
+2. `appName`
+3. `macOS.packageName`, then the root `packageName`
+4. the Gradle project name
+
+This has to be a single value because the two formats disagree otherwise: electron-builder stages
+the bundle inside a DMG under its sanitized product name, while the ZIP target archives the
+prepackaged directory verbatim. An app installed from the DMG must be updatable from the ZIP, which
+only holds when both ship the same directory name.
+
+Only the directory is named this way. The launcher stays at `Contents/MacOS/<packageName>` and
+`CFBundleName` still comes from `appName`, so a rename does not disturb the running process or how
+the app identifies itself.
+
+The value is sanitized the same way electron-builder sanitizes `productName`, so characters that
+are illegal in a file name are dropped, and it is normalized to NFD to match what the DMG's HFS+
+volume stores.
+
+Set it explicitly when you need a name none of the fallbacks produce:
+
+```kotlin
+potassium {
+    appName = "My App"
+    packageName = "myapp"
+
+    macOS {
+        bundleName = "My App Pro"   // ships My App Pro.app in every format
+    }
+}
+```
+
+!!! warning "Upgrading from 0.4.1 or earlier"
+
+    Earlier versions named the raw app image after `macOS.packageName`. If you set that property
+    and it differs from `appName`, the bundle directory is now named after `appName` instead, and
+    the build prints a warning naming the `macOS.bundleName` value that restores the previous name.
+
+    A renamed bundle matters for auto-update: the updater keeps the installed path when the old and
+    new bundles share a `CFBundleIdentifier`, so existing installs are updated in place rather than
+    left behind under the old name.
 
 ## DMG Customization
 
@@ -306,6 +355,7 @@ macOS {
 | `minimumSystemVersion`         | `String?`             | `null`          | Minimum macOS version                                                                                       |
 | `layeredIconDir`               | `DirectoryProperty`   | —               | `.icon` directory for macOS 26+                                                                             |
 | `packageName`                  | `String?`             | `null`          | Override package name                                                                                       |
+| `bundleName`                   | `String?`             | `null`          | Name of the `.app` bundle directory, without `.app` (see [above](#bundle-name))                             |
 | `entitlementsFile`             | `RegularFileProperty` | —               | Entitlements plist                                                                                          |
 | `runtimeEntitlementsFile`      | `RegularFileProperty` | —               | Runtime entitlements plist                                                                                  |
 | `provisioningProfile`          | `RegularFileProperty` | —               | Provisioning profile                                                                                        |
