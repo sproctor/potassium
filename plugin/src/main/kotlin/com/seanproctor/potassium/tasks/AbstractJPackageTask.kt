@@ -11,6 +11,7 @@ import com.seanproctor.potassium.dsl.MacOSSigningSettings
 import com.seanproctor.potassium.dsl.TargetFormat
 import com.seanproctor.potassium.dsl.UrlProtocol
 import com.seanproctor.potassium.internal.APP_RESOURCES_DIR
+import com.seanproctor.potassium.internal.IcnsIcon
 import com.seanproctor.potassium.internal.InfoPlistBuilder
 import com.seanproctor.potassium.internal.InfoPlistBuilder.InfoPlistValue.InfoPlistListValue
 import com.seanproctor.potassium.internal.InfoPlistBuilder.InfoPlistValue.InfoPlistMapValue
@@ -88,6 +89,7 @@ import java.util.ArrayList
 import java.util.Calendar
 import java.util.HashMap
 import java.util.HashSet
+import javax.imageio.ImageIO
 import javax.inject.Inject
 import kotlin.io.path.isExecutable
 import kotlin.io.path.isRegularFile
@@ -407,7 +409,11 @@ abstract class AbstractJPackageTask
                 if (currentOS == OS.Windows) {
                     cliArg("--win-console", winConsole)
                 }
-                cliArg("--icon", iconFile)
+                if (currentOS == OS.MacOS) {
+                    cliArg("--icon", prepareMacIcon(tmpDir))
+                } else {
+                    cliArg("--icon", iconFile)
+                }
                 launcherArgs.orNull?.forEach {
                     cliArg("--arguments", "'$it'")
                 }
@@ -456,6 +462,42 @@ abstract class AbstractJPackageTask
                     }
                 }
             }
+
+        /**
+         * jpackage copies the macOS icon into the bundle verbatim, so whatever this returns is
+         * exactly what ships. A PNG source is converted here into an icns carrying the complete
+         * representation set (the macOS counterpart of prepareLinuxIconSet — no macOS tooling
+         * involved, so it works on any build host). A supplied `.icns` is passed through as-is but
+         * checked for missing representations, because hand-converted files routinely lack the
+         * small non-retina sizes and then render blurry or empty in Finder list views — shipped
+         * silently, that gap is only ever discovered by end users.
+         */
+        private fun prepareMacIcon(tmpDir: File): File? {
+            val icon = iconFile.orNull?.asFile ?: return null
+            when (icon.extension.lowercase()) {
+                "png" -> {
+                    val source =
+                        ImageIO.read(icon)
+                            ?: error("Could not read macOS icon image: $icon")
+                    val generated = tmpDir.resolve("${icon.nameWithoutExtension}.icns")
+                    IcnsIcon.write(source, generated)
+                    return generated
+                }
+                "icns" -> {
+                    val missing = IcnsIcon.missingRepresentations(icon)
+                    if (missing.isNotEmpty()) {
+                        logger.warn(
+                            "The macOS icon $icon is missing the ${missing.joinToString(", ")} " +
+                                "representation(s); those sizes will render blurry or not at all. " +
+                                "Regenerate the icns with a full icon set, or point macOS.iconFile " +
+                                "at a large PNG to have Potassium generate a complete one.",
+                        )
+                    }
+                    return icon
+                }
+                else -> return icon
+            }
+        }
 
         private fun invalidateMappedLibs(inputChanges: InputChanges): Set<File> {
             val outdatedLibs = HashSet<File>()
