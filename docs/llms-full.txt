@@ -1442,6 +1442,32 @@ potassium {
 }
 ```
 
+## Window ↔ launcher matching (the icon of a running app)
+
+A Linux desktop shows the themed icon for a *running* window only when it can match the window
+back to an installed `.desktop` file. How that match happens differs by display protocol, and
+Potassium covers each half:
+
+- **Wayland** — the compositor matches the window's `app_id` against the `.desktop` file's
+  basename. The JetBrains Runtime's Wayland toolkit reads the `awt.app.id` system property for
+  this, and its fallback (`sun.java.command`: the dotted main class plus any CLI arguments) can
+  never match. Potassium's launcher sets `-Dawt.app.id=<executableName>`, which is also the
+  generated `.desktop` file's basename, so the match holds.
+- **X11 (including XWayland)** — the window manager matches the window's `WM_CLASS` against the
+  `.desktop` file's `StartupWMClass`. The JDK derives `WM_CLASS` from the bottom stack frame of
+  whichever thread first initializes AWT — usually the main class, dots replaced with dashes,
+  which is exactly what the auto-derived `startupWMClass` contains. There is no supported system
+  property to pin `WM_CLASS`; if your app initializes AWT off the main thread and the match
+  breaks, either set `startupWMClass` to what `xprop WM_CLASS` reports on a packaged build, or
+  pin the name app-side before any AWT class loads (the reflection into
+  `sun.awt.X11.XToolkit.awtAppClassName` that IntelliJ uses, plus
+  `--add-opens java.desktop/sun.awt.X11=ALL-UNNAMED`).
+
+An AppImage carries its `.desktop` file and icons inside the image, but nothing installs them on
+the host, so an unmatched window falls back to the icon the app sets on the window itself. Tools
+like AppImageLauncher integrate the embedded entry; a deb/rpm install of the same app also makes
+its `.desktop` file available for the AppImage's windows to match.
+
 ## DEB Package
 
 ```kotlin
