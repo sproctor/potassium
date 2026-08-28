@@ -40,9 +40,11 @@ class MacInstallScriptsTest {
     fun `scripts with hostile paths still parse as bash`() {
         // The install location contains the account name, so an apostrophe is ordinary; the
         // artifact name comes from the update manifest, so treat it as hostile.
+        // mkfifo as the canary: a command no install script ever runs legitimately, so a line
+        // starting with it can only come from the injection escaping its quotes.
         val hostile =
             MacInstallScripts.forDmg(
-                dmgFile = "/tmp/App';touch /tmp/pwned;'.dmg",
+                dmgFile = "/tmp/App';mkfifo /tmp/pwned;'.dmg",
                 appPath = "/Users/o'brien/Applications/App.app",
                 mountPoint = "/tmp/potassium-dmg-1",
                 pid = 1,
@@ -50,8 +52,8 @@ class MacInstallScriptsTest {
             )
         assertParses(hostile)
         // The injected command must survive as literal text rather than becoming a statement.
-        assertTrue(hostile.contains("touch /tmp/pwned"))
-        assertFalse("injected command must stay inside a quoted literal", runsCommand(hostile, "touch"))
+        assertTrue(hostile.contains("mkfifo /tmp/pwned"))
+        assertFalse("injected command must stay inside a quoted literal", runsCommand(hostile, "mkfifo"))
     }
 
     @Test
@@ -97,6 +99,25 @@ class MacInstallScriptsTest {
     fun `dmg script detaches the image on every exit path`() {
         assertTrue(dmg.contains("trap "))
         assertTrue(dmg.contains("hdiutil detach"))
+    }
+
+    @Test
+    fun `both scripts refresh the icon caches after the swap and before relaunch`() {
+        // Finder and the Dock cache icons by bundle record; replacing the bundle in place is when
+        // that cache goes stale. The refresh must come after the new bundle is in place and before
+        // the relaunch, and must be best-effort (guarded), since the update itself already succeeded.
+        for ((name, script, bundleVar) in listOf(
+            Triple("zip", zip, "TARGET"),
+            Triple("dmg", dmg, "APP_PATH"),
+        )) {
+            val touch = script.indexOf("touch \"\$$bundleVar\"")
+            val lsregister = script.indexOf("\"\$LSREGISTER\" -f \"\$$bundleVar\"")
+            val relaunch = script.indexOf("open \"\$$bundleVar\"")
+            assertTrue("$name: the mtime bump must be present", touch >= 0)
+            assertTrue("$name: the Launch Services refresh must be present", lsregister >= 0)
+            assertTrue("$name: the refresh must precede the relaunch", touch < relaunch && lsregister < relaunch)
+            assertTrue("$name: the refresh must be best-effort", script.contains(">/dev/null 2>&1 || true"))
+        }
     }
 
     @Test
