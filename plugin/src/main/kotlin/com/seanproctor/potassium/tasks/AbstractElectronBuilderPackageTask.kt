@@ -1192,6 +1192,14 @@ abstract class AbstractElectronBuilderPackageTask
                     update-desktop-database /usr/share/applications || true
                 fi
 
+                # Refresh the hicolor icon cache so the freshly installed icons resolve immediately.
+                # Debian/Ubuntu regenerate it through a dpkg file trigger, but distros and image-build
+                # environments without that trigger are left with a stale icon-theme.cache and show a
+                # generic icon until something else rebuilds it.
+                if hash gtk-update-icon-cache 2>/dev/null; then
+                    gtk-update-icon-cache -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
+                fi
+
                 # Install apparmor profile. (Ubuntu 24+)
                 # First check if the version of AppArmor running on the device supports our profile.
                 # This is in order to keep backwards compatibility with Ubuntu 22.04 which does not support abi/4.0.
