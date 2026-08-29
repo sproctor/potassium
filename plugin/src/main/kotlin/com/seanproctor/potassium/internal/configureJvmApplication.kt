@@ -760,7 +760,19 @@ private fun JvmApplicationContext.configurePackageTask(
             val appIdArg = "-D$APP_ID=${resolvedAppIdProvider().get()}"
             val appVersionArgs =
                 resolvedAppVersion()?.let { listOf("-D$APP_VERSION=$it") }.orEmpty()
-            var args = defaultJvmArgs + appIdArg + appVersionArgs + app.jvmArgs
+            // Pin the Wayland app_id to the executable name, which is also the .desktop file's
+            // basename, so Wayland desktops can associate the window with the launcher entry and
+            // show its icon. X11 is unaffected: XToolkit derives WM_CLASS on its own, which is
+            // what the generated StartupWMClass matches (see docs/targets/linux.md).
+            val awtAppIdArgs =
+                if (currentOS == OS.Linux) {
+                    // resolvedAppIdProvider() is exactly the Linux executable-name chain
+                    // (linux.packageName > packageName > project.name).
+                    listOf("-D$AWT_APP_ID=${resolvedAppIdProvider().get()}")
+                } else {
+                    emptyList()
+                }
+            var args = defaultJvmArgs + appIdArg + appVersionArgs + awtAppIdArgs + app.jvmArgs
             val splash = app.nativeDistributions.splashImage
             if (splash != null) {
                 args = args + "-splash:\$APPDIR/resources/$splash"
