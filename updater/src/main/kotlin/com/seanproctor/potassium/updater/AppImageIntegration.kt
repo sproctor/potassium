@@ -161,8 +161,9 @@ public class AppImageIntegration internal constructor(
      * An entry under another name that already launches this image — an integration tool's
      * (Gear Lever and appimaged name theirs after a hash), found by its `Exec=` referencing the
      * image path. A same-named entry in a *system* applications directory (a deb/rpm install)
-     * also counts: its `StartupWMClass` already matches this app's windows, so a second entry
-     * would only duplicate the launcher.
+     * also counts when its `StartupWMClass` matches this app's, since it already claims this
+     * app's windows and a second entry would only duplicate the launcher; a same-named entry
+     * for an unrelated app does not block integration.
      */
     private fun foreignEntryFor(source: SourceEntry): File? {
         val userEntry =
@@ -173,9 +174,13 @@ public class AppImageIntegration internal constructor(
                     DesktopEntryText(entry.readText()).value("Exec")?.contains(source.appImage.path) == true
                 }
         if (userEntry != null) return userEntry
+        val startupWmClass = source.text.value("StartupWMClass")?.takeIf { it.isNotBlank() } ?: return null
         return systemDataDirs()
             .map { File(File(it, "applications"), source.desktopFile.name) }
-            .firstOrNull { it.isFile }
+            .firstOrNull { entry ->
+                entry.isFile &&
+                    DesktopEntryText(entry.readText()).value("StartupWMClass") == startupWmClass
+            }
     }
 
     /**

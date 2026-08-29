@@ -153,14 +153,26 @@ class AppImageIntegrationTest {
     }
 
     @Test
-    fun `a system package's entry is ExternallyManaged`() {
+    fun `a system package's entry with this app's StartupWMClass is ExternallyManaged`() {
         val systemEntry =
             File(systemDataDir, "applications/myapp.desktop").apply {
                 parentFile.mkdirs()
-                writeText("[Desktop Entry]\nName=My App\nExec=/opt/MyApp/myapp %U\n")
+                writeText(
+                    "[Desktop Entry]\nName=My App\nExec=/opt/MyApp/myapp %U\nStartupWMClass=com-example-MainKt\n",
+                )
             }
 
         assertEquals(AppImageIntegrationStatus.ExternallyManaged(systemEntry), integration().status())
+    }
+
+    @Test
+    fun `an unrelated same-named system entry does not block integration`() {
+        File(systemDataDir, "applications/myapp.desktop").apply {
+            parentFile.mkdirs()
+            writeText("[Desktop Entry]\nName=Some Other App\nExec=/usr/bin/myapp %U\n")
+        }
+
+        assertEquals(AppImageIntegrationStatus.NotIntegrated, integration().status())
     }
 
     @Test
