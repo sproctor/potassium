@@ -35,7 +35,10 @@ potassium {
         // Minimum macOS version
         minimumSystemVersion = "12.0"
 
-        // Traditional icon
+        // Traditional icon: either a ready-made .icns, or a large PNG (1024x1024 recommended)
+        // that Potassium turns into an .icns carrying the complete representation set. A supplied
+        // .icns is checked at build time and missing representations are reported — hand-converted
+        // files often lack the small non-retina sizes, which then render blurry in Finder.
         iconFile.set(project.file("icons/app.icns"))
 
         // Layered icon for macOS 26+ (dynamic tilt/depth effects)
@@ -346,7 +349,7 @@ macOS {
 
 | Property                       | Type                  | Default         | Description                                                                                                 |
 |--------------------------------|-----------------------|-----------------|-------------------------------------------------------------------------------------------------------------|
-| `iconFile`                     | `RegularFileProperty` | —               | `.icns` icon file                                                                                           |
+| `iconFile`                     | `RegularFileProperty` | —               | `.icns` icon file, or a large PNG that Potassium converts into a complete `.icns`                           |
 | `bundleID`                     | `String?`             | `null`          | macOS bundle identifier                                                                                     |
 | `dockName`                     | `String?`             | `null`          | Name displayed in the Dock                                                                                  |
 | `setDockNameSameAsPackageName` | `Boolean`             | `true`          | Use `packageName` as dock name                                                                              |
