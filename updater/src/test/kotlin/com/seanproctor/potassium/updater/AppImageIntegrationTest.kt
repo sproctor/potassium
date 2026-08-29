@@ -176,6 +176,25 @@ class AppImageIntegrationTest {
     }
 
     @Test
+    fun `a matching system entry shadowed by an unrelated one does not count`() {
+        // XDG precedence: only the first existing same-named entry is visible to the desktop.
+        File(systemDataDir, "applications/myapp.desktop").apply {
+            parentFile.mkdirs()
+            writeText("[Desktop Entry]\nName=Some Other App\nExec=/usr/bin/myapp %U\n")
+        }
+        val shadowedDir = tmp.newFolder("system-share-2")
+        File(shadowedDir, "applications/myapp.desktop").apply {
+            parentFile.mkdirs()
+            writeText(
+                "[Desktop Entry]\nName=My App\nExec=/opt/MyApp/myapp %U\nStartupWMClass=com-example-MainKt\n",
+            )
+        }
+        val env = defaultEnv() + ("XDG_DATA_DIRS" to "${systemDataDir.path}:${shadowedDir.path}")
+
+        assertEquals(AppImageIntegrationStatus.NotIntegrated, integration(env).status())
+    }
+
+    @Test
     fun `an image without a themed icon tree falls back to an absolute Icon path`() {
         File(appDir, "usr/share/icons/hicolor").deleteRecursively()
         File(appDir, "myapp.png").writeText("root-png")

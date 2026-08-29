@@ -175,12 +175,16 @@ public class AppImageIntegration internal constructor(
                 }
         if (userEntry != null) return userEntry
         val startupWmClass = source.text.value("StartupWMClass")?.takeIf { it.isNotBlank() } ?: return null
-        return systemDataDirs()
-            .map { File(File(it, "applications"), source.desktopFile.name) }
-            .firstOrNull { entry ->
-                entry.isFile &&
-                    DesktopEntryText(entry.readText()).value("StartupWMClass") == startupWmClass
-            }
+        // XDG precedence: the first existing same-named entry shadows any later ones, so only
+        // that effective entry decides — a matching entry hidden behind an unrelated one is
+        // invisible to the desktop and must not count.
+        val systemEntry =
+            systemDataDirs()
+                .map { File(File(it, "applications"), source.desktopFile.name) }
+                .firstOrNull { it.isFile } ?: return null
+        return systemEntry.takeIf {
+            DesktopEntryText(it.readText()).value("StartupWMClass") == startupWmClass
+        }
     }
 
     /**
