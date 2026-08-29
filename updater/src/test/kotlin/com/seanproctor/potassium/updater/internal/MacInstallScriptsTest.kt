@@ -4,10 +4,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.io.File
 
 class MacInstallScriptsTest {
+    @get:Rule
+    val tmp = TemporaryFolder()
+
     private val zip =
         MacInstallScripts.forZip(
             zipFile = "/tmp/App-1.2.3.zip",
@@ -40,19 +45,25 @@ class MacInstallScriptsTest {
     fun `scripts with hostile paths still parse as bash`() {
         // The install location contains the account name, so an apostrophe is ordinary; the
         // artifact name comes from the update manifest, so treat it as hostile.
-        // mkfifo as the canary: a command no install script ever runs legitimately, so a line
-        // starting with it can only come from the injection escaping its quotes.
+        // mkfifo as the canary: a command no install script ever runs legitimately, aimed at a
+        // path under the test's control so a quoting bug is detected rather than acted out.
+        val canary = File(tmp.root, "pwned")
+        val hostileDmg = "/tmp/App';mkfifo ${canary.path};'.dmg"
+        val hostileApp = "/Users/o'brien/Applications/App.app"
         val hostile =
             MacInstallScripts.forDmg(
-                dmgFile = "/tmp/App';mkfifo /tmp/pwned;'.dmg",
-                appPath = "/Users/o'brien/Applications/App.app",
+                dmgFile = hostileDmg,
+                appPath = hostileApp,
                 mountPoint = "/tmp/potassium-dmg-1",
                 pid = 1,
                 restart = true,
             )
         assertParses(hostile)
-        // The injected command must survive as literal text rather than becoming a statement.
-        assertTrue(hostile.contains("mkfifo /tmp/pwned"))
+        // Ask bash itself to evaluate the generated assignments: the value must round-trip as
+        // one literal, and the injected command must not have run.
+        assertEquals(hostileDmg, evaluatedAssignment(hostile, "DMG_FILE"))
+        assertEquals(hostileApp, evaluatedAssignment(hostile, "APP_PATH"))
+        assertFalse("the injected command must not execute", canary.exists())
         assertFalse("injected command must stay inside a quoted literal", runsCommand(hostile, "mkfifo"))
     }
 
@@ -116,7 +127,14 @@ class MacInstallScriptsTest {
             assertTrue("$name: the mtime bump must be present", touch >= 0)
             assertTrue("$name: the Launch Services refresh must be present", lsregister >= 0)
             assertTrue("$name: the refresh must precede the relaunch", touch < relaunch && lsregister < relaunch)
-            assertTrue("$name: the refresh must be best-effort", script.contains(">/dev/null 2>&1 || true"))
+            assertTrue(
+                "$name: the mtime bump must be best-effort",
+                script.contains("touch \"\$$bundleVar\" 2>/dev/null || true"),
+            )
+            assertTrue(
+                "$name: the Launch Services refresh must be best-effort",
+                script.contains("\"\$LSREGISTER\" -f \"\$$bundleVar\" >/dev/null 2>&1 || true"),
+            )
         }
     }
 
@@ -149,6 +167,24 @@ class MacInstallScriptsTest {
                 .start()
         val output = process.inputStream.bufferedReader().readText()
         assertEquals("bash rejected the script:\n$output\n---\n$script", 0, process.waitFor())
+    }
+
+    /** The value bash assigns to [variable] when it evaluates the script's assignment line. */
+    private fun evaluatedAssignment(
+        script: String,
+        variable: String,
+    ): String {
+        val bash = File("/bin/bash").takeIf { it.canExecute() }
+        assumeTrue("bash is unavailable on this host", bash != null)
+
+        val assignment = script.lineSequence().single { it.startsWith("$variable=") }
+        val probe =
+            ProcessBuilder(bash!!.absolutePath, "-c", "$assignment\nprintf '%s' \"\$$variable\"")
+                .redirectErrorStream(true)
+                .start()
+        val output = probe.inputStream.bufferedReader().readText()
+        assertEquals("bash rejected the assignment:\n$output", 0, probe.waitFor())
+        return output
     }
 
     /**
