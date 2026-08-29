@@ -126,6 +126,22 @@ class IcnsIconTest {
     }
 
     @Test
+    fun `a wrong declared container length reports every slot missing`() {
+        // Valid entry records after a header that lies about the total length: the container is
+        // corrupt, so nothing in it can be trusted as present.
+        val complete = tmp.newFile("complete.icns")
+        IcnsIcon.write(sourceImage(64), complete)
+        val data = complete.readBytes()
+        data[4] = 0
+        data[5] = 0
+        data[6] = 0
+        data[7] = 8
+        val lying = tmp.newFile("lying.icns").apply { writeBytes(data) }
+
+        assertEquals(10, IcnsIcon.missingRepresentations(lying).size)
+    }
+
+    @Test
     fun `a file that is not an icns reports every slot missing rather than throwing`() {
         val bogus = tmp.newFile("bogus.icns").apply { writeText("not an icns") }
         assertEquals(10, IcnsIcon.missingRepresentations(bogus).size)

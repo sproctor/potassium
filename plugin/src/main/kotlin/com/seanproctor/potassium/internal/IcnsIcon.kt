@@ -82,20 +82,29 @@ internal object IcnsIcon {
     private fun entryTypes(file: File): Set<String> {
         val data = runCatching { file.readBytes() }.getOrElse { return emptySet() }
         if (data.size < 8 || String(data, 0, 4, Charsets.US_ASCII) != "icns") return emptySet()
+        // The header's total length must match the file; a mismatch means a truncated or
+        // corrupt container, which counts as unparseable (every slot missing) like any other
+        // malformed file.
+        if (bigEndianInt(data, 4) != data.size) return emptySet()
         val types = mutableSetOf<String>()
         var offset = 8
         while (offset + 8 <= data.size) {
-            val length =
-                ((data[offset + 4].toInt() and 0xFF) shl 24) or
-                    ((data[offset + 5].toInt() and 0xFF) shl 16) or
-                    ((data[offset + 6].toInt() and 0xFF) shl 8) or
-                    (data[offset + 7].toInt() and 0xFF)
+            val length = bigEndianInt(data, offset + 4)
             if (length < 8 || offset + length > data.size) break
             types.add(String(data, offset, 4, Charsets.US_ASCII))
             offset += length
         }
         return types
     }
+
+    private fun bigEndianInt(
+        data: ByteArray,
+        offset: Int,
+    ): Int =
+        ((data[offset].toInt() and 0xFF) shl 24) or
+            ((data[offset + 1].toInt() and 0xFF) shl 16) or
+            ((data[offset + 2].toInt() and 0xFF) shl 8) or
+            (data[offset + 3].toInt() and 0xFF)
 
     private fun resize(
         source: BufferedImage,
