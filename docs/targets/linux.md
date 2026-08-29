@@ -53,8 +53,8 @@ Potassium covers each half:
 
 - **Wayland** — the compositor matches the window's `app_id` against the `.desktop` file's
   basename. The JetBrains Runtime's Wayland toolkit reads the `awt.app.id` system property for
-  this, and its fallback (`sun.java.command`: the dotted main class plus any CLI arguments) can
-  never match. Potassium's launcher sets `-Dawt.app.id=<executableName>`, which is also the
+  this, and its fallback (`sun.java.command`: the dotted main class plus any CLI arguments) may
+  not match. Potassium's launcher sets `-Dawt.app.id=<executableName>`, which is also the
   generated `.desktop` file's basename, so the match holds.
 - **X11 (including XWayland)** — the window manager matches the window's `WM_CLASS` against the
   `.desktop` file's `StartupWMClass`. The JDK derives `WM_CLASS` from the bottom stack frame of

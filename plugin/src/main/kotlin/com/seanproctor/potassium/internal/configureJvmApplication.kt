@@ -766,8 +766,9 @@ private fun JvmApplicationContext.configurePackageTask(
             // what the generated StartupWMClass matches (see docs/targets/linux.md).
             val awtAppIdArgs =
                 if (currentOS == OS.Linux) {
-                    val executable = app.nativeDistributions.linux.packageName ?: app.nativeDistributions.packageName
-                    executable?.let { listOf("-D$AWT_APP_ID=$it") }.orEmpty()
+                    // resolvedAppIdProvider() is exactly the Linux executable-name chain
+                    // (linux.packageName > packageName > project.name).
+                    listOf("-D$AWT_APP_ID=${resolvedAppIdProvider().get()}")
                 } else {
                     emptyList()
                 }
