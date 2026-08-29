@@ -123,6 +123,7 @@ internal object MacInstallScripts {
         |fi
         |
         |${clearQuarantine("TARGET")}
+        |${refreshIconCaches("TARGET")}
         |${relaunch(restart, "TARGET")}
         |# Clean up
         |rm -f "${D}ZIP_FILE"
@@ -188,6 +189,7 @@ internal object MacInstallScripts {
         |ditto "${D}NEW_APP" "${D}APP_PATH"
         |
         |${clearQuarantine()}
+        |${refreshIconCaches()}
         |${relaunch(restart)}
         |# Clean up
         |rm -f "${D}DMG_FILE"
@@ -209,6 +211,23 @@ internal object MacInstallScripts {
         """
         |# Remove quarantine attribute
         |xattr -r -d com.apple.quarantine "$D$bundleVar" 2>/dev/null || true
+        """.trimMargin()
+
+    /**
+     * Finder and the Dock cache an app's icon by bundle record, and replacing a bundle's content
+     * at an unchanged path is exactly when that cache goes stale — the classic "my icon turned
+     * generic after an update" report. Bump the bundle's mtime so both re-read it, and force
+     * Launch Services to refresh its record of the bundle. Cache refresh is best-effort: the new
+     * version is already installed at this point, so nothing here may abort the script.
+     */
+    private fun refreshIconCaches(bundleVar: String = "APP_PATH"): String =
+        """
+        |# Refresh the Finder/Dock icon and Launch Services record for the replaced bundle
+        |touch "$D$bundleVar" 2>/dev/null || true
+        |LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+        |if [ -x "${D}LSREGISTER" ]; then
+        |    "${D}LSREGISTER" -f "$D$bundleVar" >/dev/null 2>&1 || true
+        |fi
         """.trimMargin()
 
     /**
