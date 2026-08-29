@@ -2921,6 +2921,52 @@ The marker file is stored in the platform-specific app data directory (resolved 
 - If verification fails, the downloaded file is deleted and an error is returned
 - GitHub token is transmitted via `Authorization` header (not URL params) for private repos
 
+## AppImage Desktop Integration
+
+An AppImage carries its `.desktop` entry and icons *inside* the image, but nothing on the host
+installs them — so desktops that resolve icons only through installed entries show a generic icon
+for the app. GNOME is the prominent case: it ignores the icon a window sets on itself, so an
+unintegrated AppImage's dock icon is a gear, no matter what the app does.
+
+`AppImageIntegration` (in `potassium-updater`) installs the image's own entry and icons into the
+user's XDG data directory, with `Exec=` rewritten to launch the image:
+
+```kotlin
+import com.seanproctor.potassium.updater.AppImageIntegration
+import com.seanproctor.potassium.updater.AppImageIntegrationStatus
+
+val integration = AppImageIntegration()
+when (val status = integration.status()) {
+    // Ask the user, then call integrate() on acceptance.
+    AppImageIntegrationStatus.NotIntegrated -> offerIntegration(integration)
+
+    // Our entry no longer matches (the image moved, or was updated):
+    // it is already broken, so refresh it without asking again.
+    is AppImageIntegrationStatus.Stale -> integration.integrate()
+
+    // Not an AppImage; our entry is current; or a system package /
+    // integration tool / hand-written entry already covers this app.
+    AppImageIntegrationStatus.NotAppImage,
+    is AppImageIntegrationStatus.Integrated,
+    is AppImageIntegrationStatus.ExternallyManaged,
+    -> Unit
+}
+```
+
+Design notes:
+
+- **Ask before integrating.** Silent self-integration from launchers is the pattern that gave
+  AppImages a bad name; `status()` / `integrate()` are split so the app owns the consent UI, the
+  same way the update flow works. Remember a "no" in your own settings.
+- `ExternallyManaged` covers a deb/rpm install of the same app (its `StartupWMClass` already
+  matches your windows), an integration tool's entry (Gear Lever, appimaged — recognized by their
+  entries launching the same image), and hand-written files. None of them are touched.
+- Entries written by `integrate()` carry an `X-Potassium-AppImage` marker naming the image they
+  were written for; `status()` uses it (plus `X-AppImage-Version`) to tell `Integrated` from
+  `Stale`, and to never mistake someone else's file for its own.
+- Icons are copied under `$XDG_DATA_HOME/icons/hicolor/…`; an image without a themed icon tree
+  falls back to its root icon referenced by absolute path.
+
 ---
 
 # Publishing

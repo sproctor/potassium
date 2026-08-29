@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### New Features
+
+- **`AppImageIntegration`** (potassium-updater) — installs the running AppImage's own `.desktop` entry and icons into the user's XDG data directory, with `Exec=` rewritten to launch the image, so desktops that resolve icons only through installed entries (GNOME ignores per-window icons entirely) show the app's icon instead of a generic one. `status()` reports `NotAppImage` / `NotIntegrated` / `Integrated` / `Stale` / `ExternallyManaged` so the app can ask for consent once, refresh silently when the image moves or updates, and stay out of the way of deb/rpm installs and integration tools like Gear Lever or appimaged. See [Auto Update → AppImage Desktop Integration](auto-update.md#appimage-desktop-integration).
+
 ## v0.5.0
 
 **Released: 2026-08-14**
