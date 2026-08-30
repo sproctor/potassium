@@ -2,9 +2,26 @@
 
 ## Unreleased
 
+## v0.6.0
+
+**Released: 2026-08-30**
+
+An icon release: every path by which a packaged app's icon reaches the desktop — the bundled icon set, the launcher-to-window match, and the caches the desktop keeps — had a gap that showed users a generic icon.
+
 ### New Features
 
 - **`AppImageIntegration`** (potassium-updater) — installs the running AppImage's own `.desktop` entry and icons into the user's XDG data directory, with `Exec=` rewritten to launch the image, so desktops that resolve icons only through installed entries (GNOME ignores per-window icons entirely) show the app's icon instead of a generic one. `status()` reports `NotAppImage` / `NotIntegrated` / `Integrated` / `Stale` / `ExternallyManaged` so the app can ask for consent once, refresh silently when the image moves or updates, and stay out of the way of deb/rpm installs and integration tools like Gear Lever or appimaged. See [Auto Update → AppImage Desktop Integration](auto-update.md#appimage-desktop-integration).
+- **`macOS.iconFile` accepts a PNG** — supply a large PNG (1024px recommended) and Potassium converts it into an `.icns` carrying the complete ten-representation set (16/32/128/256/512 at 1x and 2x). An icns is typed PNG payloads behind 8-byte headers, so the writer is pure JVM and needs no macOS tooling on the build host — the macOS counterpart of what `prepareLinuxIconSet` already did for the hicolor sizes. See [macOS → General macOS Settings](targets/macos.md#general-macos-settings).
+
+### Bug Fixes
+
+- **Wayland desktops match windows to the launcher entry** — the packaged Linux launcher now passes `-Dawt.app.id=<executableName>`, which the JetBrains Runtime's Wayland toolkit reads as the window `app_id`. Its fallback is `sun.java.command` — the dotted main class plus whatever arguments the app was launched with — which may not match the installed `.desktop` file's basename, and an unmatched window gets a generic icon. The executable name is the basename electron-builder gives the generated `.desktop` file, so the match holds by construction. X11/XWayland is unchanged: `XToolkit` derives `WM_CLASS` itself, which the auto-derived `StartupWMClass` already matches. A new docs section covers both matching paths and the X11 caveat. See [Linux → Window ↔ launcher matching](targets/linux.md#window--launcher-matching-the-icon-of-a-running-app).
+- **macOS icons no longer go generic after an update** — Finder and the Dock cache icons by bundle record, and replacing the bundle in place is exactly when that cache goes stale, so a ZIP or DMG self-update could leave the app showing a generic icon until the caches were rebuilt by hand. Both update scripts now bump the bundle's mtime and refresh its Launch Services record with `lsregister -f` after the swap and before relaunch. Both steps are best-effort — the update has already succeeded by then, so a failed refresh never aborts the script.
+- **deb/rpm installs refresh the hicolor icon cache** — the generated after-install script ran `update-mime-database` and `update-desktop-database` but never `gtk-update-icon-cache`. A dpkg file trigger papers over this on Debian and Ubuntu; distributions and image-build environments without that trigger were left with a stale `icon-theme.cache` and a generic launcher icon until something else rebuilt it. The refresh is guarded exactly like the neighboring database updates, so hosts without the tool or without a cache are unaffected.
+
+### Improvements
+
+- **A supplied `.icns` is validated instead of shipped blind** — hand-converted icon files routinely lack the small non-retina representations, which renders blurry or empty in Finder list views, and the gap was only ever discovered by end users. A supplied `.icns` still passes through to jpackage unchanged, but is now parsed at build time and missing representations are reported. The validator counts `iconutil`'s ARGB `ic04`/`ic05` and the legacy RGB types as satisfying their slots, so files produced by Apple tooling do not warn, and a malformed container (bad magic, or a declared length that disagrees with the file) is reported rather than trusted.
 
 ## v0.5.0
 

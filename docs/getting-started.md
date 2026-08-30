@@ -33,7 +33,7 @@ plugins {
     kotlin("jvm") version "..."
     id("org.jetbrains.kotlin.plugin.compose") version "..."
     id("org.jetbrains.compose") version "..."
-    id("com.seanproctor.potassium") version "0.5.0"
+    id("com.seanproctor.potassium") version "0.6.0"
 }
 ```
 
