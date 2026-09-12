@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.6.1
+
+**Released: 2026-09-12**
+
+### Improvements
+
+- **Default ProGuard version bumped to 7.10.0** — the `proguard { version }` default moves from 7.9.1 to 7.10.0. Set `version` explicitly to stay on an older release.
+
 ## v0.6.0
 
 **Released: 2026-08-30**
