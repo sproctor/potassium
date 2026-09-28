@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Bug Fixes
+
+- **Linux updates relaunch even when the app's working directory is gone** (potassium-updater) — the detached AppImage/deb/rpm update script inherited the app's working directory and passed it to the relaunched app. If that directory had been deleted since the app started (a terminal's directory that was later removed, for instance), the new JVM aborted during startup with "Could not determine current working directory". The update itself was applied, but the app never came back. The script now changes to the original directory if it still exists, otherwise `$HOME`, otherwise `/`, before installing and relaunching.
+
 ## v0.6.1
 
 **Released: 2026-09-12**
