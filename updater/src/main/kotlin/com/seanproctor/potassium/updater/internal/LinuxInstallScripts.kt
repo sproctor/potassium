@@ -39,6 +39,7 @@ internal object LinuxInstallScripts {
         |${relaunch(restart, "OLD_FILE", "Relaunch in a fully detached process")}
         |# Clean up this script
         |rm -f "$D{0}"
+        |rmdir "$(dirname "$D{0}")" 2>/dev/null || true
         """.trimMargin()
 
     /** Installs [packageFile] (`deb` or `rpm`, per [extension]) over the jpackage install. */
@@ -82,6 +83,7 @@ internal object LinuxInstallScripts {
             |${relaunch(restart, "APP_LAUNCHER", "Relaunch the application")}
             |# Clean up this script
             |rm -f "$D{0}"
+            |rmdir "$(dirname "$D{0}")" 2>/dev/null || true
             """.trimMargin()
     }
 

@@ -92,6 +92,16 @@ class LinuxInstallScriptsTest {
         assertEquals(original.canonicalPath, runAppImageUpdate(workingDir = original, home = home))
     }
 
+    @Test
+    fun `appimage script removes its private directory when it finishes`() {
+        val home = tmp.newFolder("home")
+        runAppImageUpdate(workingDir = home, home = home)
+        assertFalse("the script's directory must be removed", scriptDir.exists())
+    }
+
+    /** Stands in for the private per-update directory the installer writes the script into. */
+    private val scriptDir: File get() = File(tmp.root, "potassium-install")
+
     /**
      * Runs the AppImage script for real against a stand-in AppImage that records the directory it
      * was relaunched in, and returns that directory. When [deleteCwd] is set, the script starts
@@ -115,7 +125,7 @@ class LinuxInstallScriptsTest {
         // A pid that has already exited, so the script does not wait.
         val deadPid = ProcessBuilder("true").start().also { it.waitFor() }.pid()
         val script =
-            File(tmp.root, "updater.sh").apply {
+            File(scriptDir.apply { mkdirs() }, "updater.sh").apply {
                 writeText(
                     appImage(
                         newAppImage = update.path,

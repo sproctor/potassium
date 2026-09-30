@@ -2,6 +2,7 @@ package com.seanproctor.potassium.updater.internal
 
 import com.seanproctor.potassium.updater.runtime.Platform
 import java.io.File
+import java.nio.file.Files
 import kotlin.system.exitProcess
 
 @Suppress("TooManyFunctions")
@@ -10,16 +11,15 @@ internal object PlatformInstaller {
     private const val UPDATE_SCRIPT_WINDOWS = "updater.ps1"
 
     /**
-     * The detached script that applies the update, in this app's own scratch directory.
+     * A fresh, owner-only (`0700` on POSIX) directory for one update's detached script, which
+     * removes the directory when it finishes.
      *
-     * The per-app directory is what makes the plain file name safe: two apps updating at once
-     * would otherwise overwrite one another's script in the shared system temp directory.
+     * A predictable path in the shared temp directory (`/tmp` on Linux) would let another local
+     * user create it first, owning the directory the script is written into, and replace the
+     * script before it runs as this app's user. A new unguessable directory per update also keeps
+     * two apps, or two updates, from colliding.
      */
-    private fun updateScriptFile(name: String): File {
-        val dir = AppDirs.tempDir()
-        dir.mkdirs()
-        return File(dir, name)
-    }
+    private fun createUpdateWorkDir(): File = Files.createTempDirectory("potassium-install-").toFile()
 
     fun install(
         file: File,
@@ -105,10 +105,10 @@ internal object PlatformInstaller {
     /**
      * Starts [body] with setsid, in a new session fully detached from the current process tree,
      * so it outlives the exit this updater is about to perform. The script deletes itself via
-     * `$0` when it finishes.
+     * `$0`, and then its directory, when it finishes.
      */
     private fun startDetachedLinuxScript(body: String) {
-        val script = updateScriptFile(UPDATE_SCRIPT_UNIX)
+        val script = File(createUpdateWorkDir(), UPDATE_SCRIPT_UNIX)
         script.writeText(body)
         script.setExecutable(true)
 
@@ -152,17 +152,17 @@ internal object PlatformInstaller {
         restart: Boolean,
     ) {
         val appBundle = currentAppBundleOrFail()
-        val pid = ProcessHandle.current().pid()
+        val workDir = createUpdateWorkDir()
         startDetachedMacScript(
             MacInstallScripts.forDmg(
                 dmgFile = dmgFile.absolutePath,
                 appPath = appBundle.absolutePath,
-                // Per-process mount point inside this app's scratch directory: a shared one would
-                // collide with a concurrent update.
-                mountPoint = File(AppDirs.tempDir(), "dmg-mount-$pid").absolutePath,
-                pid = pid,
+                // Inside this update's private directory, so no other update can collide with it.
+                mountPoint = File(workDir, "dmg-mount").absolutePath,
+                pid = ProcessHandle.current().pid(),
                 restart = restart,
             ),
+            workDir,
         )
     }
 
@@ -172,10 +172,13 @@ internal object PlatformInstaller {
 
     /**
      * Starts [body] detached, so it outlives the exit this updater is about to perform. The
-     * script deletes itself via `$0` when it finishes.
+     * script deletes itself via `$0`, and then its directory, when it finishes.
      */
-    private fun startDetachedMacScript(body: String) {
-        val script = updateScriptFile(UPDATE_SCRIPT_UNIX)
+    private fun startDetachedMacScript(
+        body: String,
+        workDir: File = createUpdateWorkDir(),
+    ) {
+        val script = File(workDir, UPDATE_SCRIPT_UNIX)
         script.writeText(body)
         script.setExecutable(true)
 
@@ -225,7 +228,8 @@ internal object PlatformInstaller {
                 ""
             }
 
-        val script = updateScriptFile(UPDATE_SCRIPT_WINDOWS)
+        val workDir = createUpdateWorkDir()
+        val script = File(workDir, UPDATE_SCRIPT_WINDOWS)
         script.writeText(
             """
             |# Wait for the app process to fully exit
@@ -238,7 +242,7 @@ internal object PlatformInstaller {
             |$relaunchCmd
             |# Clean up
             |Remove-Item ${psLiteral(file.absolutePath)} -Force -ErrorAction SilentlyContinue
-            |Remove-Item ${psLiteral(script.absolutePath)} -Force -ErrorAction SilentlyContinue
+            |Remove-Item ${psLiteral(workDir.absolutePath)} -Recurse -Force -ErrorAction SilentlyContinue
             """.trimMargin(),
         )
 

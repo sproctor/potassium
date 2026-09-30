@@ -128,6 +128,7 @@ internal object MacInstallScripts {
         |# Clean up
         |rm -f "${D}ZIP_FILE"
         |rm -f "$D{0}"
+        |rmdir "$(dirname "$D{0}")" 2>/dev/null || true
         """.trimMargin()
 
     /**
@@ -157,7 +158,7 @@ internal object MacInstallScripts {
         |
         |mkdir -p "${D}MOUNT_POINT"
         |# Detach on every exit path so a failed copy never leaves the image mounted.
-        |trap 'hdiutil detach "${D}MOUNT_POINT" -force >/dev/null 2>&1 || true; rmdir "${D}MOUNT_POINT" 2>/dev/null || true' EXIT
+        |trap 'hdiutil detach "${D}MOUNT_POINT" -force >/dev/null 2>&1 || true; rmdir "${D}MOUNT_POINT" "$(dirname "${D}MOUNT_POINT")" 2>/dev/null || true' EXIT
         |
         |# -nobrowse keeps the volume out of Finder. `yes` answers the licence prompt of an image
         |# carrying a software licence agreement, which would otherwise block on stdin forever.
@@ -194,6 +195,7 @@ internal object MacInstallScripts {
         |# Clean up
         |rm -f "${D}DMG_FILE"
         |rm -f "$D{0}"
+        |rmdir "$(dirname "$D{0}")" 2>/dev/null || true
         """.trimMargin()
 
     /** A literal `$`, which cannot be written directly inside these raw strings. */
