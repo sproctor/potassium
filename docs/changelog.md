@@ -9,6 +9,7 @@
 
 ### Bug Fixes
 
+- **Linux updates relaunch even when the app's working directory is gone** (potassium-updater) — the detached AppImage/deb/rpm update script inherited the app's working directory and passed it to the relaunched app. If that directory had been deleted since the app started (a terminal's directory that was later removed, for instance), the new JVM aborted during startup with "Could not determine current working directory". The update itself was applied, but the app never came back. The script now changes to the original directory if it still exists, otherwise `$HOME`, otherwise `/`, before installing and relaunching.
 - **Sharp 16px and 32px macOS icons from a PNG `iconFile`** — the `.icns` generated from a PNG stored the 16px and 32px 1x sizes as PNG in `icp4`/`icp5` entries. macOS renders PNG data in those entries as noise, so the icon looked corrupt in Finder list views and the DMG title bar. Those sizes are now written as ARGB `ic04`/`ic05` entries, byte-for-byte what Apple's `iconutil` produces (the same fix electron-builder shipped in its icons toolset 1.2.3). Supplied `.icns` files are passed through unchanged.
 
 ## v0.6.1
