@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Improvements
+
+- **Much faster differential downloads when many chunks changed** (potassium-updater) — the differential downloader fetched changed chunks one HTTP range request at a time and paused for a second after every 100 requests, so an update touching many scattered chunks spent most of its time waiting on round trips. Now:
+    - Changed chunks separated by less than 256 KiB of unchanged data are merged into one range.
+    - Up to six ranges download at once, written into place in the new file.
+    - The fixed pause is gone.
+    - A range that fails transiently (a dropped connection, HTTP 429 or 5xx) is retried with backoff, honoring `Retry-After`, instead of abandoning the whole delta. An expired redirect target is re-resolved through the original URL.
+    - A delta that would download 90% or more of the file becomes a single streamed full download.
+
+    On a local test server adding 50 ms of latency per request, 1,000 ranges took 101 s before and 16 s after, without the merge step. With it, the same alternating-chunk plan becomes a single request.
+
 ## v0.6.1
 
 **Released: 2026-09-12**

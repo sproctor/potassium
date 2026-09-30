@@ -88,7 +88,7 @@ internal class DifferentialUpdatePreparer(
         val trailer = fetchNewBlockMapTrailer(target, blockMapSize, trailerLength)
         val newBlockMap = BlockMapCodec.decodeDeflateRaw(trailer.copyOf(trailer.size - BlockMapCodec.TRAILER_LENGTH))
 
-        val plan = DownloadPlanBuilder.build(oldBlockMap, newBlockMap)
+        val plan = DownloadPlanBuilder.coalesce(DownloadPlanBuilder.build(oldBlockMap, newBlockMap))
         checkSizeInvariant(plan, trailerLength, target)
         return Prepared(DifferentialRequest(target.url, plan, oldFile, destination, trailer), newBlockMapBytes = null)
     }
@@ -158,7 +158,7 @@ internal class DifferentialUpdatePreparer(
                 checkNotNull(seededInstaller) to fetchOldBlockMap(oldFileName, currentVersion, target)
             }
 
-        val plan = DownloadPlanBuilder.build(oldBlockMap, newBlockMap)
+        val plan = DownloadPlanBuilder.coalesce(DownloadPlanBuilder.build(oldBlockMap, newBlockMap))
         checkSizeInvariant(plan, trailerLength = 0, target = target)
         return Prepared(DifferentialRequest(target.url, plan, oldFile, destination), newBlockMapBytes)
     }

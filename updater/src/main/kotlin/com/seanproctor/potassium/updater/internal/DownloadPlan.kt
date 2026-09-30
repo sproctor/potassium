@@ -73,4 +73,51 @@ internal object DownloadPlanBuilder {
 
         return DownloadPlan(operations, downloadSize, copySize)
     }
+
+    /**
+     * Merges downloads separated only by copies totalling at most [maxGap] bytes into one
+     * download, fetching the gap from the server instead of copying it locally. Each range
+     * request costs a round trip, which outweighs transferring a small gap, so a plan with
+     * many scattered changes needs far fewer requests.
+     *
+     * The merge is exact: download offsets index the new file, so the copies between two
+     * downloads fill `[first.end, next.start)` of it, and fetching that range yields the same
+     * bytes. A gap whose copies don't add up to that span is left alone.
+     */
+    fun coalesce(
+        plan: DownloadPlan,
+        maxGap: Long = MAX_COALESCE_GAP,
+    ): DownloadPlan {
+        val operations = plan.operations
+        val merged = mutableListOf<PlanOperation>()
+        var index = 0
+        while (index < operations.size) {
+            val operation = operations[index]
+            val last = merged.lastOrNull()
+            if (operation is PlanOperation.Copy && last is PlanOperation.Download) {
+                var next = index
+                var gap = 0L
+                while (next < operations.size && operations[next] is PlanOperation.Copy) {
+                    gap += operations[next].length
+                    next++
+                }
+                val following = operations.getOrNull(next)
+                if (following is PlanOperation.Download && gap <= maxGap && following.start == last.end + gap) {
+                    merged[merged.lastIndex] = PlanOperation.Download(last.start, following.end)
+                    index = next + 1
+                    continue
+                }
+            }
+            merged += operation
+            index++
+        }
+        return DownloadPlan(
+            operations = merged,
+            downloadSize = merged.filterIsInstance<PlanOperation.Download>().sumOf { it.length },
+            copySize = merged.filterIsInstance<PlanOperation.Copy>().sumOf { it.length },
+        )
+    }
+
+    /** Largest local-copy gap [coalesce] replaces with downloaded bytes. */
+    const val MAX_COALESCE_GAP: Long = 256L * 1024
 }
