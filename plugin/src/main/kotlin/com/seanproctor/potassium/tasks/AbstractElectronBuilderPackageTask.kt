@@ -5,7 +5,6 @@
 
 package com.seanproctor.potassium.tasks
 
-import com.seanproctor.potassium.dsl.CompressionLevel
 import com.seanproctor.potassium.dsl.JvmApplicationDistributions
 import com.seanproctor.potassium.dsl.MacOSSigningSettings
 import com.seanproctor.potassium.dsl.TargetFormat
@@ -451,14 +450,6 @@ abstract class AbstractElectronBuilderPackageTask
                 } else {
                     null to null
                 }
-
-            if (TargetFormat.AppImage in targetFormats && distributions.compressionLevel == CompressionLevel.Maximum) {
-                logger.warn(
-                    "AppImage with 'maximum' compression can cause extremely slow startup times (60s+) " +
-                        "due to squashfs/FUSE decompression overhead. Consider 'normal' or 'store' instead. " +
-                        "See https://github.com/electron-userland/electron-builder/issues/7483",
-                )
-            }
 
             val nsisProtocolInclude = generateProtocolNsisInclude(distributions, targetFormats, outputDir)
 
