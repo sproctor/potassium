@@ -5,6 +5,7 @@
 ### Improvements
 
 - **AppImages run without `libfuse2`** — AppImages are now built on the static type2-runtime (electron-builder's `appimage` toolset 1.0.3) instead of the legacy runtime, which linked the system's `libfuse2`. Current distributions (Ubuntu 22.04+, Fedora 36+) don't install `libfuse2` by default, so the old images failed to start there until users installed it. The new runtime needs only a `fusermount`/`fusermount3` binary. It supports gzip and zstd compression but not xz, so `CompressionLevel.Maximum` now builds a zstd image. The warning about slow AppImage startup with `Maximum` has been removed. See [Linux → AppImage Runtime](targets/linux.md#runtime).
+- **electron-builder 26.17.0** — picks up upstream fixes that apply to Potassium builds: blockmap generation no longer fails with `ERR_REQUIRE_ESM` on Node.js older than 20.19; appx manifests and MSI file, shortcut and file-association entries XML-escape their values, so a publisher or product name containing `&`, `<` or quotes no longer breaks the build; and the NSIS single-instance check runs PowerShell with `-NoProfile -NonInteractive`. The updater changes in electron-updater 6.8.10 (multipart range-response parsing and blockmap-cache consistency) don't apply to potassium-updater: it issues single-range requests and replaces its cached artifact and blockmap together.
 
 ## v0.6.1
 
