@@ -99,6 +99,33 @@ class LinuxInstallScriptsTest {
         assertFalse("the script's directory must be removed", scriptDir.exists())
     }
 
+    @Test
+    fun `appimage script removes its private directory when the update fails`() {
+        val bash = File("/bin/bash").takeIf { it.canExecute() }
+        assumeTrue("bash is unavailable on this host", bash != null)
+
+        // The new AppImage is missing, so the replacing `mv` fails and errexit aborts the script.
+        val deadPid = ProcessBuilder("true").start().also { it.waitFor() }.pid()
+        val script =
+            File(scriptDir.apply { mkdirs() }, "updater.sh").apply {
+                writeText(
+                    appImage(
+                        newAppImage = File(tmp.root, "missing.AppImage").path,
+                        currentAppImage = File(tmp.root, "App.AppImage").path,
+                        workingDir = tmp.root.path,
+                        pid = deadPid,
+                        restart = false,
+                    ),
+                )
+            }
+
+        val process = ProcessBuilder(bash!!.path, script.path).redirectErrorStream(true).start()
+        process.inputStream.bufferedReader().readText()
+        assertTrue("the script did not finish", process.waitFor(30, TimeUnit.SECONDS))
+        assertTrue("the update must fail", process.exitValue() != 0)
+        assertFalse("the script's directory must be removed", scriptDir.exists())
+    }
+
     /** Stands in for the private per-update directory the installer writes the script into. */
     private val scriptDir: File get() = File(tmp.root, "potassium-install")
 

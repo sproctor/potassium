@@ -21,6 +21,8 @@ internal object LinuxInstallScripts {
         |
         |# Ignore SIGHUP to survive parent process exit
         |trap '' HUP
+        |# Remove this script and its private directory on every exit path, a failed update included
+        |trap 'rm -f "$D{0}"; rmdir "$(dirname "$D{0}")" 2>/dev/null || true' EXIT
         |
         |NEW_FILE=${shLiteral(newAppImage)}
         |OLD_FILE=${shLiteral(currentAppImage)}
@@ -37,9 +39,6 @@ internal object LinuxInstallScripts {
         |mv -f "${D}NEW_FILE" "${D}OLD_FILE"
         |chmod +x "${D}OLD_FILE"
         |${relaunch(restart, "OLD_FILE", "Relaunch in a fully detached process")}
-        |# Clean up this script
-        |rm -f "$D{0}"
-        |rmdir "$(dirname "$D{0}")" 2>/dev/null || true
         """.trimMargin()
 
     /** Installs [packageFile] (`deb` or `rpm`, per [extension]) over the jpackage install. */
