@@ -75,6 +75,16 @@ internal class UpdateDownloadEngine(
         return try {
             val prepared = preparer.prepare(mode, targetFile, info.version, tempFile)
             val plan = prepared.request.plan
+            if (plan.downloadSize * PERCENT_MAX >= targetFile.size * MAX_DIFFERENTIAL_DOWNLOAD_PERCENT) {
+                // Nearly everything changed: many range requests would save next to nothing
+                // over one streamed full download.
+                logger.log(
+                    System.Logger.Level.INFO,
+                    "Differential update would download ${plan.downloadSize} of ${targetFile.size} bytes " +
+                        "for ${targetFile.fileName}; using a full download instead",
+                )
+                return null
+            }
             logger.log(
                 System.Logger.Level.INFO,
                 "Differential update: downloading ${plan.downloadSize} of ${targetFile.size} bytes " +
@@ -213,6 +223,9 @@ internal class UpdateDownloadEngine(
 
     private companion object {
         const val PERCENT_MAX = 100.0
+
+        /** A differential download fetching at least this share of the file is not worth it. */
+        const val MAX_DIFFERENTIAL_DOWNLOAD_PERCENT = 90.0
 
         val logger: System.Logger = System.getLogger("com.seanproctor.potassium.updater")
     }

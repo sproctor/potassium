@@ -3,6 +3,8 @@ package com.seanproctor.potassium.updater.internal
 import com.seanproctor.potassium.updater.exception.NetworkException
 import com.seanproctor.potassium.updater.exception.UpdateException
 import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -17,6 +19,8 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 class DifferentialDownloaderTest {
@@ -53,6 +57,8 @@ class DifferentialDownloaderTest {
         redirectCount.set(0)
         handler = RangeHttpHandler(newBytes)
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        // The default executor handles one exchange at a time, which would serialize ranges.
+        server.executor = Executors.newCachedThreadPool()
         server.createContext("/artifact.zip", handler)
         server.createContext("/redirect.zip") { exchange ->
             redirectCount.incrementAndGet()
@@ -67,6 +73,7 @@ class DifferentialDownloaderTest {
     @After
     fun stopServer() {
         server.stop(0)
+        (server.executor as ExecutorService).shutdownNow()
     }
 
     @Test
@@ -196,6 +203,166 @@ class DifferentialDownloaderTest {
         assertNull(handler.rangeRequests.last().authorization)
     }
 
+    @Test
+    fun `assembles a file from many scattered ranges`() {
+        val (scatteredPlan, expected) = scatteredPlan(blocks = 500)
+        handler.body = expected
+        val destination = tempFolder.newFile()
+
+        runBlocking {
+            newDownloader().download(request(destination, plan = scatteredPlan)) { _, _ -> }
+        }
+
+        assertArrayEquals(expected, destination.readBytes())
+        assertEquals(250, handler.rangeRequests.size)
+    }
+
+    @Test
+    fun `range requests overlap`() {
+        val (scatteredPlan, expected) = scatteredPlan(blocks = 40)
+        handler.body = expected
+        handler.latencyMs = 50
+        val destination = tempFolder.newFile()
+
+        runBlocking {
+            newDownloader().download(request(destination, plan = scatteredPlan)) { _, _ -> }
+        }
+
+        assertArrayEquals(expected, destination.readBytes())
+        assertTrue("max in flight ${handler.maxInFlight.get()}", handler.maxInFlight.get() > 1)
+    }
+
+    @Test
+    fun `retries a range after a transient server error`() {
+        handler.scriptedStatuses.add(503)
+        handler.retryAfter = "0"
+        val destination = tempFolder.newFile()
+
+        runBlocking {
+            newDownloader().download(request(destination)) { _, _ -> }
+        }
+
+        assertArrayEquals(newBytes, destination.readBytes())
+        assertEquals(2, handler.rangeRequests.size)
+    }
+
+    @Test
+    fun `retries a rate-limited range after its Retry-After`() {
+        handler.scriptedStatuses.add(429)
+        handler.retryAfter = "0"
+        val destination = tempFolder.newFile()
+
+        runBlocking {
+            newDownloader().download(request(destination)) { _, _ -> }
+        }
+
+        assertArrayEquals(newBytes, destination.readBytes())
+    }
+
+    @Test
+    fun `retries use backoff without a Retry-After`() {
+        handler.scriptedStatuses.add(500)
+        val destination = tempFolder.newFile()
+
+        runBlocking {
+            newDownloader().download(request(destination)) { _, _ -> }
+        }
+
+        assertArrayEquals(newBytes, destination.readBytes())
+    }
+
+    @Test
+    fun `throws after a range keeps failing`() {
+        handler.alwaysStatus = 500
+        handler.retryAfter = "0"
+        val destination = tempFolder.newFile()
+
+        assertThrows(NetworkException::class.java) {
+            runBlocking { newDownloader().download(request(destination)) { _, _ -> } }
+        }
+        assertEquals(3, handler.rangeRequests.size)
+    }
+
+    @Test
+    fun `throws on a client error without retrying`() {
+        handler.scriptedStatuses.add(404)
+        val destination = tempFolder.newFile()
+
+        assertThrows(NetworkException::class.java) {
+            runBlocking { newDownloader().download(request(destination)) { _, _ -> } }
+        }
+        assertEquals(1, handler.rangeRequests.size)
+    }
+
+    @Test
+    fun `re-resolves the redirect when its target starts refusing`() {
+        val (scatteredPlan, expected) = scatteredPlan(blocks = 4)
+        handler.body = expected
+        // First range succeeds via the redirect; the next one hits the resolved URI and is
+        // refused, as an expired pre-signed CDN URL would be.
+        handler.scriptedStatuses.addAll(listOf(RangeHttpHandler.SERVE, 403))
+        val destination = tempFolder.newFile()
+
+        runBlocking {
+            newDownloader().download(
+                request(
+                    destination,
+                    plan = scatteredPlan,
+                    url = "http://127.0.0.1:${server.address.port}/redirect.zip",
+                ),
+            ) { _, _ -> }
+        }
+
+        assertArrayEquals(expected, destination.readBytes())
+        assertEquals(2, redirectCount.get())
+    }
+
+    @Test
+    fun `progress is reported from the calling coroutine`() {
+        val (scatteredPlan, expected) = scatteredPlan(blocks = 200)
+        handler.body = expected
+        val destination = tempFolder.newFile()
+
+        // Flow rejects emissions from any coroutine but its own, so this fails if progress is
+        // reported from a worker.
+        val progress =
+            runBlocking {
+                flow {
+                    newDownloader().download(request(destination, plan = scatteredPlan)) { downloaded, _ ->
+                        emit(downloaded)
+                    }
+                }.toList()
+            }
+
+        assertEquals(scatteredPlan.downloadSize, progress.last())
+        assertEquals(progress.sorted(), progress)
+    }
+
+    /**
+     * A plan of [blocks] 1000-byte blocks alternating copy (from the same offset in the old
+     * file) and download, and the file it assembles. The old file is regenerated to match.
+     */
+    private fun scatteredPlan(blocks: Int): Pair<DownloadPlan, ByteArray> {
+        val size = blocks * BLOCK
+        scatteredOld = ByteArray(size) { (it % 251).toByte() }
+        val expected = ByteArray(size) { i -> if ((i / BLOCK) % 2 == 0) scatteredOld!![i] else (i % 239 + 7).toByte() }
+        val operations =
+            (0 until blocks).map { i ->
+                val start = (i * BLOCK).toLong()
+                if (i % 2 ==
+                    0
+                ) {
+                    PlanOperation.Copy(start, start + BLOCK)
+                } else {
+                    PlanOperation.Download(start, start + BLOCK)
+                }
+            }
+        val downloadSize = operations.filterIsInstance<PlanOperation.Download>().sumOf { it.length }
+        return DownloadPlan(operations, downloadSize, size - downloadSize) to expected
+    }
+
+    private var scatteredOld: ByteArray? = null
+
     private fun newDownloader(authHeaders: Map<String, String> = emptyMap()): DifferentialDownloader =
         DifferentialDownloader(
             HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build(),
@@ -209,7 +376,7 @@ class DifferentialDownloaderTest {
         url: String = artifactUrl,
     ): DifferentialRequest {
         val oldFile = tempFolder.newFile()
-        oldFile.writeBytes(oldBytes)
+        oldFile.writeBytes(scatteredOld ?: oldBytes)
         return DifferentialRequest(
             url = url,
             plan = plan,
@@ -217,5 +384,9 @@ class DifferentialDownloaderTest {
             destination = destination,
             trailer = trailer,
         )
+    }
+
+    private companion object {
+        const val BLOCK = 1000
     }
 }

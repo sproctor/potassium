@@ -45,6 +45,9 @@ class PotassiumUpdaterDifferentialTest {
     @Volatile
     private var newBlockMapStatus = 200
 
+    @Volatile
+    private var newBlockMapBody: ByteArray? = null
+
     // Segment-structured artifacts: A and B are shared, X is new in 2.0.0.
     private val segmentA = ByteArray(4000) { (it % 13).toByte() }
     private val segmentB = ByteArray(3000) { (it % 7).toByte() }
@@ -78,13 +81,14 @@ class PotassiumUpdaterDifferentialTest {
         oldBlockMapRequests.set(0)
         newBlockMapRequests.set(0)
         newBlockMapStatus = 200
+        newBlockMapBody = null
 
         zipHandler = RangeHttpHandler(newBytes)
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/app-2.0.0.zip", zipHandler)
         server.createContext("/app-2.0.0.zip.blockmap") { exchange ->
             newBlockMapRequests.incrementAndGet()
-            respond(exchange, newBlockMapStatus, newBlockMapGzip)
+            respond(exchange, newBlockMapStatus, newBlockMapBody ?: newBlockMapGzip)
         }
         server.createContext("/app-1.0.0.zip.blockmap") { exchange ->
             oldBlockMapRequests.incrementAndGet()
@@ -128,6 +132,22 @@ class PotassiumUpdaterDifferentialTest {
         assertEquals("2.0.0", entry!!.version)
         assertArrayEquals(newBytes, entry.artifact.readBytes())
         assertNotNull(UpdateCache(cacheDir).readBlockMap())
+    }
+
+    @Test
+    fun `a differential download that saves too little becomes a full download`() {
+        val cacheDir = seededCacheDir(withBlockMap = true)
+        // Every block's checksum differs from the old blockmap, so the plan would download
+        // the whole file through range requests.
+        val changedA = segmentA.copyOf().also { it[0] = 99 }
+        val changedB = segmentB.copyOf().also { it[0] = 99 }
+        newBlockMapBody = BlockMapFixtures.gzip(BlockMapFixtures.blockMapJson(listOf(changedA, segmentX, changedB)))
+
+        val downloaded = download(newUpdater(cacheDir))
+
+        assertArrayEquals(newBytes, downloaded.readBytes())
+        assertTrue(zipHandler.rangeRequests.isEmpty())
+        assertEquals(newBytes.size.toLong(), zipHandler.bytesServed)
     }
 
     @Test
