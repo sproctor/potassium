@@ -231,6 +231,12 @@ abstract class WindowsPlatformSettings : AbstractPlatformSettings() {
         fn.execute(nsis)
     }
 
+    val msi: MsiSettings = objects.newInstance(MsiSettings::class.java)
+
+    fun msi(fn: Action<MsiSettings>) {
+        fn.execute(msi)
+    }
+
     val appx: AppXSettings = objects.newInstance(AppXSettings::class.java)
 
     fun appx(fn: Action<AppXSettings>) {

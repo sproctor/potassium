@@ -40,7 +40,7 @@ potassium {
         // Per-user install (no admin required)
         perUserInstall = true
 
-        // Start menu group
+        // Start menu folder — the default for nsis/msi menuCategory
         menuGroup = "My Company"
 
         // Installation directory name
@@ -65,6 +65,8 @@ windows {
         // Shortcuts
         createDesktopShortcut = true
         createStartMenuShortcut = true
+        menuCategory = "My Company"               // Start menu folder (default: windows.menuGroup)
+        shortcutName = "My App"                   // Shortcut name (default: app name)
 
         // Post-install
         runAfterFinish = true
@@ -103,6 +105,8 @@ windows {
 | `allowToChangeInstallationDirectory` | `Boolean` | `false` | Show directory chooser |
 | `createDesktopShortcut` | `Boolean` | `true` | Create desktop shortcut |
 | `createStartMenuShortcut` | `Boolean` | `true` | Create Start Menu shortcut |
+| `menuCategory` | `String?` | `windows.menuGroup` | Start Menu folder (and program files subdirectory) for the shortcut; `null` puts it in the Start Menu root |
+| `shortcutName` | `String?` | app name | Name of the shortcuts |
 | `runAfterFinish` | `Boolean` | `true` | Launch app after install |
 | `deleteAppDataOnUninstall` | `Boolean` | `false` | Remove app data on uninstall |
 | `multiLanguageInstaller` | `Boolean` | `false` | Multi-language installer UI |
@@ -167,6 +171,34 @@ nsis {
     - [electron-builder NSIS configuration](https://www.electron.build/nsis.html)
     - [Change default installation directory value (electron-builder#2855)](https://github.com/electron-userland/electron-builder/issues/2855)
     - [Change $INSTDIR to a custom path (electron-builder#1961)](https://github.com/electron-userland/electron-builder/issues/1961)
+
+## MSI Installer
+
+The MSI target takes its upgrade code from `windows.upgradeUuid` and its install scope from `windows.perUserInstall`. The remaining installer settings live in `windows { msi { } }`; each defaults to electron-builder's default.
+
+```kotlin
+windows {
+    msi {
+        oneClick = false               // Show the install wizard, as jpackage MSIs did
+        runAfterFinish = false         // Don't launch the app when the install finishes
+        createDesktopShortcut = true
+        createStartMenuShortcut = true
+        menuCategory = "My Company"    // Start menu folder (default: windows.menuGroup)
+        shortcutName = "My App"        // Shortcut name (default: app name)
+    }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `oneClick` | `Boolean` | `true` | Install immediately without a wizard |
+| `runAfterFinish` | `Boolean` | `true` | Launch app after install |
+| `createDesktopShortcut` | `Boolean` | `true` | Create desktop shortcut |
+| `createStartMenuShortcut` | `Boolean` | `true` | Create Start Menu shortcut |
+| `menuCategory` | `String?` | `windows.menuGroup` | Start Menu folder (and program files subdirectory) for the shortcut; `null` puts it in the Start Menu root |
+| `shortcutName` | `String?` | app name | Name of the shortcuts |
+
+`windows.menu` and `windows.shortcut` are not mapped to MSI: their defaults (`false`) are the opposite of electron-builder's (`true`), so mapping them would silently drop shortcuts. Use `createStartMenuShortcut` / `createDesktopShortcut` instead.
 
 ## AppX (Windows Store / MSIX)
 

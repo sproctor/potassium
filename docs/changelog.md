@@ -14,6 +14,7 @@
     - A delta that would download 90% or more of the file becomes a single streamed full download.
 
     On a local test server adding 50 ms of latency per request, 1,000 ranges took 101 s before and 16 s after, without the merge step. With it, the same alternating-chunk plan becomes a single request.
+- **Windows installer settings for MSI, start menu folder for NSIS** — the MSI target only passed `upgradeCode` and `perMachine` to electron-builder, so the installer always ran one-click without a wizard, launched the app when it finished, and put the shortcut in the Start Menu root. A new `windows { msi { } }` block sets `oneClick`, `runAfterFinish`, `createDesktopShortcut`, `createStartMenuShortcut`, `menuCategory` and `shortcutName`. The NSIS targets gain `menuCategory` and `shortcutName`. For both, `windows.menuGroup` is now the default `menuCategory`, so projects that set it get their Start Menu folder back. See [Windows → MSI Installer](targets/windows.md#msi-installer). (Ported from Nucleus `7e7363cb` and `82c6131f`.)
 
 ### Bug Fixes
 
