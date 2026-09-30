@@ -592,6 +592,15 @@ internal class ElectronBuilderConfigGenerator {
             yaml.appendLine("  fpm:")
             yaml.appendLine("    - \"--rpm-auto-add-directories\"")
         }
+        if (TargetFormat.AppImage in targetFormats) {
+            // The legacy (default "0.0.0") toolset embeds the old AppImage runtime, which links the
+            // system's libfuse2 — absent by default on current distros (Ubuntu 22.04+, Fedora 36+),
+            // so the image fails to start there. The newer toolset embeds the static type2-runtime,
+            // which needs only a `fusermount`/`fusermount3` binary. A top-level key, but only the
+            // AppImage target reads it, and on Linux nothing else emits `toolsets:`.
+            yaml.appendLine("toolsets:")
+            yaml.appendLine("  appimage: \"$APPIMAGE_TOOLSET_VERSION\"")
+        }
         if (TargetFormat.Snap in targetFormats) {
             generateSnapConfig(yaml, distributions.linux.snap)
         }
@@ -759,3 +768,9 @@ internal class ElectronBuilderConfigGenerator {
             .replace("\r", "\\r")
             .replace("\t", "\\t")
 }
+
+/**
+ * electron-builder `toolsets.appimage` version: "1.0.3" is the static type2-runtime (build
+ * 20251108) patched for electron-builder#9598. Must be one the pinned electron-builder knows.
+ */
+internal const val APPIMAGE_TOOLSET_VERSION = "1.0.3"
