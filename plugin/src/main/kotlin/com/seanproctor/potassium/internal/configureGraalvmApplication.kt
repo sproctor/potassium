@@ -1266,6 +1266,13 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
             extraDepends = listOf(cleanAppBundle),
             doNotTrack = true,
         )
+    // Resources share Contents/MacOS with the generated binaries: copy them first so the
+    // generated files win on a name clash, and so any dylibs among them are stripped, patched
+    // and re-signed with the rest.
+    listOf(copyBinary, copyAwtDylibs, copyJawtToLib, copySkikoLib).forEach { copy ->
+        copy.configure { it.mustRunAfter(copyAppResources) }
+    }
+    stripDylibs.configure { it.dependsOn(copyAppResources) }
 
     val codesignBundle =
         tasks.register<Exec>(
