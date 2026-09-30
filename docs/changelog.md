@@ -4,6 +4,8 @@
 
 ### Improvements
 
+- **AppImages run without `libfuse2`** — AppImages are now built on the static type2-runtime (electron-builder's `appimage` toolset 1.0.3) instead of the legacy runtime, which linked the system's `libfuse2`. Current distributions (Ubuntu 22.04+, Fedora 36+) don't install `libfuse2` by default, so the old images failed to start there until users installed it. The new runtime needs only a `fusermount`/`fusermount3` binary. It supports gzip and zstd compression but not xz, so `CompressionLevel.Maximum` now builds a zstd image. The warning about slow AppImage startup with `Maximum` has been removed. See [Linux → AppImage Runtime](targets/linux.md#runtime).
+- **electron-builder 26.17.0** — picks up upstream fixes that apply to Potassium builds: blockmap generation no longer fails with `ERR_REQUIRE_ESM` on Node.js older than 20.19; appx manifests and MSI file, shortcut and file-association entries XML-escape their values, so a publisher or product name containing `&`, `<` or quotes no longer breaks the build; and the NSIS single-instance check runs PowerShell with `-NoProfile -NonInteractive`. The updater changes in electron-updater 6.8.10 (multipart range-response parsing and blockmap-cache consistency) don't apply to potassium-updater: it issues single-range requests and replaces its cached artifact and blockmap together.
 - **Much faster differential downloads when many chunks changed** (potassium-updater) — the differential downloader fetched changed chunks one HTTP range request at a time and paused for a second after every 100 requests, so an update touching many scattered chunks spent most of its time waiting on round trips. Now:
     - Changed chunks separated by less than 256 KiB of unchanged data are merged into one range.
     - Up to six ranges download at once, written into place in the new file.
@@ -12,6 +14,11 @@
     - A delta that would download 90% or more of the file becomes a single streamed full download.
 
     On a local test server adding 50 ms of latency per request, 1,000 ranges took 101 s before and 16 s after, without the merge step. With it, the same alternating-chunk plan becomes a single request.
+
+### Bug Fixes
+
+- **Linux updates relaunch even when the app's working directory is gone** (potassium-updater) — the detached AppImage/deb/rpm update script inherited the app's working directory and passed it to the relaunched app. If that directory had been deleted since the app started (a terminal's directory that was later removed, for instance), the new JVM aborted during startup with "Could not determine current working directory". The update itself was applied, but the app never came back. The script now changes to the original directory if it still exists, otherwise `$HOME`, otherwise `/`, before installing and relaunching.
+- **Sharp 16px and 32px macOS icons from a PNG `iconFile`** — the `.icns` generated from a PNG stored the 16px and 32px 1x sizes as PNG in `icp4`/`icp5` entries. macOS renders PNG data in those entries as noise, so the icon looked corrupt in Finder list views and the DMG title bar. Those sizes are now written as ARGB `ic04`/`ic05` entries, byte-for-byte what Apple's `iconutil` produces (the same fix electron-builder shipped in its icons toolset 1.2.3). Supplied `.icns` files are passed through unchanged.
 
 ## v0.6.1
 

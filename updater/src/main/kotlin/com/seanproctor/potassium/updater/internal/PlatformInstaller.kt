@@ -63,55 +63,19 @@ internal object PlatformInstaller {
         newAppImage: File,
         restart: Boolean,
     ) {
-        val pid = ProcessHandle.current().pid()
         val currentAppImage =
             System.getenv("APPIMAGE")
                 ?: error("APPIMAGE environment variable not set — update is only supported from a packaged AppImage")
 
-        val relaunchCmd =
-            if (restart) {
-                "\n# Relaunch in a fully detached process\nnohup \"\$OLD_FILE\" > /dev/null 2>&1 &\n"
-            } else {
-                ""
-            }
-
-        val script = updateScriptFile(UPDATE_SCRIPT_UNIX)
-        script.writeText(
-            """
-            |#!/usr/bin/env bash
-            |set -e
-            |
-            |# Ignore SIGHUP to survive parent process exit
-            |trap '' HUP
-            |
-            |NEW_FILE=${shLiteral(newAppImage.absolutePath)}
-            |OLD_FILE=${shLiteral(currentAppImage)}
-            |APP_PID=$pid
-            |
-            |# Wait for the app process to fully exit
-            |while kill -0 "${'$'}APP_PID" 2>/dev/null; do
-            |    sleep 0.5
-            |done
-            |
-            |# Wait for the AppImage FUSE mount to fully clean up
-            |sleep 1
-            |
-            |# Replace the old AppImage with the new one
-            |mv -f "${'$'}NEW_FILE" "${'$'}OLD_FILE"
-            |chmod +x "${'$'}OLD_FILE"
-            |$relaunchCmd
-            |# Clean up this script
-            |rm -f "${'$'}{0}"
-            """.trimMargin(),
+        startDetachedLinuxScript(
+            LinuxInstallScripts.forAppImage(
+                newAppImage = newAppImage.absolutePath,
+                currentAppImage = currentAppImage,
+                workingDir = workingDir(),
+                pid = ProcessHandle.current().pid(),
+                restart = restart,
+            ),
         )
-        script.setExecutable(true)
-
-        // Use setsid to start the script in a new session, fully detached
-        // from the current process tree
-        ProcessBuilder("setsid", "bash", script.absolutePath)
-            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-            .redirectError(ProcessBuilder.Redirect.DISCARD)
-            .start()
     }
 
     private fun installLinuxPackage(
@@ -119,56 +83,33 @@ internal object PlatformInstaller {
         extension: String,
         restart: Boolean,
     ) {
-        val pid = ProcessHandle.current().pid()
         val launcher =
             resolveLinuxLauncher()
                 ?: error("Cannot resolve application launcher from java.home")
 
-        val installCmd =
-            when (extension) {
-                "deb" -> "pkexec dpkg -i \"\$PKG_FILE\""
-                "rpm" -> "pkexec rpm -U \"\$PKG_FILE\""
-                else -> error("Unsupported package format: $extension")
-            }
-
-        val relaunchCmd =
-            if (restart) {
-                "\n# Relaunch the application\nnohup \"\$APP_LAUNCHER\" > /dev/null 2>&1 &\n"
-            } else {
-                ""
-            }
-
-        val script = updateScriptFile(UPDATE_SCRIPT_UNIX)
-        script.writeText(
-            """
-            |#!/usr/bin/env bash
-            |
-            |# Ignore SIGHUP to survive parent process exit
-            |trap '' HUP
-            |
-            |PKG_FILE=${shLiteral(packageFile.absolutePath)}
-            |APP_PID=$pid
-            |APP_LAUNCHER=${shLiteral(launcher.absolutePath)}
-            |
-            |# Wait for the app process to fully exit
-            |while kill -0 "${'$'}APP_PID" 2>/dev/null; do
-            |    sleep 0.5
-            |done
-            |
-            |sleep 1
-            |
-            |# Install the package (shows graphical authentication dialog)
-            |# Do not use set -e: dpkg/rpm may return non-zero on warnings,
-            |# which would prevent the application from relaunching.
-            |$installCmd
-            |
-            |# Clean up the package file
-            |rm -f "${'$'}PKG_FILE"
-            |$relaunchCmd
-            |# Clean up this script
-            |rm -f "${'$'}{0}"
-            """.trimMargin(),
+        startDetachedLinuxScript(
+            LinuxInstallScripts.forPackage(
+                packageFile = packageFile.absolutePath,
+                extension = extension,
+                launcher = launcher.absolutePath,
+                workingDir = workingDir(),
+                pid = ProcessHandle.current().pid(),
+                restart = restart,
+            ),
         )
+    }
+
+    /** The directory the app was started in; the relaunch returns to it while it still exists. */
+    private fun workingDir(): String = System.getProperty("user.dir") ?: "/"
+
+    /**
+     * Starts [body] with setsid, in a new session fully detached from the current process tree,
+     * so it outlives the exit this updater is about to perform. The script deletes itself via
+     * `$0` when it finishes.
+     */
+    private fun startDetachedLinuxScript(body: String) {
+        val script = updateScriptFile(UPDATE_SCRIPT_UNIX)
+        script.writeText(body)
         script.setExecutable(true)
 
         ProcessBuilder("setsid", "bash", script.absolutePath)
