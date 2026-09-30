@@ -1517,29 +1517,19 @@ linux {
 }
 ```
 
+### Runtime
+
+AppImages are built on the static [type2-runtime](https://github.com/AppImage/type2-runtime) (electron-builder's `appimage` toolset 1.0.3). It does not need `libfuse2`, which current distributions (Ubuntu 22.04+, Fedora 36+) no longer install by default: it needs only a `fusermount` or `fusermount3` binary on the user's machine. Where FUSE is unavailable altogether (some containers), users can run the image with `--appimage-extract-and-run`.
+
+The bundled JDK and native libraries still link the system's C library, so the image runs on distributions with glibc at least as new as the one the JDK was built against.
+
 ### AppImage Categories
 
 `AudioVideo`, `Development`, `Education`, `Game`, `Graphics`, `Network`, `Office`, `Science`, `Settings`, `System`, `Utility`
 
 ### Compression
 
-AppImage startup time is heavily affected by the compression level. Using `CompressionLevel.Maximum` causes squashfs/FUSE decompression at every launch, resulting in startup times of **60 seconds or more**.
-
-| Compression Level | Startup Impact | Recommended |
-|---|---|---|
-| `Store` | Fastest startup, largest file | Testing |
-| `Normal` (default) | Good balance | **Production** |
-| `Maximum` | 60s+ startup, ~20% smaller | Not recommended |
-
-See [electron-builder#7483](https://github.com/electron-userland/electron-builder/issues/7483) for details.
-
-### Build Requirements
-
-AppImage requires `fuse` (or `libfuse2`) on the build host. On Ubuntu:
-
-```bash
-sudo apt-get install -y libfuse2
-```
+The static runtime supports gzip and zstd squashfs compression, not xz. `Store` builds a gzip image; `Normal` and `Maximum` both build a zstd image, which decompresses quickly at launch.
 
 ## Snap
 
