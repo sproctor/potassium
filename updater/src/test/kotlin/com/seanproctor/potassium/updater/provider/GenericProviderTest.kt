@@ -23,6 +23,18 @@ class GenericProviderTest {
     }
 
     @Test
+    fun `plain http is rejected for remote names that only look like loopback`() {
+        for (url in listOf(
+            "http://127.updates.example.com",
+            "http://127.0.0.1.example.com",
+            "http://127.0.0.256",
+            "http://localhost.example.com",
+        )) {
+            assertThrows(url, IllegalArgumentException::class.java) { GenericProvider(url) }
+        }
+    }
+
+    @Test
     fun `plain http is allowed for loopback hosts`() {
         for (url in listOf("http://localhost:8080", "http://127.0.0.1:1234/x", "http://127.1.2.3", "http://[::1]:80")) {
             GenericProvider(url)

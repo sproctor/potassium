@@ -58,4 +58,15 @@ private fun requireSecureBaseUrl(baseUrl: String) {
 
 private fun isLoopbackHost(host: String?): Boolean =
     host != null &&
-        (host.equals("localhost", ignoreCase = true) || host == "[::1]" || host == "::1" || host.startsWith("127."))
+        (host.equals("localhost", ignoreCase = true) || host == "[::1]" || host == "::1" || isIpv4Loopback(host))
+
+/**
+ * Whether [host] is a dotted-quad IPv4 literal in `127.0.0.0/8`. Checked syntactically, never by
+ * resolving it: `127.updates.example.com` is a remote name that merely starts with `127.`.
+ */
+private fun isIpv4Loopback(host: String): Boolean {
+    val octets = host.split('.')
+    return octets.size == 4 &&
+        octets[0] == "127" &&
+        octets.all { octet -> octet.length in 1..3 && octet.all { it in '0'..'9' } && octet.toInt() <= 255 }
+}
