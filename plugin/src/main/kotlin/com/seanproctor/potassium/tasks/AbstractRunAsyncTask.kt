@@ -11,6 +11,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 import java.io.File
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
 /**
@@ -103,9 +104,12 @@ abstract class AbstractRunAsyncTask : AbstractPotassiumTask() {
         logger.lifecycle("Stopping previous instance (pid $pid)")
         val processes = handle.descendants().toList() + handle
         processes.forEach { it.destroy() }
+        // Wait for the descendants too: the parent can exit while a child is still shutting down.
         val exited =
             runCatching {
-                handle.onExit().get(STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                CompletableFuture
+                    .allOf(*processes.map { it.onExit() }.toTypedArray())
+                    .get(STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             }.isSuccess
         if (!exited) processes.forEach { it.destroyForcibly() }
     }

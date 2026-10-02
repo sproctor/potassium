@@ -93,14 +93,15 @@ internal fun writeJavaArgFile(
 /**
  * Escapes a single Java launcher argument for `@argfile`.
  *
- * The argument is quoted when it contains whitespace, quotes, backslashes, or is empty.
+ * The argument is quoted when it contains whitespace, quotes, backslashes, `#`, or is empty.
+ * Unquoted, `#` starts a comment and the launcher drops the argument.
  * Newline characters are rejected because each argfile line encodes one argument.
  */
 internal fun escapeArgForArgFile(arg: String): String {
     require('\n' !in arg && '\r' !in arg) {
         "Java @argfile argument must not contain newline characters"
     }
-    val requiresQuotes = arg.isEmpty() || arg.any { it.isWhitespace() || it == '"' || it == '\\' }
+    val requiresQuotes = arg.isEmpty() || arg.any { it.isWhitespace() || it == '"' || it == '\\' || it == '#' }
     if (!requiresQuotes) return arg
     val escaped =
         arg
