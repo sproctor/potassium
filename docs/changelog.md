@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.7.0
+
+**Released: 2026-10-02**
 
 ### Improvements
 
