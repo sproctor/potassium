@@ -1428,6 +1428,11 @@ private fun JvmApplicationContext.configureWindowsGraalvmPackaging(
         }
 
     val copyAppResources = copyGraalvmAppResources(into = outputDir)
+    // Resources share the output directory with the generated files: copy them first so the
+    // generated files win on a name clash.
+    listOf(copyBinary, copyAwtDlls, copyJvmDll, copyJawtToBin, copySkikoLib).forEach { copy ->
+        copy.configure { it.mustRunAfter(copyAppResources) }
+    }
 
     return tasks.register<DefaultTask>(
         taskNameAction = "package",
@@ -1571,6 +1576,12 @@ private fun JvmApplicationContext.configureLinuxGraalvmPackaging(
         }
 
     val copyAppResources = copyGraalvmAppResources(into = outputDir)
+    // Resources share the output directory with the generated files: copy them first so the
+    // generated files win on a name clash, and so the rpath fix and strip see any .so among them
+    // every time rather than depending on task order.
+    listOf(copyBinary, copyAwtSoLibs, copyJvmSo, copyJawtToLib, copySkikoLib).forEach { copy ->
+        copy.configure { it.mustRunAfter(copyAppResources) }
+    }
 
     return tasks.register<DefaultTask>(
         taskNameAction = "package",
