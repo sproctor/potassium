@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- **`runAsync` launches the app without holding the build** — `run` keeps the Gradle build open until the app exits, and IDEs that run one Gradle build at a time (Android Studio) queue every other task behind it. The new `runAsync` (and `runReleaseAsync`) starts the app with the same JVM, flags and classpath as `run`, waits two seconds to catch a JVM that fails to start, and finishes. The app's output goes to `build/potassium/run-async/<task>/output.log`. Running the task again stops the instance it started before launching a new one. See [Gradle Tasks → Development](getting-started.md#development).
+
 ## v0.7.0
 
 **Released: 2026-10-02**

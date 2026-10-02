@@ -37,6 +37,7 @@ import com.seanproctor.potassium.tasks.AbstractNotarizationTask
 import com.seanproctor.potassium.tasks.AbstractPatchCaCertificatesTask
 import com.seanproctor.potassium.tasks.AbstractProguardTask
 import com.seanproctor.potassium.tasks.AbstractRunAppXTask
+import com.seanproctor.potassium.tasks.AbstractRunAsyncTask
 import com.seanproctor.potassium.tasks.AbstractRunDistributableTask
 import com.seanproctor.potassium.tasks.AbstractStripNativeLibsFromJarsTask
 import com.seanproctor.potassium.tasks.AbstractSuggestModulesTask
@@ -583,6 +584,10 @@ private fun JvmApplicationContext.configurePackagingTasks(commonTasks: CommonJvm
     tasks.register<JavaExec>(taskNameAction = "run") {
         configureRunTask(this, commonTasks.prepareAppResources, runProguard)
     }
+
+    tasks.register<AbstractRunAsyncTask>(taskNameAction = "run", taskNameObject = "async") {
+        configureRunAsyncTask(this, commonTasks.prepareAppResources, runProguard)
+    }
 }
 
 /**
@@ -989,61 +994,7 @@ private fun JvmApplicationContext.configureRunTask(
 
     exec.mainClass.set(app.mainClass)
     exec.executable(javaExecutable(app.javaHome))
-    exec.jvmArgs =
-        arrayListOf<String>().apply {
-            addAll(defaultJvmArgs)
-            add("-D$APP_ID=${resolvedAppIdProvider().get()}")
-            resolvedAppVersion()?.let { add("-D$APP_VERSION=$it") }
-
-            if (currentOS == OS.MacOS) {
-                val dockName =
-                    app.nativeDistributions.appName
-                        ?: app.nativeDistributions.packageName
-                        ?: project.name
-                add("-Dapple.awt.application.name=$dockName")
-                val file = app.nativeDistributions.macOS.iconFile.ioFileOrNull
-                if (file != null) add("-Xdock:icon=$file")
-            }
-
-            addAll(app.jvmArgs)
-            val appResourcesDir = prepareAppResources.get().destinationDir
-            add("-D$APP_RESOURCES_DIR=${appResourcesDir.absolutePath}")
-
-            app.nativeDistributions.splashImage?.let { splash ->
-                val splashFile = appResourcesDir.resolve(splash)
-                if (splashFile.exists()) {
-                    add("-splash:${splashFile.absolutePath}")
-                }
-            }
-
-            // Dev mode AOT: ./gradlew run -Paot=train|on|auto|off
-            val aotCacheDir =
-                project.layout.buildDirectory
-                    .dir("potassium/aot-cache")
-                    .get()
-                    .asFile
-            val devAotCache = java.io.File(aotCacheDir, "dev.aot")
-            when (project.findProperty("aot")?.toString()) {
-                "train" -> {
-                    aotCacheDir.mkdirs()
-                    add("-XX:AOTCacheOutput=${devAotCache.absolutePath}")
-                }
-                "on" -> {
-                    if (devAotCache.exists()) {
-                        add("-XX:AOTCache=${devAotCache.absolutePath}")
-                    }
-                }
-                "auto" -> {
-                    if (devAotCache.exists()) {
-                        add("-XX:AOTCache=${devAotCache.absolutePath}")
-                    } else {
-                        aotCacheDir.mkdirs()
-                        add("-XX:AOTCacheOutput=${devAotCache.absolutePath}")
-                    }
-                }
-                // "off" or absent → no-op
-            }
-        }
+    exec.jvmArgs = runJvmArgs(prepareAppResources)
     exec.args = app.args
 
     if (runProguard != null) {
@@ -1055,6 +1006,88 @@ private fun JvmApplicationContext.configureRunTask(
         }
     }
 }
+
+private fun JvmApplicationContext.configureRunAsyncTask(
+    task: AbstractRunAsyncTask,
+    prepareAppResources: TaskProvider<Sync>,
+    runProguard: Provider<AbstractProguardTask>?,
+) {
+    task.dependsOn(prepareAppResources)
+
+    task.mainClass.set(app.mainClass)
+    task.javaExecutable.set(javaExecutable(app.javaHome))
+    task.jvmArgs.set(runJvmArgs(prepareAppResources))
+    task.args.set(app.args)
+    // Same directory JavaExec runs `run` in.
+    task.workingDir.set(project.layout.projectDirectory)
+    task.runDir.set(project.layout.buildDirectory.dir("potassium/run-async/${task.name}"))
+
+    if (runProguard != null) {
+        task.dependsOn(runProguard)
+        task.classpath.from(project.fileTree(runProguard.flatMap { it.destinationDir }))
+    } else {
+        task.useAppRuntimeFiles { (runtimeJars, _) ->
+            classpath.from(runtimeJars)
+        }
+    }
+}
+
+/** JVM args shared by `run` and `runAsync`. */
+private fun JvmApplicationContext.runJvmArgs(prepareAppResources: TaskProvider<Sync>): List<String> =
+    arrayListOf<String>().apply {
+        addAll(defaultJvmArgs)
+        add("-D$APP_ID=${resolvedAppIdProvider().get()}")
+        resolvedAppVersion()?.let { add("-D$APP_VERSION=$it") }
+
+        if (currentOS == OS.MacOS) {
+            val dockName =
+                app.nativeDistributions.appName
+                    ?: app.nativeDistributions.packageName
+                    ?: project.name
+            add("-Dapple.awt.application.name=$dockName")
+            val file = app.nativeDistributions.macOS.iconFile.ioFileOrNull
+            if (file != null) add("-Xdock:icon=$file")
+        }
+
+        addAll(app.jvmArgs)
+        val appResourcesDir = prepareAppResources.get().destinationDir
+        add("-D$APP_RESOURCES_DIR=${appResourcesDir.absolutePath}")
+
+        app.nativeDistributions.splashImage?.let { splash ->
+            val splashFile = appResourcesDir.resolve(splash)
+            if (splashFile.exists()) {
+                add("-splash:${splashFile.absolutePath}")
+            }
+        }
+
+        // Dev mode AOT: ./gradlew run -Paot=train|on|auto|off
+        val aotCacheDir =
+            project.layout.buildDirectory
+                .dir("potassium/aot-cache")
+                .get()
+                .asFile
+        val devAotCache = java.io.File(aotCacheDir, "dev.aot")
+        when (project.findProperty("aot")?.toString()) {
+            "train" -> {
+                aotCacheDir.mkdirs()
+                add("-XX:AOTCacheOutput=${devAotCache.absolutePath}")
+            }
+            "on" -> {
+                if (devAotCache.exists()) {
+                    add("-XX:AOTCache=${devAotCache.absolutePath}")
+                }
+            }
+            "auto" -> {
+                if (devAotCache.exists()) {
+                    add("-XX:AOTCache=${devAotCache.absolutePath}")
+                } else {
+                    aotCacheDir.mkdirs()
+                    add("-XX:AOTCacheOutput=${devAotCache.absolutePath}")
+                }
+            }
+            // "off" or absent → no-op
+        }
+    }
 
 private fun JvmApplicationContext.configureFlattenJars(
     flattenJars: AbstractJarsFlattenTask,
