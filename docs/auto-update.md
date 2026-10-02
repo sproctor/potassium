@@ -355,6 +355,8 @@ https://updates.example.com/MyApp-1.2.3-macos-universal.zip.blockmap   # differe
 https://updates.example.com/MyApp-1.2.3-linux-arm64.AppImage
 ```
 
+The base URL must use `https`: the manifest, its checksums and the installers all come from it, so over plain `http` anyone on the network path could replace all of them together. `GenericProvider` throws `IllegalArgumentException` for an `http` URL, except on loopback hosts (`localhost`, `127.0.0.0/8`, `[::1]`) for local testing.
+
 The server must support HTTP `Range` requests for differential downloads (any standard static file server does); without them the updater simply downloads full installers.
 
 ### API Reference

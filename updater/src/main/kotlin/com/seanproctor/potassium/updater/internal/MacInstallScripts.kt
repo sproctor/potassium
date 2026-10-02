@@ -49,12 +49,15 @@ internal object MacInstallScripts {
         |# Runs on every exit path, including an interrupt between the two renames below: if the
         |# installed bundle was moved aside and nothing took its place, put it back. Leaving the
         |# machine without an application is the one outcome this script must never produce.
+        |# Then remove this script and its private directory, whether or not the update succeeded.
         |cleanup() {
         |    if [ -n "${D}BACKUP" ] && [ -d "${D}BACKUP" ] && [ ! -d "${D}TARGET" ]; then
         |        echo "Restoring the previous bundle after an interrupted update" >&2
         |        mv "${D}BACKUP" "${D}TARGET" || true
         |    fi
         |    rm -rf "${D}STAGE_DIR"
+        |    rm -f "$D{0}"
+        |    rmdir "$(dirname "$D{0}")" 2>/dev/null || true
         |}
         |trap cleanup EXIT INT TERM
         |
@@ -125,9 +128,7 @@ internal object MacInstallScripts {
         |${clearQuarantine("TARGET")}
         |${refreshIconCaches("TARGET")}
         |${relaunch(restart, "TARGET")}
-        |# Clean up
         |rm -f "${D}ZIP_FILE"
-        |rm -f "$D{0}"
         """.trimMargin()
 
     /**
@@ -156,8 +157,15 @@ internal object MacInstallScripts {
         |${waitForExit()}
         |
         |mkdir -p "${D}MOUNT_POINT"
-        |# Detach on every exit path so a failed copy never leaves the image mounted.
-        |trap 'hdiutil detach "${D}MOUNT_POINT" -force >/dev/null 2>&1 || true; rmdir "${D}MOUNT_POINT" 2>/dev/null || true' EXIT
+        |# Detach on every exit path so a failed copy never leaves the image mounted, then remove
+        |# the mount point, this script and its private directory, whether or not the update succeeded.
+        |cleanup() {
+        |    hdiutil detach "${D}MOUNT_POINT" -force >/dev/null 2>&1 || true
+        |    rmdir "${D}MOUNT_POINT" 2>/dev/null || true
+        |    rm -f "$D{0}"
+        |    rmdir "$(dirname "$D{0}")" 2>/dev/null || true
+        |}
+        |trap cleanup EXIT
         |
         |# -nobrowse keeps the volume out of Finder. `yes` answers the licence prompt of an image
         |# carrying a software licence agreement, which would otherwise block on stdin forever.
@@ -191,9 +199,7 @@ internal object MacInstallScripts {
         |${clearQuarantine()}
         |${refreshIconCaches()}
         |${relaunch(restart)}
-        |# Clean up
         |rm -f "${D}DMG_FILE"
-        |rm -f "$D{0}"
         """.trimMargin()
 
     /** A literal `$`, which cannot be written directly inside these raw strings. */

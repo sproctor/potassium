@@ -266,7 +266,8 @@ internal class ElectronBuilderConfigGenerator {
         val height: Int,
     )
 
-    private fun generateWindowsConfig(
+    // internal (like generateLinuxConfig) so the rendered YAML can be asserted in unit tests
+    internal fun generateWindowsConfig(
         yaml: StringBuilder,
         distributions: JvmApplicationDistributions,
         targetFormats: List<TargetFormat>,
@@ -300,17 +301,38 @@ internal class ElectronBuilderConfigGenerator {
             if (TargetFormat.Nsis in targetFormats) {
                 appendArtifactName(yaml, distributions.artifactName, TargetFormat.Nsis, "  ")
             }
-            generateNsisSettings(yaml, distributions.windows.nsis, "  ", nsisProtocolInclude)
+            generateNsisSettings(
+                yaml,
+                distributions.windows.nsis,
+                "  ",
+                nsisProtocolInclude,
+                menuCategoryDefault = distributions.windows.menuGroup,
+            )
         }
         if (TargetFormat.NsisWeb in targetFormats) {
             yaml.appendLine("nsisWeb:")
             appendArtifactName(yaml, distributions.artifactName, TargetFormat.NsisWeb, "  ")
-            generateNsisSettings(yaml, distributions.windows.nsis, "  ", nsisProtocolInclude)
+            generateNsisSettings(
+                yaml,
+                distributions.windows.nsis,
+                "  ",
+                nsisProtocolInclude,
+                menuCategoryDefault = distributions.windows.menuGroup,
+            )
         }
         if (TargetFormat.Msi in targetFormats) {
             yaml.appendLine("msi:")
             appendIfNotNull(yaml, "  upgradeCode", distributions.windows.upgradeUuid)
             yaml.appendLine("  perMachine: ${!distributions.windows.perUserInstall}")
+            val msi = distributions.windows.msi
+            yaml.appendLine("  oneClick: ${msi.oneClick}")
+            yaml.appendLine("  runAfterFinish: ${msi.runAfterFinish}")
+            yaml.appendLine("  createDesktopShortcut: ${msi.createDesktopShortcut}")
+            yaml.appendLine("  createStartMenuShortcut: ${msi.createStartMenuShortcut}")
+            // windows.menuGroup is the jpackage-era name for the same concept, so it acts as
+            // the default here; without it the shortcut lands in the start menu root.
+            appendIfNotNull(yaml, "  menuCategory", msi.menuCategory ?: distributions.windows.menuGroup)
+            appendIfNotNull(yaml, "  shortcutName", msi.shortcutName)
         }
         if (TargetFormat.AppX in targetFormats) {
             generateAppXConfig(yaml, distributions.windows.appx)
@@ -413,6 +435,7 @@ internal class ElectronBuilderConfigGenerator {
         nsis: NsisSettings,
         indent: String,
         protocolInclude: File? = null,
+        menuCategoryDefault: String? = null,
     ) {
         yaml.appendLine("${indent}oneClick: ${nsis.oneClick}")
         yaml.appendLine("${indent}allowElevation: ${nsis.allowElevation}")
@@ -421,6 +444,10 @@ internal class ElectronBuilderConfigGenerator {
         yaml.appendLine("${indent}createDesktopShortcut: ${nsis.createDesktopShortcut}")
         yaml.appendLine("${indent}createStartMenuShortcut: ${nsis.createStartMenuShortcut}")
         yaml.appendLine("${indent}runAfterFinish: ${nsis.runAfterFinish}")
+        // windows.menuGroup is the jpackage-era name for the same concept, so it acts as
+        // the default here; without it the shortcut lands in the start menu root.
+        appendIfNotNull(yaml, "${indent}menuCategory", nsis.menuCategory ?: menuCategoryDefault)
+        appendIfNotNull(yaml, "${indent}shortcutName", nsis.shortcutName)
         yaml.appendLine("${indent}deleteAppDataOnUninstall: ${nsis.deleteAppDataOnUninstall}")
         yaml.appendLine("${indent}warningsAsErrors: false")
 

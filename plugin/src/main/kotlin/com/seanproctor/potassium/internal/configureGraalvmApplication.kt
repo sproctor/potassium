@@ -19,10 +19,13 @@ import com.seanproctor.potassium.tasks.AbstractElectronBuilderPackageTask
 import com.seanproctor.potassium.tasks.AbstractNotarizationTask
 import com.seanproctor.potassium.tasks.AbstractUnpackDefaultApplicationResourcesTask
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.Directory
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.jvm.toolchain.JavaLanguageVersion
@@ -38,6 +41,41 @@ private val graalvmDefaultJvmArgs: List<String> =
             add("--add-opens=java.desktop/sun.lwawt.macosx=ALL-UNNAMED")
         }
     }
+
+/**
+ * The JVM `run` and jpackage pipelines copy `appResourcesRootDir` via `prepareAppResources`;
+ * the native pipeline reuses that task so native packages carry the same resources.
+ */
+private fun JvmApplicationContext.prepareAppResourcesTask(): TaskProvider<Sync> =
+    project.tasks.named(
+        "prepare${buildType.classifier.uppercaseFirstChar()}AppResources",
+        Sync::class.java,
+    )
+
+/**
+ * Copies the app resources next to the native executable, where sidecar native libraries (for
+ * example Dawn's `dxil.dll`) are found at run time.
+ */
+private fun JvmApplicationContext.copyGraalvmAppResources(
+    into: Provider<Directory>,
+    extraDepends: List<TaskProvider<*>> = emptyList(),
+    doNotTrack: Boolean = false,
+): TaskProvider<Copy> {
+    val prepareAppResources = prepareAppResourcesTask()
+    return tasks.register<Copy>(
+        taskNameAction = "copy",
+        taskNameObject = "graalvmAppResources",
+    ) {
+        description = "Copy appResourcesRootDir contents next to the native executable"
+        dependsOn(prepareAppResources)
+        extraDepends.forEach { dependsOn(it) }
+        if (doNotTrack) {
+            doNotTrackState("Output directory is modified by downstream strip/codesign tasks")
+        }
+        from(prepareAppResources.map { it.destinationDir })
+        into(into)
+    }
+}
 
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 internal fun JvmApplicationContext.configureGraalvmApplication() {
@@ -89,6 +127,9 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
             classpath = runtimeJars
         }
 
+        val prepareAppResources = prepareAppResourcesTask()
+        dependsOn(prepareAppResources)
+
         jvmArgs =
             buildList {
                 addAll(graalvmDefaultJvmArgs)
@@ -99,6 +140,7 @@ internal fun JvmApplicationContext.configureGraalvmApplication() {
                             !arg.startsWith("-D$APP_RESOURCES_DIR=")
                     },
                 )
+                add("-D$APP_RESOURCES_DIR=${prepareAppResources.get().destinationDir.absolutePath}")
 
                 if (currentOS == OS.MacOS) {
                     val dockName =
@@ -915,11 +957,13 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
 
             doLast {
                 val macosDir = appBundleDir.get().dir("MacOS").asFile
+                // Recurse so dylibs among the app resources (e.g. MacOS/lib/vendor/) are stripped too
                 val dylibs =
                     macosDir
-                        .listFiles { file -> file.isFile && file.extension == "dylib" }
-                        ?.sortedBy { it.name }
-                        .orEmpty()
+                        .walkTopDown()
+                        .filter { file -> file.isFile && file.extension == "dylib" }
+                        .sortedBy { it.path }
+                        .toList()
 
                 var successCount = 0
                 var failureCount = 0
@@ -959,12 +1003,10 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
                 val minVer = patchMinVersion.get()
                 val sdkVer = patchSdkVersion.get()
                 val macosDir = appBundleDir.get().dir("MacOS").asFile
-                val libDir = appBundleDir.get().dir("MacOS/lib").asFile
 
-                // Patch all Mach-O files: main binary + dylibs in MacOS/ and MacOS/lib/
-                sequenceOf(macosDir, libDir)
-                    .filter { it.isDirectory }
-                    .flatMap { dir -> dir.listFiles()?.asSequence().orEmpty() }
+                // Patch all Mach-O files under MacOS/: main binary, lib/ and any app resources
+                macosDir
+                    .walkTopDown()
                     .filter { it.isFile && (it.extension == "dylib" || it.canExecute()) }
                     .toList()
                     .also { files ->
@@ -994,7 +1036,21 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
             description = "Re-sign dylibs after stripping (ad-hoc)"
             dependsOn(patchBuildVersion)
             val macosDir = appBundleDir.map { it.dir("MacOS") }
-            commandLine("bash", "-c", "codesign --force --sign - '${macosDir.get().asFile.absolutePath}'/*.dylib")
+            commandLine(
+                "find",
+                macosDir.get().asFile.absolutePath,
+                "-type",
+                "f",
+                "-name",
+                "*.dylib",
+                "-exec",
+                "codesign",
+                "--force",
+                "--sign",
+                "-",
+                "{}",
+                "+",
+            )
         }
 
     val fixRpath =
@@ -1218,13 +1274,41 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
             null
         }
 
+    val copyAppResources =
+        copyGraalvmAppResources(
+            into = appBundleDir.map { it.dir("MacOS") },
+            extraDepends = listOf(cleanAppBundle),
+            doNotTrack = true,
+        )
+    // Resources share Contents/MacOS with the generated binaries: copy them first so the
+    // generated files win on a name clash, and so any dylibs among them are stripped, patched
+    // and re-signed with the rest.
+    listOf(copyBinary, copyAwtDylibs, copyJawtToLib, copySkikoLib).forEach { copy ->
+        copy.configure { it.mustRunAfter(copyAppResources) }
+    }
+    stripDylibs.configure { it.dependsOn(copyAppResources) }
+    // stripDylibs walks MacOS/lib/ as well. Copy libjawt and Skiko there after it, so they stay
+    // unstripped as before rather than depending on which task happened to run first.
+    listOf(copyJawtToLib, copySkikoLib).forEach { copy ->
+        copy.configure { it.mustRunAfter(stripDylibs) }
+    }
+
     val codesignBundle =
         tasks.register<Exec>(
             taskNameAction = "codesign",
             taskNameObject = "graalvmBundle",
         ) {
             description = "Ad-hoc sign the entire .app bundle"
-            dependsOn(codesignDylibs, copyBinary, fixRpath, copyInfoPlist, copyJawtToLib, copySkikoLib, copyIcon)
+            dependsOn(
+                codesignDylibs,
+                copyBinary,
+                copyAppResources,
+                fixRpath,
+                copyInfoPlist,
+                copyJawtToLib,
+                copySkikoLib,
+                copyIcon,
+            )
             copyFileAssociationIcons?.let { dependsOn(it) }
             val bundleDir = appTmpDir.map { it.dir("graalvm/output/${appBundleName.get()}") }
             commandLine("codesign", "--force", "--deep", "--sign", "-", bundleDir.get().asFile.absolutePath)
@@ -1237,6 +1321,7 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
         description = "Build native image and package as macOS .app bundle"
         dependsOn(
             copyBinary,
+            copyAppResources,
             copyAwtDylibs,
             copyJawtToLib,
             copySkikoLib,
@@ -1342,12 +1427,19 @@ private fun JvmApplicationContext.configureWindowsGraalvmPackaging(
             into(outputDir.map { it.dir("bin") })
         }
 
+    val copyAppResources = copyGraalvmAppResources(into = outputDir)
+    // Resources share the output directory with the generated files: copy them first so the
+    // generated files win on a name clash.
+    listOf(copyBinary, copyAwtDlls, copyJvmDll, copyJawtToBin, copySkikoLib).forEach { copy ->
+        copy.configure { it.mustRunAfter(copyAppResources) }
+    }
+
     return tasks.register<DefaultTask>(
         taskNameAction = "package",
         taskNameObject = "graalvmNative",
     ) {
         description = "Build native image and package with DLLs"
-        dependsOn(copyBinary, copyAwtDlls, copyJvmDll, copyJawtToBin, copySkikoLib)
+        dependsOn(copyBinary, copyAppResources, copyAwtDlls, copyJvmDll, copyJawtToBin, copySkikoLib)
     }
 }
 
@@ -1483,12 +1575,30 @@ private fun JvmApplicationContext.configureLinuxGraalvmPackaging(
             commandLine("bash", "-c", "strip --strip-debug '${outputDir.get().asFile.absolutePath}'/*.so")
         }
 
+    val copyAppResources = copyGraalvmAppResources(into = outputDir)
+    // Resources share the output directory with the generated files: copy them first so the
+    // generated files win on a name clash, and so the rpath fix and strip see any .so among them
+    // every time rather than depending on task order.
+    listOf(copyBinary, copyAwtSoLibs, copyJvmSo, copyJawtToLib, copySkikoLib).forEach { copy ->
+        copy.configure { it.mustRunAfter(copyAppResources) }
+    }
+
     return tasks.register<DefaultTask>(
         taskNameAction = "package",
         taskNameObject = "graalvmNative",
     ) {
         description = "Build native image and package with .so libs"
-        dependsOn(copyBinary, copyAwtSoLibs, copyJvmSo, copyJawtToLib, copySkikoLib, fixRpath, fixSoRpath, stripSoLibs)
+        dependsOn(
+            copyBinary,
+            copyAppResources,
+            copyAwtSoLibs,
+            copyJvmSo,
+            copyJawtToLib,
+            copySkikoLib,
+            fixRpath,
+            fixSoRpath,
+            stripSoLibs,
+        )
     }
 }
 

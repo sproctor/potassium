@@ -73,3 +73,13 @@ This means:
 
 !!! note "Binary size trade-off"
     The glob pattern `.*\.(svg|ttf|otf)` includes **all** SVGs and fonts from **all** JARs on the classpath. If you depend on the IntelliJ Platform icons library, this may add several megabytes of icons you don't actually use. For most applications, the convenience far outweighs the size increase. If binary size is critical, you can override with more targeted patterns in your own `resource-config.json`.
+
+## Application Resources (`appResourcesRootDir`)
+
+Native packages carry the same [`appResourcesRootDir`](../getting-started.md#application-resources) files as JVM packages. They are copied next to the native executable (into `Contents/MacOS/` on macOS), where sidecar native libraries such as Dawn's `dxil.dll` are found at run time. `runWithNativeAgent` gets them too, with `compose.application.resources.dir` pointing at them.
+
+In a native image, `compose.application.resources.dir` is **not** set: the `graalvm-runtime` module doesn't set it. To read a data file from these resources, resolve it against the executable's directory (`ProcessHandle.current().info().command()`).
+
+!!! warning "macOS notarization"
+    Gatekeeper treats every file under `Contents/MacOS/` as code. Native libraries there are fine, but data files can make a notarized bundle fail `spctl` assessment. Keep macOS app resources to native libraries.
+
