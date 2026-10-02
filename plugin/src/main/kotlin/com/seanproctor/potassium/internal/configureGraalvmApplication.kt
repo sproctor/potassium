@@ -957,11 +957,13 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
 
             doLast {
                 val macosDir = appBundleDir.get().dir("MacOS").asFile
+                // Recurse so dylibs among the app resources (e.g. MacOS/lib/vendor/) are stripped too
                 val dylibs =
                     macosDir
-                        .listFiles { file -> file.isFile && file.extension == "dylib" }
-                        ?.sortedBy { it.name }
-                        .orEmpty()
+                        .walkTopDown()
+                        .filter { file -> file.isFile && file.extension == "dylib" }
+                        .sortedBy { it.path }
+                        .toList()
 
                 var successCount = 0
                 var failureCount = 0
@@ -1001,12 +1003,10 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
                 val minVer = patchMinVersion.get()
                 val sdkVer = patchSdkVersion.get()
                 val macosDir = appBundleDir.get().dir("MacOS").asFile
-                val libDir = appBundleDir.get().dir("MacOS/lib").asFile
 
-                // Patch all Mach-O files: main binary + dylibs in MacOS/ and MacOS/lib/
-                sequenceOf(macosDir, libDir)
-                    .filter { it.isDirectory }
-                    .flatMap { dir -> dir.listFiles()?.asSequence().orEmpty() }
+                // Patch all Mach-O files under MacOS/: main binary, lib/ and any app resources
+                macosDir
+                    .walkTopDown()
                     .filter { it.isFile && (it.extension == "dylib" || it.canExecute()) }
                     .toList()
                     .also { files ->
@@ -1036,7 +1036,21 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
             description = "Re-sign dylibs after stripping (ad-hoc)"
             dependsOn(patchBuildVersion)
             val macosDir = appBundleDir.map { it.dir("MacOS") }
-            commandLine("bash", "-c", "codesign --force --sign - '${macosDir.get().asFile.absolutePath}'/*.dylib")
+            commandLine(
+                "find",
+                macosDir.get().asFile.absolutePath,
+                "-type",
+                "f",
+                "-name",
+                "*.dylib",
+                "-exec",
+                "codesign",
+                "--force",
+                "--sign",
+                "-",
+                "{}",
+                "+",
+            )
         }
 
     val fixRpath =
@@ -1273,6 +1287,11 @@ private fun JvmApplicationContext.configureMacOsGraalvmPackaging(
         copy.configure { it.mustRunAfter(copyAppResources) }
     }
     stripDylibs.configure { it.dependsOn(copyAppResources) }
+    // stripDylibs walks MacOS/lib/ as well. Copy libjawt and Skiko there after it, so they stay
+    // unstripped as before rather than depending on which task happened to run first.
+    listOf(copyJawtToLib, copySkikoLib).forEach { copy ->
+        copy.configure { it.mustRunAfter(stripDylibs) }
+    }
 
     val codesignBundle =
         tasks.register<Exec>(
