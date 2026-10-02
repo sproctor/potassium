@@ -1181,7 +1181,7 @@ potassium {
         // Per-user install (no admin required)
         perUserInstall = true
 
-        // Start menu group
+        // Start menu folder — the default for nsis/msi menuCategory
         menuGroup = "My Company"
 
         // Installation directory name
@@ -1206,6 +1206,8 @@ windows {
         // Shortcuts
         createDesktopShortcut = true
         createStartMenuShortcut = true
+        menuCategory = "My Company"               // Start menu folder (default: windows.menuGroup)
+        shortcutName = "My App"                   // Shortcut name (default: app name)
 
         // Post-install
         runAfterFinish = true
@@ -1244,6 +1246,8 @@ windows {
 | `allowToChangeInstallationDirectory` | `Boolean` | `false` | Show directory chooser |
 | `createDesktopShortcut` | `Boolean` | `true` | Create desktop shortcut |
 | `createStartMenuShortcut` | `Boolean` | `true` | Create Start Menu shortcut |
+| `menuCategory` | `String?` | `windows.menuGroup` | Start Menu folder (and program files subdirectory) for the shortcut; `null` puts it in the Start Menu root |
+| `shortcutName` | `String?` | app name | Name of the shortcuts |
 | `runAfterFinish` | `Boolean` | `true` | Launch app after install |
 | `deleteAppDataOnUninstall` | `Boolean` | `false` | Remove app data on uninstall |
 | `multiLanguageInstaller` | `Boolean` | `false` | Multi-language installer UI |
@@ -1306,6 +1310,34 @@ nsis {
 **References:** - [electron-builder NSIS configuration](https://www.electron.build/nsis.html)
 - [Change default installation directory value (electron-builder#2855)](https://github.com/electron-userland/electron-builder/issues/2855)
 - [Change $INSTDIR to a custom path (electron-builder#1961)](https://github.com/electron-userland/electron-builder/issues/1961)
+
+## MSI Installer
+
+The MSI target takes its upgrade code from `windows.upgradeUuid` and its install scope from `windows.perUserInstall`. The remaining installer settings live in `windows { msi { } }`; each defaults to electron-builder's default.
+
+```kotlin
+windows {
+    msi {
+        oneClick = false               // Show the install wizard, as jpackage MSIs did
+        runAfterFinish = false         // Don't launch the app when the install finishes
+        createDesktopShortcut = true
+        createStartMenuShortcut = true
+        menuCategory = "My Company"    // Start menu folder (default: windows.menuGroup)
+        shortcutName = "My App"        // Shortcut name (default: app name)
+    }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `oneClick` | `Boolean` | `true` | Install immediately without a wizard |
+| `runAfterFinish` | `Boolean` | `true` | Launch app after install |
+| `createDesktopShortcut` | `Boolean` | `true` | Create desktop shortcut |
+| `createStartMenuShortcut` | `Boolean` | `true` | Create Start Menu shortcut |
+| `menuCategory` | `String?` | `windows.menuGroup` | Start Menu folder (and program files subdirectory) for the shortcut; `null` puts it in the Start Menu root |
+| `shortcutName` | `String?` | app name | Name of the shortcuts |
+
+`windows.menu` and `windows.shortcut` are not mapped to MSI: their defaults (`false`) are the opposite of electron-builder's (`true`), so mapping them would silently drop shortcuts. Use `createStartMenuShortcut` / `createDesktopShortcut` instead.
 
 ## AppX (Windows Store / MSIX)
 
@@ -2622,6 +2654,8 @@ https://updates.example.com/MyApp-1.2.3-macos-universal.zip.blockmap   # differe
 https://updates.example.com/MyApp-1.2.3-linux-arm64.AppImage
 ```
 
+The base URL must use `https`: the manifest, its checksums and the installers all come from it, so over plain `http` anyone on the network path could replace all of them together. `GenericProvider` throws `IllegalArgumentException` for an `http` URL, except on loopback hosts (`localhost`, `127.0.0.0/8`, `[::1]`) for local testing.
+
 The server must support HTTP `Range` requests for differential downloads (any standard static file server does); without them the updater simply downloads full installers.
 
 ### API Reference
@@ -3691,6 +3725,14 @@ This means:
 - **Service loaders resolve correctly** — ktor engines, coil fetchers, SLF4J providers, etc.
 
 **Binary size trade-off:** The glob pattern `.*\.(svg|ttf|otf)` includes **all** SVGs and fonts from **all** JARs on the classpath. If you depend on the IntelliJ Platform icons library, this may add several megabytes of icons you don't actually use. For most applications, the convenience far outweighs the size increase. If binary size is critical, you can override with more targeted patterns in your own `resource-config.json`.
+
+## Application Resources (`appResourcesRootDir`)
+
+Native packages carry the same [`appResourcesRootDir`](../getting-started.md#application-resources) files as JVM packages. They are copied next to the native executable (into `Contents/MacOS/` on macOS), where sidecar native libraries such as Dawn's `dxil.dll` are found at run time. `runWithNativeAgent` gets them too, with `compose.application.resources.dir` pointing at them.
+
+In a native image, `compose.application.resources.dir` is **not** set: the `graalvm-runtime` module doesn't set it. To read a data file from these resources, resolve it against the executable's directory (`ProcessHandle.current().info().command()`).
+
+**macOS notarization:** Gatekeeper treats every file under `Contents/MacOS/` as code. Native libraries there are fine, but data files can make a notarized bundle fail `spctl` assessment. Keep macOS app resources to native libraries.
 
 ---
 
