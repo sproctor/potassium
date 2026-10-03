@@ -62,7 +62,13 @@ potassium {
 | Task | Description |
 |------|-------------|
 | `run` | Run the application from the IDE/terminal |
+| `runAsync` | Start the application like `run`, then finish without waiting for it to exit |
 | `runDistributable` | Run the packaged application image |
+
+`runAsync` frees the build while the app runs, which matters in IDEs that run one Gradle build at a
+time: Android Studio queues every other Gradle task behind a running `run`. The app's output goes to
+`build/potassium/run-async/runAsync/output.log`. Running the task again stops the instance it
+started and launches a new one.
 
 #### Compose Hot Reload
 

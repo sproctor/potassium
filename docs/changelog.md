@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- **`runAsync` launches the app without holding the build** — `run` keeps the Gradle build open until the app exits, and IDEs that run one Gradle build at a time (Android Studio) queue every other task behind it. The new `runAsync` (and `runReleaseAsync`) starts the app with the same JVM, flags and classpath as `run`, waits two seconds to catch a JVM that fails to start, and finishes. The app's output goes to `build/potassium/run-async/<task>/output.log`. Running the task again stops the instance it started before launching a new one. See [Gradle Tasks → Development](getting-started.md#development).
+
+### Bug Fixes
+
+- **JVM arguments containing `#` survive the AOT training run** — the `@argfile` that launches the AOT cache training run left arguments containing `#` unquoted, and the Java launcher reads an unquoted `#` as the start of a comment. An argument such as `-Dfoo=a#b` was dropped entirely. Such arguments are now quoted.
+
 ## v0.7.0
 
 **Released: 2026-10-02**

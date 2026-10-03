@@ -93,6 +93,12 @@ class AotArgFileSupportTest {
     }
 
     @Test
+    fun `escapeArgForArgFile quotes hash so the launcher does not read a comment`() {
+        assertEquals("\"#profile\"", escapeArgForArgFile("#profile"))
+        assertEquals("\"-Dfoo=a#b\"", escapeArgForArgFile("-Dfoo=a#b"))
+    }
+
+    @Test
     fun `escapeArgForArgFile quotes empty string`() {
         assertEquals("\"\"", escapeArgForArgFile(""))
     }
