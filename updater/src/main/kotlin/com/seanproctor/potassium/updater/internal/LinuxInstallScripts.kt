@@ -41,7 +41,12 @@ internal object LinuxInstallScripts {
         |${relaunch(restart, "OLD_FILE", "Relaunch in a fully detached process")}
         """.trimMargin()
 
-    /** Installs [packageFile] (`deb` or `rpm`, per [extension]) over the jpackage install. */
+    /**
+     * Installs [packageFile] (`deb` or `rpm`, per [extension]) over the jpackage install. The
+     * installer's output goes to [logFile]; when it fails, [failureFile] records [version] and its
+     * exit status (see [InstallFailureRecord]) for the relaunched app to report.
+     */
+    @Suppress("LongParameterList")
     fun forPackage(
         packageFile: String,
         extension: String,
@@ -49,6 +54,9 @@ internal object LinuxInstallScripts {
         workingDir: String,
         pid: Long,
         restart: Boolean,
+        version: String,
+        logFile: String,
+        failureFile: String,
     ): String {
         val installCmd =
             when (extension) {
@@ -65,6 +73,9 @@ internal object LinuxInstallScripts {
             |PKG_FILE=${shLiteral(packageFile)}
             |APP_PID=$pid
             |APP_LAUNCHER=${shLiteral(launcher)}
+            |NEW_VERSION=${shLiteral(version)}
+            |LOG_FILE=${shLiteral(logFile)}
+            |FAILURE_FILE=${shLiteral(failureFile)}
             |
             |${waitForExit()}
             |
@@ -72,13 +83,28 @@ internal object LinuxInstallScripts {
             |
             |${enterWorkingDir(workingDir)}
             |
-            |# Install the package (shows graphical authentication dialog)
-            |# Do not use set -e: dpkg/rpm may return non-zero on warnings,
-            |# which would prevent the application from relaunching.
-            |$installCmd
+            |# Keep the installer's output: this script's own output is discarded, so the log is the
+            |# only record of why an install failed. A log that cannot be written must not stop the
+            |# install, so fall back to discarding it.
+            |{ mkdir -p "$(dirname "${D}LOG_FILE")" && : > "${D}LOG_FILE"; } 2>/dev/null || LOG_FILE=/dev/null
+            |rm -f "${D}FAILURE_FILE"
             |
-            |# Clean up the package file
+            |# Install the package (shows graphical authentication dialog)
+            |$installCmd > "${D}LOG_FILE" 2>&1
+            |STATUS=$D?
+            |
+            |# Any non-zero status is a failed install: dpkg exits 1 when it leaves the package
+            |# unconfigured and 2 when it cannot start (say, another package manager holds its lock),
+            |# and pkexec exits 126 when the authentication dialog is dismissed. errexit stays off so
+            |# the app is relaunched either way; the record tells it why it is still the old version.
+            |if [ "${D}STATUS" -ne 0 ]; then
+            |    printf '${InstallFailureRecord.KEY_VERSION}=%s\n${InstallFailureRecord.KEY_EXIT_CODE}=%s\n' "${D}NEW_VERSION" "${D}STATUS" > "${D}FAILURE_FILE.tmp" &&
+            |        mv -f "${D}FAILURE_FILE.tmp" "${D}FAILURE_FILE"
+            |fi
+            |
+            |# Clean up the package file and its private download directory
             |rm -f "${D}PKG_FILE"
+            |rmdir "$(dirname "${D}PKG_FILE")" 2>/dev/null || true
             |${relaunch(restart, "APP_LAUNCHER", "Relaunch the application")}
             |# Clean up this script
             |rm -f "$D{0}"

@@ -5,6 +5,7 @@ import com.seanproctor.potassium.updater.exception.NoMatchingFileException
 import com.seanproctor.potassium.updater.exception.ParseException
 import com.seanproctor.potassium.updater.exception.UpdateException
 import com.seanproctor.potassium.updater.internal.FileSelector
+import com.seanproctor.potassium.updater.internal.InstallFailureRecord
 import com.seanproctor.potassium.updater.internal.InstallTypeDetector
 import com.seanproctor.potassium.updater.internal.PlatformInfo
 import com.seanproctor.potassium.updater.internal.PlatformInstaller
@@ -156,13 +157,13 @@ public class PotassiumUpdater(
     public fun installAndRestart(installerFile: File) {
         writeUpdateMarker()
         val platform = PlatformInfo.currentPlatform()
-        PlatformInstaller.install(installerFile, platform, restart = true)
+        PlatformInstaller.install(installerFile, platform, restart = true, version = pendingUpdateVersion)
     }
 
     public fun installAndQuit(installerFile: File) {
         writeUpdateMarker()
         val platform = PlatformInfo.currentPlatform()
-        PlatformInstaller.install(installerFile, platform, restart = false)
+        PlatformInstaller.install(installerFile, platform, restart = false, version = pendingUpdateVersion)
     }
 
     /**
@@ -174,6 +175,23 @@ public class PotassiumUpdater(
         val event = peekUpdateEvent() ?: return null
         UpdateMarker.delete()
         return event
+    }
+
+    /**
+     * Returns the failure of the last update install, if it failed, and clears it so that
+     * subsequent calls return `null`. Use this on startup, next to [consumeUpdateEvent], to tell
+     * the user why the app is still on the old version. Never throws.
+     *
+     * Only Linux deb and rpm installs record failures today: their installer runs after the app
+     * exits, and the app is relaunched whether or not it succeeded. A failure that the running
+     * version has since overtaken (the update was installed some other way) is not reported.
+     */
+    public fun consumeInstallFailure(): InstallFailure? {
+        val entry = InstallFailureRecord.read()
+        InstallFailureRecord.delete()
+        entry ?: return null
+        if (entry.version == config.currentVersion.trim()) return null
+        return InstallFailure(entry.version, entry.exitCode, entry.output)
     }
 
     /**

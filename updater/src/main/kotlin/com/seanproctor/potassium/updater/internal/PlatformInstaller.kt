@@ -21,10 +21,15 @@ internal object PlatformInstaller {
      */
     private fun createUpdateWorkDir(): File = Files.createTempDirectory("potassium-install-").toFile()
 
+    /**
+     * Installs [file] and exits. [version] is the version being installed, when known; the Linux
+     * package installer records it if the install fails (see [InstallFailureRecord]).
+     */
     fun install(
         file: File,
         platform: Platform,
         restart: Boolean = true,
+        version: String? = null,
     ) {
         val extension = file.name.substringAfterLast('.').lowercase()
 
@@ -34,7 +39,7 @@ internal object PlatformInstaller {
             platform == Platform.Windows -> installWindows(file, extension, restart)
             platform == Platform.Linux && extension == "appimage" -> installLinuxAppImage(file, restart)
             platform == Platform.Linux && (extension == "deb" || extension == "rpm") ->
-                installLinuxPackage(file, extension, restart)
+                installLinuxPackage(file, extension, restart, version)
             else -> handOffToDesktop(file, platform).start()
         }
         exitProcess(0)
@@ -82,6 +87,7 @@ internal object PlatformInstaller {
         packageFile: File,
         extension: String,
         restart: Boolean,
+        version: String?,
     ) {
         val launcher =
             resolveLinuxLauncher()
@@ -95,6 +101,10 @@ internal object PlatformInstaller {
                 workingDir = workingDir(),
                 pid = ProcessHandle.current().pid(),
                 restart = restart,
+                // Trimmed: a newline in the value would split the record across lines.
+                version = version?.trim().orEmpty(),
+                logFile = InstallFailureRecord.logFile().absolutePath,
+                failureFile = InstallFailureRecord.recordFile().absolutePath,
             ),
         )
     }

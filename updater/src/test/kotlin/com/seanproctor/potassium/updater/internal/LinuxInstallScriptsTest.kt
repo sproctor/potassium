@@ -25,13 +25,22 @@ class LinuxInstallScriptsTest {
     private fun pkg(
         extension: String,
         restart: Boolean = true,
+        packageFile: String = "/tmp/app_1.2.3_amd64.$extension",
+        launcher: String = "/opt/app/bin/App",
+        workingDir: String = "/home/user",
+        pid: Long = 4321,
+        logFile: String = "/home/user/.local/share/app/potassium-install.log",
+        failureFile: String = "/home/user/.local/share/app/potassium-install-failure",
     ) = LinuxInstallScripts.forPackage(
-        packageFile = "/tmp/app_1.2.3_amd64.$extension",
+        packageFile = packageFile,
         extension = extension,
-        launcher = "/opt/app/bin/App",
-        workingDir = "/home/user",
-        pid = 4321,
+        launcher = launcher,
+        workingDir = workingDir,
+        pid = pid,
         restart = restart,
+        version = "1.2.3",
+        logFile = logFile,
+        failureFile = failureFile,
     )
 
     @Test
@@ -124,6 +133,118 @@ class LinuxInstallScriptsTest {
         assertTrue("the script did not finish", process.waitFor(30, TimeUnit.SECONDS))
         assertTrue("the update must fail", process.exitValue() != 0)
         assertFalse("the script's directory must be removed", scriptDir.exists())
+    }
+
+    @Test
+    fun `package script records a failed install and still relaunches`() {
+        // The regression: another package manager held the dpkg lock, so dpkg exited 2 at once.
+        // The script discarded its output and relaunched the old version, which looked like an
+        // update that silently did nothing.
+        val run =
+            runPackageUpdate(
+                pkexec = "echo 'dpkg: error: dpkg frontend lock was locked by another process' >&2; exit 2",
+            )
+
+        assertTrue("the app must be relaunched", run.relaunched)
+        assertEquals("version=1.2.3\nexitCode=2\n", run.failureFile.readText())
+        assertTrue(run.logFile.readText().contains("frontend lock was locked by another process"))
+        assertFalse("the package must be removed", run.packageFile.exists())
+        assertFalse("the package's directory must be removed", run.packageFile.parentFile.exists())
+    }
+
+    @Test
+    fun `package script leaves no failure record after a successful install`() {
+        val run =
+            runPackageUpdate(
+                pkexec = "echo \"Unpacking app (1.2.3)\"; exit 0",
+                staleFailure = true,
+            )
+
+        assertTrue("the app must be relaunched", run.relaunched)
+        assertFalse("a record from an earlier attempt must be cleared", run.failureFile.exists())
+        assertTrue(run.logFile.readText().contains("Unpacking app"))
+    }
+
+    @Test
+    fun `package script installs even when the log cannot be written`() {
+        // The log's directory cannot be created because a regular file is in the way.
+        val blocker = tmp.newFile("blocker")
+        val run =
+            runPackageUpdate(
+                pkexec = "exit 0",
+                logFile = File(blocker, "potassium-install.log"),
+            )
+
+        assertTrue("the install must run and the app be relaunched", run.relaunched)
+        assertTrue("the installer must have been invoked", run.invoked)
+    }
+
+    private class PackageRun(
+        val relaunched: Boolean,
+        val invoked: Boolean,
+        val packageFile: File,
+        val logFile: File,
+        val failureFile: File,
+    )
+
+    /**
+     * Runs the deb script for real with a stand-in `pkexec` on PATH whose body is [pkexec], and a
+     * launcher that records that it was relaunched.
+     */
+    private fun runPackageUpdate(
+        pkexec: String,
+        staleFailure: Boolean = false,
+        logFile: File = File(tmp.root, "state/potassium-install.log"),
+    ): PackageRun {
+        val bash = File("/bin/bash").takeIf { it.canExecute() }
+        assumeTrue("bash is unavailable on this host", bash != null)
+
+        val bin = tmp.newFolder("bin")
+        val invokedMarker = File(tmp.root, "invoked")
+        File(bin, "pkexec").apply {
+            writeText("#!/bin/sh\ntouch '${invokedMarker.path}'\n$pkexec\n")
+            setExecutable(true)
+        }
+        val relaunchMarker = File(tmp.root, "relaunched")
+        val launcher =
+            File(tmp.root, "App").apply {
+                writeText("#!/bin/sh\ntouch '${relaunchMarker.path}'\n")
+                setExecutable(true)
+            }
+        val packageFile = File(tmp.newFolder("potassium-update"), "app_1.2.3_amd64.deb").apply { writeText("deb") }
+        val failureFile = File(tmp.root, "state/potassium-install-failure")
+        if (staleFailure) {
+            failureFile.parentFile.mkdirs()
+            failureFile.writeText("version=1.2.2\nexitCode=2\n")
+        }
+        val deadPid = ProcessBuilder("true").start().also { it.waitFor() }.pid()
+        val script =
+            File(scriptDir.apply { mkdirs() }, "updater.sh").apply {
+                writeText(
+                    pkg(
+                        "deb",
+                        packageFile = packageFile.path,
+                        launcher = launcher.path,
+                        workingDir = tmp.root.path,
+                        pid = deadPid,
+                        logFile = logFile.path,
+                        failureFile = failureFile.path,
+                    ),
+                )
+            }
+
+        val process =
+            ProcessBuilder(bash!!.path, script.path)
+                .apply { environment()["PATH"] = "${bin.path}:${environment()["PATH"]}" }
+                .redirectErrorStream(true)
+                .start()
+        val output = process.inputStream.bufferedReader().readText()
+        assertTrue("the script did not finish", process.waitFor(30, TimeUnit.SECONDS))
+        assertEquals("the script failed:\n$output", 0, process.exitValue())
+
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        while (!relaunchMarker.exists() && System.nanoTime() < deadline) Thread.sleep(50)
+        return PackageRun(relaunchMarker.exists(), invokedMarker.exists(), packageFile, logFile, failureFile)
     }
 
     /** Stands in for the private per-update directory the installer writes the script into. */
