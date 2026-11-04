@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Bug Fixes
+
+- **Failed deb/rpm updates are reported instead of passing silently** (potassium-updater) — the detached script that installs a deb or rpm update discarded the output of `pkexec dpkg -i` / `pkexec rpm -U`, ignored its exit status and relaunched the app, so a failed install looked like an update that did nothing. One cause was a `sudo apt upgrade` waiting at its prompt elsewhere, which holds the dpkg lock and makes dpkg exit at once. The installer's output now goes to `potassium-install.log` in the app data directory. When it exits non-zero, the script records the attempted version and exit status, still relaunching the app, and the new `consumeInstallFailure()` returns them with the end of the output so the app can tell the user why it is still on the old version. The script also removes the package's download directory once empty, when the updater created it. See [Auto Update → Failed Installs](auto-update.md#failed-installs).
+
 ## v0.7.1
 
 **Released: 2026-10-02**

@@ -21,10 +21,30 @@ internal object PlatformInstaller {
      */
     private fun createUpdateWorkDir(): File = Files.createTempDirectory("potassium-install-").toFile()
 
+    /** Prefix of the directory a download is staged in; see [isUpdateStagingDir]. */
+    const val UPDATE_STAGING_DIR_PREFIX = "potassium-update-"
+
+    /**
+     * Whether [dir] is a download staging directory the updater created, and so may remove. An
+     * installer file the caller supplied from elsewhere (say `~/Downloads`) must not take its
+     * directory with it.
+     */
+    fun isUpdateStagingDir(dir: File?): Boolean =
+        dir != null &&
+            dir.name.startsWith(UPDATE_STAGING_DIR_PREFIX) &&
+            dir.parentFile?.absoluteFile == File(System.getProperty("java.io.tmpdir")).absoluteFile
+
+    /**
+     * Installs [file] and exits. [version] is the version being installed and [runningVersion] the
+     * one running now, when known; the Linux package installer records both if the install fails
+     * (see [InstallFailureRecord]).
+     */
     fun install(
         file: File,
         platform: Platform,
         restart: Boolean = true,
+        version: String? = null,
+        runningVersion: String? = null,
     ) {
         val extension = file.name.substringAfterLast('.').lowercase()
 
@@ -34,7 +54,7 @@ internal object PlatformInstaller {
             platform == Platform.Windows -> installWindows(file, extension, restart)
             platform == Platform.Linux && extension == "appimage" -> installLinuxAppImage(file, restart)
             platform == Platform.Linux && (extension == "deb" || extension == "rpm") ->
-                installLinuxPackage(file, extension, restart)
+                installLinuxPackage(file, extension, restart, version, runningVersion)
             else -> handOffToDesktop(file, platform).start()
         }
         exitProcess(0)
@@ -82,10 +102,13 @@ internal object PlatformInstaller {
         packageFile: File,
         extension: String,
         restart: Boolean,
+        version: String?,
+        runningVersion: String?,
     ) {
         val launcher =
             resolveLinuxLauncher()
                 ?: error("Cannot resolve application launcher from java.home")
+        val packageDir = packageFile.absoluteFile.parentFile.takeIf(::isUpdateStagingDir)
 
         startDetachedLinuxScript(
             LinuxInstallScripts.forPackage(
@@ -95,6 +118,12 @@ internal object PlatformInstaller {
                 workingDir = workingDir(),
                 pid = ProcessHandle.current().pid(),
                 restart = restart,
+                // Trimmed: a newline in a value would split the record across lines.
+                version = version?.trim().orEmpty(),
+                runningVersion = runningVersion?.trim().orEmpty(),
+                logFile = InstallFailureRecord.logFile().absolutePath,
+                failureFile = InstallFailureRecord.recordFile().absolutePath,
+                packageDir = packageDir?.absolutePath,
             ),
         )
     }

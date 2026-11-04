@@ -374,6 +374,7 @@ The server must support HTTP `Range` requests for differential downloads (any st
 | `installAndQuit(installerFile: File)` | Launch the installer and exit without relaunching — the update is applied on next manual start |
 | `consumeUpdateEvent(): UpdateEvent?` | Returns the post-update event if the app was just updated, then clears it. Returns `null` if no update occurred. |
 | `wasJustUpdated(): Boolean` | Non-consuming check — returns `true` if the app was launched after an update. Call `consumeUpdateEvent()` to clear. |
+| `consumeInstallFailure(): InstallFailure?` | Returns the failure of the last install, if it failed, then clears it. Returns `null` otherwise. Linux deb/rpm installs only. See [Failed Installs](#failed-installs). |
 
 #### DownloadProgress
 
@@ -639,6 +640,25 @@ The marker file is stored in the platform-specific app data directory (resolved 
 - **Linux**: `$XDG_DATA_HOME/<appId>/` or `~/.local/share/<appId>/`
 - **macOS**: `~/Library/Application Support/<appId>/`
 - **Windows**: `%APPDATA%/<appId>/`
+
+### Failed Installs
+
+A deb or rpm update is installed by a detached script after the app exits: it runs `pkexec dpkg -i` (or `pkexec rpm -U`) and then relaunches the app whether or not the install succeeded, so the user is never left without it. When the installer exits non-zero, the script records the attempted version, the running version and the exit status, and the relaunched app (still the old version) can report it:
+
+```kotlin
+updater.consumeInstallFailure()?.let { failure ->
+    showError(
+        "The update to ${failure.version ?: "the new version"} could not be installed " +
+            "(exit code ${failure.exitCode}).\n\n${failure.output}",
+    )
+}
+```
+
+Common causes are another package manager holding the dpkg lock (dpkg exits 2 with "dpkg frontend lock was locked by another process"), the user dismissing the authentication dialog (`pkexec` exits 126), and missing dependencies (dpkg exits 1 and leaves the package unconfigured).
+
+`output` is the end (up to 16 KiB) of the installer's combined output. The full output of the last install, successful or not, stays in `potassium-install.log` in the app data directory above until the next install replaces it. A failure is reported only while the app is still the version that attempted the install; once it runs any other version (the update, or a later one, was installed some other way) the record is discarded. `consumeInstallFailure()` never throws.
+
+Other install types don't record failures yet.
 
 ### Security
 
