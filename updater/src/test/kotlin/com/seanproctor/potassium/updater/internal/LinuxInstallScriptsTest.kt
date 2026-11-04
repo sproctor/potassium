@@ -31,6 +31,7 @@ class LinuxInstallScriptsTest {
         pid: Long = 4321,
         logFile: String = "/home/user/.local/share/app/potassium-install.log",
         failureFile: String = "/home/user/.local/share/app/potassium-install-failure",
+        packageDir: String? = "/tmp/potassium-update-123",
     ) = LinuxInstallScripts.forPackage(
         packageFile = packageFile,
         extension = extension,
@@ -39,8 +40,10 @@ class LinuxInstallScriptsTest {
         pid = pid,
         restart = restart,
         version = "1.2.3",
+        runningVersion = "1.2.2",
         logFile = logFile,
         failureFile = failureFile,
+        packageDir = packageDir,
     )
 
     @Test
@@ -146,10 +149,21 @@ class LinuxInstallScriptsTest {
             )
 
         assertTrue("the app must be relaunched", run.relaunched)
-        assertEquals("version=1.2.3\nexitCode=2\n", run.failureFile.readText())
+        assertEquals("version=1.2.3\nrunningVersion=1.2.2\nexitCode=2\n", run.failureFile.readText())
         assertTrue(run.logFile.readText().contains("frontend lock was locked by another process"))
         assertFalse("the package must be removed", run.packageFile.exists())
         assertFalse("the package's directory must be removed", run.packageFile.parentFile.exists())
+    }
+
+    @Test
+    fun `package script leaves alone a directory the updater did not create`() {
+        // installAndRestart takes any file: a deb the caller keeps in ~/Downloads must not take
+        // that directory with it, even when it was the only file there.
+        val run = runPackageUpdate(pkexec = "exit 0", ownPackageDir = false)
+
+        assertTrue("the app must be relaunched", run.relaunched)
+        assertFalse("the package must be removed", run.packageFile.exists())
+        assertTrue("the caller's directory must stay", run.packageFile.parentFile.isDirectory)
     }
 
     @Test
@@ -195,6 +209,7 @@ class LinuxInstallScriptsTest {
         pkexec: String,
         staleFailure: Boolean = false,
         logFile: File = File(tmp.root, "state/potassium-install.log"),
+        ownPackageDir: Boolean = true,
     ): PackageRun {
         val bash = File("/bin/bash").takeIf { it.canExecute() }
         assumeTrue("bash is unavailable on this host", bash != null)
@@ -211,7 +226,8 @@ class LinuxInstallScriptsTest {
                 writeText("#!/bin/sh\ntouch '${relaunchMarker.path}'\n")
                 setExecutable(true)
             }
-        val packageFile = File(tmp.newFolder("potassium-update"), "app_1.2.3_amd64.deb").apply { writeText("deb") }
+        val packageDir = tmp.newFolder(if (ownPackageDir) "potassium-update-123" else "Downloads")
+        val packageFile = File(packageDir, "app_1.2.3_amd64.deb").apply { writeText("deb") }
         val failureFile = File(tmp.root, "state/potassium-install-failure")
         if (staleFailure) {
             failureFile.parentFile.mkdirs()
@@ -229,6 +245,7 @@ class LinuxInstallScriptsTest {
                         pid = deadPid,
                         logFile = logFile.path,
                         failureFile = failureFile.path,
+                        packageDir = packageDir.path.takeIf { ownPackageDir },
                     ),
                 )
             }

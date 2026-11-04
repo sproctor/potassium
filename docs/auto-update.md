@@ -643,7 +643,7 @@ The marker file is stored in the platform-specific app data directory (resolved 
 
 ### Failed Installs
 
-A deb or rpm update is installed by a detached script after the app exits: it runs `pkexec dpkg -i` (or `pkexec rpm -U`) and then relaunches the app whether or not the install succeeded, so the user is never left without it. When the installer exits non-zero, the script records the attempted version and the exit status, and the relaunched app (still the old version) can report it:
+A deb or rpm update is installed by a detached script after the app exits: it runs `pkexec dpkg -i` (or `pkexec rpm -U`) and then relaunches the app whether or not the install succeeded, so the user is never left without it. When the installer exits non-zero, the script records the attempted version, the running version and the exit status, and the relaunched app (still the old version) can report it:
 
 ```kotlin
 updater.consumeInstallFailure()?.let { failure ->
@@ -656,7 +656,7 @@ updater.consumeInstallFailure()?.let { failure ->
 
 Common causes are another package manager holding the dpkg lock (dpkg exits 2 with "dpkg frontend lock was locked by another process"), the user dismissing the authentication dialog (`pkexec` exits 126), and missing dependencies (dpkg exits 1 and leaves the package unconfigured).
 
-`output` is the end (up to 16 KiB) of the installer's combined output. The full output of the last install, successful or not, stays in `potassium-install.log` in the app data directory above until the next install replaces it. A failure whose version the app is now running (it was installed some other way) is discarded rather than reported. `consumeInstallFailure()` never throws.
+`output` is the end (up to 16 KiB) of the installer's combined output. The full output of the last install, successful or not, stays in `potassium-install.log` in the app data directory above until the next install replaces it. A failure is reported only while the app is still the version that attempted the install; once it runs any other version (the update, or a later one, was installed some other way) the record is discarded. `consumeInstallFailure()` never throws.
 
 Other install types don't record failures yet.
 

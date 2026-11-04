@@ -118,7 +118,7 @@ public class PotassiumUpdater(
             val artifactName = requireSingleFileName(targetFile.fileName)
             // A fresh, owner-only (0700 on POSIX) staging directory: a predictable path in the
             // shared temp dir would be a pre-created-file/symlink hazard on multi-user systems.
-            val stagingDir = Files.createTempDirectory("potassium-update-").toFile()
+            val stagingDir = Files.createTempDirectory(PlatformInstaller.UPDATE_STAGING_DIR_PREFIX).toFile()
             val tempFile = File(stagingDir, "$artifactName.download")
             val finalFile = File(stagingDir, artifactName)
 
@@ -157,13 +157,25 @@ public class PotassiumUpdater(
     public fun installAndRestart(installerFile: File) {
         writeUpdateMarker()
         val platform = PlatformInfo.currentPlatform()
-        PlatformInstaller.install(installerFile, platform, restart = true, version = pendingUpdateVersion)
+        PlatformInstaller.install(
+            installerFile,
+            platform,
+            restart = true,
+            version = pendingUpdateVersion,
+            runningVersion = config.currentVersion,
+        )
     }
 
     public fun installAndQuit(installerFile: File) {
         writeUpdateMarker()
         val platform = PlatformInfo.currentPlatform()
-        PlatformInstaller.install(installerFile, platform, restart = false, version = pendingUpdateVersion)
+        PlatformInstaller.install(
+            installerFile,
+            platform,
+            restart = false,
+            version = pendingUpdateVersion,
+            runningVersion = config.currentVersion,
+        )
     }
 
     /**
@@ -183,14 +195,17 @@ public class PotassiumUpdater(
      * the user why the app is still on the old version. Never throws.
      *
      * Only Linux deb and rpm installs record failures today: their installer runs after the app
-     * exits, and the app is relaunched whether or not it succeeded. A failure that the running
-     * version has since overtaken (the update was installed some other way) is not reported.
+     * exits, and the app is relaunched whether or not it succeeded. A failure is reported only
+     * while the app is still the version that attempted the install; once it runs any other
+     * version (the update, or a later one, was installed some other way) it is discarded.
      */
     public fun consumeInstallFailure(): InstallFailure? {
         val entry = InstallFailureRecord.read()
         InstallFailureRecord.delete()
         entry ?: return null
-        if (entry.version == config.currentVersion.trim()) return null
+        // Only while the app is still the version that attempted the install: once it runs any
+        // other version, whatever installed that has superseded the failure.
+        if (entry.runningVersion != config.currentVersion.trim()) return null
         return InstallFailure(entry.version, entry.exitCode, entry.output)
     }
 

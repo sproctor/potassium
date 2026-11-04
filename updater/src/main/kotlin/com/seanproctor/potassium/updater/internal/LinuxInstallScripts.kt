@@ -43,8 +43,10 @@ internal object LinuxInstallScripts {
 
     /**
      * Installs [packageFile] (`deb` or `rpm`, per [extension]) over the jpackage install. The
-     * installer's output goes to [logFile]; when it fails, [failureFile] records [version] and its
-     * exit status (see [InstallFailureRecord]) for the relaunched app to report.
+     * installer's output goes to [logFile]; when it fails, [failureFile] records [version],
+     * [runningVersion] and its exit status (see [InstallFailureRecord]) for the relaunched app to
+     * report. [packageDir], when given, is the updater's own staging directory holding the package,
+     * removed once empty; a package the caller keeps elsewhere leaves its directory alone.
      */
     @Suppress("LongParameterList")
     fun forPackage(
@@ -55,8 +57,10 @@ internal object LinuxInstallScripts {
         pid: Long,
         restart: Boolean,
         version: String,
+        runningVersion: String,
         logFile: String,
         failureFile: String,
+        packageDir: String?,
     ): String {
         val installCmd =
             when (extension) {
@@ -74,6 +78,7 @@ internal object LinuxInstallScripts {
             |APP_PID=$pid
             |APP_LAUNCHER=${shLiteral(launcher)}
             |NEW_VERSION=${shLiteral(version)}
+            |RUNNING_VERSION=${shLiteral(runningVersion)}
             |LOG_FILE=${shLiteral(logFile)}
             |FAILURE_FILE=${shLiteral(failureFile)}
             |
@@ -98,19 +103,28 @@ internal object LinuxInstallScripts {
             |# and pkexec exits 126 when the authentication dialog is dismissed. errexit stays off so
             |# the app is relaunched either way; the record tells it why it is still the old version.
             |if [ "${D}STATUS" -ne 0 ]; then
-            |    printf '${InstallFailureRecord.KEY_VERSION}=%s\n${InstallFailureRecord.KEY_EXIT_CODE}=%s\n' "${D}NEW_VERSION" "${D}STATUS" > "${D}FAILURE_FILE.tmp" &&
+            |    printf '${InstallFailureRecord.KEY_VERSION}=%s\n${InstallFailureRecord.KEY_RUNNING_VERSION}=%s\n${InstallFailureRecord.KEY_EXIT_CODE}=%s\n' \
+            |        "${D}NEW_VERSION" "${D}RUNNING_VERSION" "${D}STATUS" > "${D}FAILURE_FILE.tmp" &&
             |        mv -f "${D}FAILURE_FILE.tmp" "${D}FAILURE_FILE"
             |fi
             |
-            |# Clean up the package file and its private download directory
+            |# Clean up the package file
             |rm -f "${D}PKG_FILE"
-            |rmdir "$(dirname "${D}PKG_FILE")" 2>/dev/null || true
+            |${removePackageDir(packageDir)}
             |${relaunch(restart, "APP_LAUNCHER", "Relaunch the application")}
             |# Clean up this script
             |rm -f "$D{0}"
             |rmdir "$(dirname "$D{0}")" 2>/dev/null || true
             """.trimMargin()
     }
+
+    /** Removes the updater's [packageDir] once empty; nothing when the package lives elsewhere. */
+    private fun removePackageDir(packageDir: String?): String =
+        if (packageDir == null) {
+            "# The package's directory is the caller's, so it stays"
+        } else {
+            "rmdir ${shLiteral(packageDir)} 2>/dev/null || true"
+        }
 
     /** A literal `$`, which cannot be written directly inside these raw strings. */
     private const val D = "$"

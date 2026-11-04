@@ -5,6 +5,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -41,7 +42,7 @@ class InstallFailureTest {
 
     @Test
     fun `consumeInstallFailure reports the version, exit code and installer output`() {
-        record("version=2.1.0\nexitCode=2\n")
+        record("version=2.1.0\nrunningVersion=2.0.0\nexitCode=2\n")
         InstallFailureRecord.logFile().writeText("dpkg: error: dpkg frontend lock was locked by another process\n")
 
         assertEquals(
@@ -52,7 +53,7 @@ class InstallFailureTest {
 
     @Test
     fun `consumeInstallFailure clears the record but keeps the log`() {
-        record("version=2.1.0\nexitCode=126\n")
+        record("version=2.1.0\nrunningVersion=2.0.0\nexitCode=126\n")
         InstallFailureRecord.logFile().writeText("Error executing command as another user\n")
         updater.consumeInstallFailure()
 
@@ -63,14 +64,14 @@ class InstallFailureTest {
 
     @Test
     fun `consumeInstallFailure reports an unknown version as null`() {
-        record("version=\nexitCode=1\n")
+        record("version=\nrunningVersion=2.0.0\nexitCode=1\n")
 
         assertEquals(InstallFailure(null, 1, ""), updater.consumeInstallFailure())
     }
 
     @Test
     fun `consumeInstallFailure keeps only the end of a long log`() {
-        record("version=2.1.0\nexitCode=1\n")
+        record("version=2.1.0\nrunningVersion=2.0.0\nexitCode=1\n")
         InstallFailureRecord.logFile().writeText("x".repeat(100_000) + "\nthe error")
 
         val output = updater.consumeInstallFailure()!!.output
@@ -79,12 +80,40 @@ class InstallFailureTest {
     }
 
     @Test
-    fun `consumeInstallFailure ignores a failure the running version has overtaken`() {
-        // The install failed, then 2.0.0 was installed some other way.
-        record("version=2.0.0\nexitCode=2\n")
+    fun `consumeInstallFailure ignores a failure once the target version is running`() {
+        // The install of 2.0.0 failed on 1.9.0, then 2.0.0 was installed some other way.
+        record("version=2.0.0\nrunningVersion=1.9.0\nexitCode=2\n")
 
         assertNull(updater.consumeInstallFailure())
         assertFalse(InstallFailureRecord.recordFile().exists())
+    }
+
+    @Test
+    fun `consumeInstallFailure ignores a failure once a later version is running`() {
+        // The install of 1.9.5 failed on 1.9.0, then 2.0.0 was installed by hand.
+        record("version=1.9.5\nrunningVersion=1.9.0\nexitCode=2\n")
+
+        assertNull(updater.consumeInstallFailure())
+        assertFalse(InstallFailureRecord.recordFile().exists())
+    }
+
+    @Test
+    fun `consumeInstallFailure ignores a record without the running version`() {
+        record("version=2.1.0\nexitCode=2\n")
+
+        assertNull(updater.consumeInstallFailure())
+    }
+
+    @Test
+    fun `consumeInstallFailure does not start the output inside a character`() {
+        record("version=2.1.0\nrunningVersion=2.0.0\nexitCode=1\n")
+        // 50,001 bytes: characters start at offsets 1 or 3 mod 5 (é is 2 bytes, € is 3), and the
+        // 16 KiB tail starts at 33,617, which is neither, so the cut lands inside a character.
+        InstallFailureRecord.logFile().writeText("x" + "\u00e9\u20ac".repeat(10_000))
+
+        val output = updater.consumeInstallFailure()!!.output
+        assertFalse("the output must not start with a replacement character", output.startsWith("\uFFFD"))
+        assertTrue(output.endsWith("\u00e9\u20ac"))
     }
 
     @Test

@@ -10,12 +10,14 @@ import java.io.RandomAccessFile
  *
  * Both files live in the platform-specific application data directory resolved by [AppDirs]. The
  * script writes them; this side only reads and clears them. The record holds `key=value` lines:
- * the version the install tried to reach (absent when it was not known) and the exit status.
+ * the version the install tried to reach (empty when it was not known), the version that was
+ * running when it tried, and the exit status.
  */
 internal object InstallFailureRecord {
     private const val RECORD_FILE_NAME = "potassium-install-failure"
     private const val LOG_FILE_NAME = "potassium-install.log"
     const val KEY_VERSION = "version"
+    const val KEY_RUNNING_VERSION = "runningVersion"
     const val KEY_EXIT_CODE = "exitCode"
 
     /** Enough of the installer's output to show its error, which comes last. */
@@ -23,6 +25,7 @@ internal object InstallFailureRecord {
 
     data class Entry(
         val version: String?,
+        val runningVersion: String,
         val exitCode: Int,
         val output: String,
     )
@@ -45,8 +48,11 @@ internal object InstallFailureRecord {
                         key.trim() to value.trim()
                     }
             val exitCode = props[KEY_EXIT_CODE]?.toIntOrNull() ?: return null
+            // Without it there is no telling whether the failure still applies.
+            val runningVersion = props[KEY_RUNNING_VERSION]?.takeIf { it.isNotEmpty() } ?: return null
             Entry(
                 version = props[KEY_VERSION]?.takeIf { it.isNotEmpty() },
+                runningVersion = runningVersion,
                 exitCode = exitCode,
                 output = readOutputTail(),
             )
@@ -70,7 +76,11 @@ internal object InstallFailureRecord {
             val bytes = ByteArray((raf.length() - start).toInt())
             raf.seek(start)
             raf.readFully(bytes)
-            return bytes.toString(Charsets.UTF_8).trim()
+            // A cut into the middle of a UTF-8 sequence would decode as U+FFFD; skip to the next
+            // character's first byte (continuation bytes are 10xxxxxx).
+            val first = if (start == 0L) 0 else bytes.indexOfFirst { it.toInt() and 0xC0 != 0x80 }
+            if (first < 0) return ""
+            return String(bytes, first, bytes.size - first, Charsets.UTF_8).trim()
         }
     }
 }
